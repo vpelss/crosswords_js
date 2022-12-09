@@ -289,6 +289,15 @@ oxxo</PRE></TD>
  <SCRIPT>
 
  var grid_string = '';
+ var word_list_strings;
+var puzzle = []; // [][] ? [x,y,Letters]
+// maybe routine puzzle_piece(x,y,val) , if (no value, return value) {
+// so we can try {
+	//speed routines [][] or [x,y,Letter]
+
+
+var puzzle_width;
+var puzzle_height;
 
  function readStringFromFileAtPath(pathOfFileToReadFrom){
 	const request = new XMLHttpRequest();
@@ -303,14 +312,92 @@ oxxo</PRE></TD>
 
  function grid_change( file_name ){
   var full_path_file = "./grids/" + file_name + ".txt";
-  grid_string = readStringFromFileAtPath ( full_path_file );
+  var grid_string = readStringFromFileAtPath ( full_path_file );
+  //convert to puzzle[x][y].Letter
+  //var lines = split( grid_string , '' );
+  var lines = grid_string.split(/\r?\n|\r|\n/g);
+  //array.forEach(function(currentValue, index, arr), thisValue)
+  lines.forEach( getLetters );
+
+  var q = 99;
+
  }
 
-//var text = readStringFromFileAtPath ( "./wordlists/clues/words/10.txt" );
-//var id = document.getElementById('display_area');
+function getLetters(currentValue , index) {
 
-//var text2 = readStringFromFileAtPath ( "./wordlists/clues/words/810.txt" );
-//id.innerHTML = text2;
+var line = currentValue.trim();
+var letters = line.split('');
+letters.forEach( addToPuzzle , index );
+
+
+ gg = '';
+}
+
+function addToPuzzle(currentValue , index) {
+
+ var x = index;
+ var y = this.valueOf();
+
+ add_to_array( puzzle , x , y , value );
+
+ if (typeof puzzle[x] === 'undefined') {
+  puzzle[x] = [];
+ }//add second dimension
+
+
+
+ puzzle[x][y].Letter = currentValue;
+
+ gg = '';
+
+}
+
+
+/*
+ sub LoadGrid
+{
+my $filename = $_[0];
+my ($x , $y);
+$in{height} = 0;
+$in{width} = 0;
+my $square;
+my $temp = 0;
+
+$filename = "./grids/$filename.txt";
+open (DATA, "<$filename") or die("Grid file $filename does not exist");
+foreach my $line (<DATA>)
+         {
+        $x = 0;
+        chomp($line);
+         my @squares = split(// , $line);
+         foreach $square (@squares)
+                 {
+                 $puzzle[$x][$y]->{Letter} = $square; #should be an x or a o.
+                 $x++;
+                 }
+         if ($x > $temp) {$temp = $x};
+         $y++;
+         }
+close (DATA);
+
+$in{width} = $temp; #store largest x width line 1 to width
+$in{height} = $y; #store largest y height 1 to height
+
+if ($debug ) {print "width:$in{width} height:$in{height}\n\n";}
+
+#only allow square grids. If not, force it to be square!
+#make all lines same width, if no x or o then pad with $padChar at end of line
+for ($y = 0 ; $y <$in{height} ; $y++)
+     {
+     for ($x = 0 ; $x <$in{width} ; $x++)
+           {
+           if ($puzzle[$x][$y]->{Letter} eq '') #there is no x or o so our line is shorter than the rest
+                {$puzzle[$x][$y]->{Letter}=$padChar}
+           }
+     }
+}
+
+ */
 
 
 var gridsvar = 'These are some standard pre-generated grids. See below if you want to contribute other grids.';
@@ -337,9 +424,9 @@ function Get_Processing()
                                           )
                                           //.done(function() {} )
                                 //.always(function() { //alert( "finished"); })
-                                 .fail(function() { $("#PrintProcessing").html( '...no other crosswords running...' ) } );
+                                 .fail(function() { $("#PrintProcessing").html( '...no other crosswords running...' ); } );
         //setTimeout( "Get_Processing();" , 1000 ); //keep the ball rolling
-        };
+        }
 
 //get results.txt often
 function Get_Results()
@@ -354,9 +441,9 @@ function Get_Results()
                                           )
                                           //.done(function() {} )
                                 //.always(function() { //alert( "finished"); })
-                                .fail(function() { $("#PrintResults").html( 'no results file' ) } );
+                                .fail(function() { $("#PrintResults").html( 'no results file' ); } );
         //setTimeout( "Get_Results();" , 1000 ); //keep the ball rolling
-        };
+        }
 
 // Attach a submit handler to the MyForm
 $( "#StartForm" ).submit(
@@ -401,22 +488,10 @@ $( "#EraseForm" ).submit(
                                                         var $form = $( this ), term = $form.serialize(), url = $form.attr( "action" );
                                                         // Send the data using post
                                                         var posting = $.post( url, term );
-                                                        posting.success(
-                                                                                        function(data)
-                                                                                                {
-                                                                                                alert(data);
-                                                                                                }
-                                                                                        );
-                                                        posting.fail(
-                                                                                function( data )
-                                                                                        { alert(data); }
-                                                                                );
-                                                        posting.done(
-                                                                                function( data )
-                                                                                        {
-                                                                                        //alert('Stalled crossword erased');
-                                                                                        }
-                                                                                );
+                                                        posting.success( function(data){alert(data);} );
+                                                        posting.fail( function( data ){ alert(data); } );
+                                                        //alert('Stalled crossword erased');
+                                                        posting.done( function( data ){ asd = data; } );
                                                         }
                                                 );
 //var timer1 = setInterval("Get_Processing();",1000); //start ball rolling
