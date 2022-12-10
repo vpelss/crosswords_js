@@ -292,6 +292,10 @@ var pad_char = 'x';
 var unoccupied = 'o';
 var grid_string = '';
 var word_list_strings;
+//puzzle will be accessed a lot if using letter searches! but js arrays and associative arrays are comparable ONLY if the key is a simple integer
+//{} object will be easier to read in code puzzle[x][y] but is really hard to decipher when looking at the object itself
+//[] arrays you will have to start with puzzle[y][x] or make code more complex (not by much) to create array first, OR convert puzzle[y][x] to puzzle[x][y]
+//I think the ease of visualizing [] internally for troubleshooting is the better option.
 var puzzle = []; // puzzle[x][y] = { 'the_letter' }
 var puzzle_width;
 var puzzle_height;
@@ -308,55 +312,40 @@ function readStringFromFileAtPath(pathOfFileToReadFrom){
 	}
 
 function grid_change( file_name ){
-  puzzle_width = 0; //forget previos setting
+  //forget previous setting
+  puzzle = [];
+  puzzle_width = 0;
+  puzzle_height = 0;
   var full_path_file = "./grids/" + file_name + ".txt";
   var grid_string = readStringFromFileAtPath ( full_path_file );
-  //quick width height check
-
-  //quick square
-
-  
-
-  //convert to puzzle[x][y].Letter
-  //var lines = split( grid_string , '' );
-  var lines = grid_string.split(/\r?\n|\r|\n/g);
-  //var lines2 = lines.map( function(item){ if(item.trim() != ''){return item;} } );
+  var lines = grid_string.split(/\r?\n|\r|\n/g); //split on lines into array lines
   if( lines[lines.length-1].trim() == '' ){
    lines.pop();
   }//remove last line if ''
 
-  //array.forEach(function(currentValue, index, arr), thisValue)
   puzzle_height = lines.length;
-  lines.forEach( getLetters );
+  lines.forEach( getLetters ); //process lines array
 
-  square_grid();
-
-  var strp = JSON.stringify(puzzle);
-  var q = 99;
-
+  square_grid(); //make the grid a square filling with pad_char on the right
  }
 
 function getLetters(currentValue , index) {
- var line = currentValue.trim();
+ var line = currentValue.trim(); //remove whitespace
  if( line.length > puzzle_width ) {
   puzzle_width = line.length;
-  }
- var letters = line.split('');
- letters.forEach( addToPuzzle , index );
-
-  gg = '';
+  }//keep seeing if we have a larger line width
+ var letters = line.split(''); //split line into letters array
+ var t = letters.valueOf();
+ letters.forEach( addToPuzzle , index ); //process letters array : index is passed to the function as its this value
  }
 
 function addToPuzzle(currentValue , index) {
- var x = index;
- var y = this.valueOf();
- if (typeof puzzle[x] === 'undefined') {
-  puzzle[x] = [];
- }//add second dimension
- puzzle[x][y] = currentValue;
+ var x = index;// index of letters array
+ var y = this.valueOf(); //!! this is the index from/used in getLetters  !!
 
- gg = '';
- }
+ if (typeof puzzle[y] === 'undefined') { puzzle[y] = []; }//add second dimension
+ puzzle[y][x] = currentValue;
+}
 
 function square_grid() {
  puzzle.forEach( function(currentValue){
@@ -364,28 +353,10 @@ function square_grid() {
   if(puzzle_width > arr_length) {
    currentValue.length = puzzle_width;
    currentValue.fill(pad_char , arr_length);
-
-   //code
   }
- } );
-	//code
+ }
+ );
 }
-
-/*
-#only allow square grids. If not, force it to be square!
-#make all lines same width, if no x or o then pad with $padChar at end of line
-for ($y = 0 ; $y <$in{height} ; $y++)
-     {
-     for ($x = 0 ; $x <$in{width} ; $x++)
-           {
-           if ($puzzle[$x][$y]->{Letter} eq '') #there is no x or o so our line is shorter than the rest
-                {$puzzle[$x][$y]->{Letter}=$padChar}
-           }
-     }
-}
-
- */
-
 
 var gridsvar = 'These are some standard pre-generated grids. See below if you want to contribute other grids.';
 var britishgridsvar = 'This will generate a random British style grid (double spaced). Nothe that it is not symetrical.';
@@ -395,8 +366,6 @@ var optimumbacktrackvar = 'Optimal Backtrack vastly speeds up the search by remo
 var slowdownvar = 'Only use this if you want to see the walk in slow time. It is not useful in generating crosswords.';
 var shufflevar = 'If unchecked, it will try to lay words down in alphabetic order. So it will generate the same puzzle each time. It is not useful in generating crosswords. It is only usefull if you want to replicate a crossword generation scenario.';
 var simplewordmaskvar = 'This lets the recursion figure out if the crossing words will play nice. Although is speeds up the words layed per second, it is slower overall.';
-
-
 
 //get processing.txt often
 function Get_Processing()
