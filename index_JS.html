@@ -299,6 +299,8 @@ var word_list_strings;
 var puzzle = []; // puzzle[x][y] = { 'the_letter' }
 var puzzle_width;
 var puzzle_height;
+var dir_across = 0;
+var dir_down = 1;
 
 function readStringFromFileAtPath(pathOfFileToReadFrom){
 	const request = new XMLHttpRequest();
@@ -311,7 +313,7 @@ function readStringFromFileAtPath(pathOfFileToReadFrom){
 	return returnValue;
 	}
 
-grid_change( document.getElementById("grid").value );
+//grid_change( document.getElementById("grid").value );
 function grid_change( file_name ){
   //forget previous setting
   puzzle = [];
@@ -335,7 +337,9 @@ function grid_change( file_name ){
      currentValue.fill(pad_char , arr_length);
     }
   });
-tt = 9;
+
+  NumberBlankSquares();
+  tt = 9;
 }
 
 function getLetters(currentValue , index) {
@@ -357,12 +361,30 @@ function addToPuzzle(currentValue , index) {
 }
 
 function NumberBlankSquares(){
+ //gridToGlobalVars()
+ //this does a lot of var setup
+ //and also associate all squares with words and word # , get word lengths on grid ,
+
+//get tempLetterPositions
+//set
+//positionInWord[$xx][$yy][$dir] = $PositionCount;
+//has the first letter been placed in thisSquareBelongsToWordNumber[$xx][$yy][$dir]
+//no -
+//yes -
+
+//letterPositionsOfWord[$numberCount][$dir] = [TempLetterPositions];
+//thisSquareBelongsToWordNumber[$xx][$yy][$dir]
+//allMasksOnBoard[$numberCount][$dir] = $blankWord;
 
 var x , xx;
 var y , yy;
-var wordLength;
-var numberCount;
-var acrossWord;
+var word_length;
+//var numberCount;
+//var next_word_number = 0;
+var last_word_number = 0;
+var was_there_an_across_word = 0; //
+
+var is_across_word , is_down_word;
 var $dir;
 var TempLetterPositions = [];
 var PositionCount;
@@ -372,12 +394,42 @@ var crossingCells;
 var totalCells;
 var whiteCells;
 var padCells;
-var wasAnAcrossWord = 0;
+
+
+
+
 
   for (y = 0 ; y < puzzle_height ; y++) {
     for (x = 0 ; x < puzzle_width ; x++) {
-      wasAnAcrossWord = 0; //assume not
+      was_there_an_across_word = 0; //assume not
       for (dir = 0 ; dir < 2 ; dir++) { //#for both across 0 and down 1 words
+        if(puzzle[y][x] == pad_char){continue;}
+        word_pos = getWordPos(x , y , dir);
+        //down_word_pos = getWordPos(x , y , dir_down);
+        if(word_pos){
+          if( (word_pos[0][0] == y) && (word_pos[0][1] == x) ){//first letter in word?
+             word_length = word_pos.length;
+            //have we chosen a number for this word/square yet
+            if(typeof thisSquareBelongsToWordNumber[$xx][$yy][$dir] === 'undefined'){//this square / word does not have a number assignment yet
+              last_word_number++;
+              was_there_an_across_word = 1;
+
+              //set all positionInWord[$xx][$yy][$dir] = $PositionCount;
+
+              //set letterPositionsOfWord[$numberCount][$dir] = [TempLetterPositions];
+
+              //set allMasksOnBoard[$numberCount][$dir] = $blankWord;
+
+
+
+            }
+          }
+
+//thisSquareBelongsToWordNumber[$xx][$yy][$dir]
+//positionInWord[$xx][$yy][$dir] = $PositionCount;
+
+//letterPositionsOfWord[$numberCount][$dir] = [TempLetterPositions];
+//allMasksOnBoard[$numberCount][$dir] = $blankWord;
 
       }
     }
@@ -385,7 +437,41 @@ var wasAnAcrossWord = 0;
 
 }
 
+function getWordPos(x,y,dir){
+  var dx,dy;
+  var xx = x , yy = y;
+  var letter_pos = [];
+  [dx,dy] = getDxDy(dir);
+  //get to start of word
+  while( (typeof puzzle[yy-dy] !== 'undefined') &&  (typeof puzzle[yy-dy][xx-dx] !== 'undefined') && (puzzle[yy-dy][xx-dx] != pad_char) ){
+    xx=xx-dx;
+    yy=yy-dy;
+  }
+  letter_pos.push([xx,yy]);
+  //now look for all letters of word
+  while( (typeof puzzle[yy+dy] !== 'undefined') && (typeof puzzle[yy+dy][xx+dx] !== 'undefined') && (puzzle[yy+dy][xx+dx] != pad_char) ){
+    xx=xx+dx;
+    yy=yy+dy;
+    letter_pos.push([xx,yy]);
+  }
+  if(letter_pos.length == 1){
+    return false;
+  }//not a word
+  return letter_pos;
+}
 
+function getDxDy(dir){
+  var dx , dy;
+  if(dir == dir_across){
+    dx = 1;
+    dy = 0;
+  }
+  if(dir == dir_down){
+    dx = 0;
+    dy = 1;
+  }
+return [dx,dy];
+}
 
 
 /*
