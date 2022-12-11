@@ -42,7 +42,7 @@
 							  </TR>
 							  <TR>
 								<TD VALIGN="TOP">
-								  <SELECT NAME="grid" SIZE="6" onchange="grid_change(this.value);">
+								  <SELECT id="grid" NAME="grid" SIZE="6" onchange="grid_change(this.value);">
 									<OPTION VALUE="3x3"
 									 CLASS="gridOption">Double Word Squares - no black squares</OPTION>
 									<OPTION VALUE="3x3">3x3</OPTION>
@@ -311,6 +311,7 @@ function readStringFromFileAtPath(pathOfFileToReadFrom){
 	return returnValue;
 	}
 
+grid_change( document.getElementById("grid").value );
 function grid_change( file_name ){
   //forget previous setting
   puzzle = [];
@@ -321,13 +322,21 @@ function grid_change( file_name ){
   var lines = grid_string.split(/\r?\n|\r|\n/g); //split on lines into array lines
   if( lines[lines.length-1].trim() == '' ){
    lines.pop();
-  }//remove last line if ''
+  }//remove last line if empty
 
   puzzle_height = lines.length;
   lines.forEach( getLetters ); //process lines array
 
-  square_grid(); //make the grid a square filling with pad_char on the right
- }
+  //square_grid(); //make the grid a square filling with pad_char on the right
+  puzzle.forEach( function(currentValue){
+    var arr_length = currentValue.length;
+    if(puzzle_width > arr_length) {
+     currentValue.length = puzzle_width;
+     currentValue.fill(pad_char , arr_length);
+    }
+  });
+tt = 9;
+}
 
 function getLetters(currentValue , index) {
  var line = currentValue.trim(); //remove whitespace
@@ -347,16 +356,135 @@ function addToPuzzle(currentValue , index) {
  puzzle[y][x] = currentValue;
 }
 
-function square_grid() {
- puzzle.forEach( function(currentValue){
-  var arr_length = currentValue.length;
-  if(puzzle_width > arr_length) {
-   currentValue.length = puzzle_width;
-   currentValue.fill(pad_char , arr_length);
+function NumberBlankSquares(){
+
+var x , xx;
+var y , yy;
+var wordLength;
+var numberCount;
+var acrossWord;
+var $dir;
+var TempLetterPositions = [];
+var PositionCount;
+var blankWord;
+var atEdge;
+var crossingCells;
+var totalCells;
+var whiteCells;
+var padCells;
+var wasAnAcrossWord = 0;
+
+  for (y = 0 ; y < puzzle_height ; y++) {
+    for (x = 0 ; x < puzzle_width ; x++) {
+      wasAnAcrossWord = 0; //assume not
+      for (dir = 0 ; dir < 2 ; dir++) { //#for both across 0 and down 1 words
+
+      }
+    }
   }
- }
- );
+
 }
+
+
+
+
+/*
+ sub NumberBlankSquares
+{
+my ($x , $xx);
+my ($y , $yy);
+my $wordLength;
+my $numberCount;
+my $acrossWord;
+my $dir;
+my @TempLetterPositions;
+my $PositionCount;
+my $blankWord;
+my $atEdge;
+my $crossingCells;
+my $totalCells;
+my $whiteCells;
+my $padCells;
+my $wasAnAcrossWord = 0;
+
+for ($y = 0 ; $y < $in{height} ; $y++)
+      {
+      for ($x = 0 ; $x < $in{width} ; $x++)
+            {
+            $wasAnAcrossWord = 0; #assume not
+            for ($dir = 0 ; $dir < 2 ; $dir++) #for both across 0 and down 1 words
+                  {
+                  $wordLength = &calcWordSize($x,$y,$dir);
+                  #if ($wordLength > 2) #words of length 0 are returned if we are on a pad character. ignore. also counts 1 letter words and 2 letter word
+                  if ($wordLength >= 2) #words of length 0 are returned if we are on a pad character. ignore. also counts 1 letter words and 2 letter word
+                    {
+                    $wordLengths{$wordLength} = 1; #mark globally that there is a word of this length
+                    }
+                  $atEdge = 0; #are we on a grid edge square?
+                  if (($dir == 0) and ($x == 0)) {$atEdge = 1;} #across word edge
+                  if (($dir == 1) and ($y == 0)) {$atEdge = 1;} #down word edge
+                  if ( ($wordLength >= 2) and ( ($puzzle[$x - ($OppositeDirection[$dir])][$y - $dir]->{Letter} eq $padChar) or $atEdge ) ) #this is the start of a word if we are 1. at an edge andlooking in right direction 2. pad before the character in the right direction
+                         {#start of either an acrross, down or both word
+                         if ($dir == 0) {
+                              $numberCount++; # always increase numbercount on across words
+                              $wasAnAcrossWord = 1; # we had an across word. so if we have a down word also, don't increase the numberCount
+                              };
+                         if ( ($dir == 1) and ($wasAnAcrossWord == 0) ) {$numberCount++}; #only increase down word if it is a lone down word and not shared with an across word
+                         #if ($wasAnAcrossWord == 0) {$numberCount++} #we have not registered an across word at this square yet. so this must be an across square and therefore we increase the number count as only a down will share the count number
+                         #build PositionInWord , LetterPositions , wordNumbers
+                         @TempLetterPositions = &LetterPositionsOfWord($x,$y,$dir,$wordLength); #get all the letter positions in this word
+                         $PositionCount = 0;
+                         $blankWord = '';
+                         foreach my $letterPosition (@TempLetterPositions)
+                                 {
+                                 $xx = $letterPosition->[0];
+                                 $yy = $letterPosition->[1];
+                                 $ThisSquareBelongsToWordNumber[$xx][$yy][$dir] = $numberCount;
+                                 $PositionInWord[$xx][$yy][$dir] = $PositionCount;
+                                 $PositionCount++;
+                                 $blankWord = "$blankWord$unoccupied";
+                                 }
+                         $allMasksOnBoard[$numberCount][$dir] = $blankWord;
+                         $letterPositionsOfWord[$numberCount][$dir] = [@TempLetterPositions]; #an annonomyous array reference of $x,$y pairs of all letters in the word
+                         }
+                  }
+
+            }
+      }
+
+#calculate interlock and density
+for ($y = 0 ; $y < $in{height} ; $y++)
+      {
+      for ($x = 0 ; $x < $in{width} ; $x++)
+            {
+            #for ($dir = 0 ; $dir < 2 ; $dir++) #for both across 0 and down 1 words
+                  {
+                  if ( exists($ThisSquareBelongsToWordNumber[$x][$y][0]) and exists($ThisSquareBelongsToWordNumber[$x][$y][1]) )
+                       {$crossingCells++;}
+                  if ($puzzle[$x][$y]->{Letter} eq $padChar)
+                       {$padCells++;}
+                  if ($puzzle[$x][$y]->{Letter} eq $unoccupied)
+                       {$whiteCells++;}
+                  }
+            }
+      }
+$totalCells = $in{height} * $in{width};
+my $interlock = 100 * $crossingCells / $totalCells;
+$interlock = sprintf "%.1f", $interlock;
+my $density = 100 * $whiteCells / $totalCells;
+$density = sprintf "%.1f", $density;
+
+$biggestwordNumber = $numberCount;
+if ($debug ) {print "Grid has words of lengths : ";}
+foreach $wordLength (keys %wordLengths)
+         {
+         if ($debug ) {print "$wordLength ,";}
+         }
+if ($debug ) {print "\nDensity:$density\% , Interlock:$interlock\% , Crossing:$crossingCells , White:$whiteCells , Total:$totalCells \n\n";}
+};
+
+ */
+
 
 var gridsvar = 'These are some standard pre-generated grids. See below if you want to contribute other grids.';
 var britishgridsvar = 'This will generate a random British style grid (double spaced). Nothe that it is not symetrical.';
