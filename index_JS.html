@@ -339,7 +339,7 @@ function grid_change( file_name ){
     }
   });
 
-  NumberBlankSquares();
+  numberBlankSquares();
   tt = 9;
 }
 
@@ -361,7 +361,7 @@ function addToPuzzle(currentValue , index) {
  puzzle[y][x] = currentValue;
 }
 
-function NumberBlankSquares(){
+function numberBlankSquares(){
  //gridToGlobalVars()
  //this does a lot of var setup
  //and also associate all squares with words and word # , get word lengths on grid ,
@@ -433,6 +433,7 @@ var pad_cells = 0;
        }
     }
   }
+
   total_cells = puzzle_height * puzzle_width;
   var interlock = 100 * crossing_cells / total_cells;
   var density = 100 * white_cells / total_cells;
@@ -443,10 +444,12 @@ var pad_cells = 0;
   console.log("Interlock: " + interlock);
   console.log("Density: " + density);
   console.log("Grid has words of lengths :");
-  wl = Object.keys(word_lengths);
+  var wl = Object.keys(word_lengths);
   wl.forEach(function(currentValue){
     console.log(currentValue);
    });
+
+   loadWordList();
 
 }
 
@@ -485,6 +488,121 @@ function getDxDy(dir){
   }
 return [dx,dy];
 }
+
+function loadWordList(){
+    var the_text;
+    var db = document.querySelector('input[name="wordfile"]:checked').value;
+    var wl = Object.keys(word_lengths);
+      wl.forEach(function(currentValue){
+        var file_and_path = './wordlists/' + db + '/words/' + currentValue + '.txt';
+        the_text = readStringFromFileAtPath(file_and_path);
+      });
+
+    ii = 9;
+    
+}
+
+/*
+
+sub LoadWordList {
+my $filename = $_[0];
+my $line;
+my $word;
+my $clue;
+my $wordLength;
+my $mask;
+my $lineCount;
+my $t = time();
+my %wordsOfLength;
+my $wordCount;
+
+my $directory = "./wordlists/$in{wordfile}/words/";
+#read word and clue file
+if (not -d $directory) {die "directory $directory does not exist"};
+
+=pod
+#build binary mask lists for all the word lengths 3-15
+# @{ $binaryMasks{ $numberOfLetters ) }
+for ( my $numberOfLetters = 2 ; $numberOfLetters < 21 ; $numberOfLetters++)
+      {
+      if ( $wordLength{$numberOfLetters} != 1 ) {next;}; #skip words that are of a length that are not on grid
+      for ($decimal = 0 ; $decimal < 2 ** $numberOfLetters ; $decimal++)
+            {
+            my $mask = sprintf "%0*b" , $numberOfLetters , $decimal;   #convert to binary# ensure it is a string and has leading 0's
+            push @{ $binaryMasks{$numberOfLetters} } , "$mask";
+            }
+      }
+=cut
+
+#new routine just loads word files of requested word lengths
+#work files were separated earlier
+foreach $wordLength ( keys %wordLengths)
+         {
+         $message = $message . "Loading words of length $wordLength...\n";
+         &PrintProcessing($message);
+
+         $filename = "$directory$wordLength\.txt";
+         #$filename = "$directory/all.txt";
+         open (DATA, "<$filename") or &Quit( "Word file $filename does not exist" );
+         print '.'; #help keep alive on big loads
+
+         foreach $word (<DATA>)
+                  {
+                  $word =~ s/\n//g; #remove line return
+                  $word =~ s/\r//g; #remove line return
+                  if ($word eq '') {next} #blank line. toss
+                  $lineCount++;
+                  $word = uc($word); #all words must be uppercase for standard, display and search reasons.
+                  $wordsOfLength{$wordLength}++; #global var for statistics
+
+                  #build $wordsOfLengthString[$wordLength] string
+                  if ($wordsOfLengthString[$wordLength] eq '') {$wordsOfLengthString[$wordLength] = ','} #start string of words with a coma
+                  $wordsOfLengthString[$wordLength] = "$wordsOfLengthString[$wordLength]$word,"; #build a comma delimited string of each possible word length
+
+                  #letter by letter build here
+                  my @lettersInWord =  split('' , $word);
+                  my $letterPosition = 0;
+                  #prep for new fast linear word search : $linearWordSearch{mask}
+                  $mask = $word;
+                  $mask =~ s/\S/o/g; #build a mask with ooooooooo of wordlength
+                  foreach my $letter (@lettersInWord)
+                           {
+                           #build new fast linear word search : $linearWordSearch{mask}
+                           $linearWordSearch{$mask}{ substr($word,$letterPosition,1) } = 1 ; #add letter for $letterPosition to set of hash keys for this $mask
+                           substr ( $mask , $letterPosition , 1 , $letter); #change mask with next letter added to it Cooo to COoo
+                           $letterPosition++;
+                           }
+=pod
+                   foreach $mask (@{ $binaryMasks{$wordLength} })
+                            {
+                            #convert RICKETS into ooooooS oooooTo oooooTS , etc
+                            #from : http://stackoverflow.com/questions/1871092/masking-a-string-in-perl-using-a-mask-string
+                            #$str =~ s/(.)/substr($mask, pos $str, 1) eq 'o' ? $1 : 'x'/eg;
+                            $maskedWord = $word;
+                            $maskedWord =~ s/(.)/substr($mask, pos($maskedWord) , 1) eq '0' ? $1 : 'o'/eg; #mask the word with our boolean mask. replace all 0 positions in $mask with a o in our $maskedWord
+                            #then we add RICKETS to ${ooooooS}{RICKETS} ${oooooTo}{RICKETS} ${oooooTS}{RICKETS} , etc
+                            #$wordListByMask{$maskedWord}{$word} = '1'; # the keys built by $word are the list
+                            push @{$wordListByMask{$maskedWord}} , $word;
+                            #@kkeys = keys %{$wordListByMask{$maskedWord}};
+                            }
+=cut
+                  }
+         close (DATA);
+         }
+
+#done loading words. Let's calculate some statistics
+foreach my $length (sort keys %wordsOfLength)
+     {
+     if ($debug ) {print "$length : $wordsOfLength{$length}\n";}
+     $wordCount = $wordCount + $wordsOfLength{$length};
+     }
+
+my $tt = time() - $t;
+if ($debug ) {print "$lineCount lines and $wordCount words loaded in $tt sec \n\n";}
+}
+
+
+*/
 
 var gridsvar = 'These are some standard pre-generated grids. See below if you want to contribute other grids.';
 var britishgridsvar = 'This will generate a random British style grid (double spaced). Nothe that it is not symetrical.';
