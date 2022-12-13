@@ -496,14 +496,173 @@ function loadWordList(){
       wl.forEach(function(currentValue){
         var file_and_path = './wordlists/' + db + '/words/' + currentValue + '.txt';
         the_text = readStringFromFileAtPath(file_and_path);
+        //still need to process
+        //$wordsOfLength{$wordLength}++
+
+        //choose which one based on word or letter search
+
+        //wordsOfLengthString
+
+        //$linearWordSearch{mask}
+
       });
 
     ii = 9;
-    
+
+}
+
+function printPuzzle(){
+  var temp , temp2 , temp3;
+  var x , y , dir;
+  var temp_puzzle = [];
+
+  temp = "<table cellspacing='0' cellpadding='0' CLASS='tableclass'>";
+    for(y = 0; y < puzzle_height; y++){
+        $temp += "<tr>";
+        for (x = 0; x < puzzle_width; x++){
+            temp3 = '';
+            if(typeof temp_puzzle[y] === 'undefined'){temp_puzzle[y] = [];}
+            temp_puzzle[y][x] = puzzle[y][x]; //mimic filled in puzzle
+            for (dir = 0 ; dir < 2 ; dir++){
+                if (typeof position_in_word[dir][y][x] === 'undefined'){continue;}
+                if ($PositionInWord[$x][$y][$dir] == 0){  //we are at start of word so there will be a number here
+                    temp_puzzle[y][x] = $ThisSquareBelongsToWordNumber[$x][$y][$dir];
+                    //print"startofword $ThisSquareBelongsToWordNumber[$x][$y][$dir] x:$x y:$y dir:$dir\n";
+                }
+
+            }
+        }
+    }
+
+
+
 }
 
 /*
 
+ sub print_puzzle {
+my @temppuzzle;
+my ($a,$temp,$temp2,$temp3,$temp4,$temp5);
+my $y;
+my $x;
+my $word;
+my $wordNumber;
+my ($dir , $direction);
+my $wordLetterPositions;
+
+$temp = "<table cellspacing='0' cellpadding='0' CLASS='tableclass'>";
+for ($y = 0; $y < $in{height}; $y++)
+        {
+        $temp .= "<tr>";
+                for ($x = 0; $x < $in{width}; $x++)
+                      {
+                      $temp3 = '';
+                      $temppuzzle[$x][$y]->{Letter} = $puzzle[$x][$y]->{Letter}; #mimic filled in puzzle
+                      for ($dir = 0 ; $dir < 2 ; $dir++)
+                            {
+                            #if ( ($PositionInWord[$x][$y][$dir] == 0) and ($PositionInWord[$x][$y][$dir] ne undef) ) #we are at start of word so there will be a number here
+                            #if ($PositionInWord[$x][$y][$dir] eq 0)  #we are at start of word so there will be a number here
+                            if ( not defined $PositionInWord[$x][$y][$dir] ) {next;}
+                            if ($PositionInWord[$x][$y][$dir] == 0)  #we are at start of word so there will be a number here
+                                 {
+                                 $temppuzzle[$x][$y]->{Letter} = $ThisSquareBelongsToWordNumber[$x][$y][$dir];
+                                 #print"startofword $ThisSquareBelongsToWordNumber[$x][$y][$dir] x:$x y:$y dir:$dir\n";
+                                 }
+
+                            #build a hover clue text for each square
+                            $word = $allMasksOnBoard[$ThisSquareBelongsToWordNumber[$x][$y][$dir]][$dir];
+                            if ($word ne undef)
+                                 {
+                                 if ($dir == 0) {$direction = 'Across'}
+                                 if ($dir == 1) {$direction = 'Down'}
+                                 $temp3 .= "$direction: $clues{$word} \n";
+                                 $temp3 =~ s/[\'\"]//g; #remove quotes from title s it is in a tag
+                                 }
+                            }
+
+                      $temp4 = ""; #clear the soon to be choose() routine variable
+                      my $wordcount = 0;
+                      if ($ThisSquareBelongsToWordNumber[$x][$y][0] ne undef) {$wordcount++} #horiz word here
+                      if ($ThisSquareBelongsToWordNumber[$x][$y][1] ne undef) {$wordcount++} #vert word here
+                      if ($wordcount == 2) #horiz and vert word here
+                          {
+                          $wordNumber = $ThisSquareBelongsToWordNumber[$x][$y][0];
+                          $word = $allMasksOnBoard[$wordNumber][0];
+                          $wordLetterPositions = &javascriptArrayFromLetterPositions(@{$letterPositionsOfWord[$wordNumber][0]});
+                          $temp4 .= qq|if (horizvert == 0) {choose("$word" , $x , $y , [$wordLetterPositions])};|;
+                          $wordNumber = $ThisSquareBelongsToWordNumber[$x][$y][1];
+                          $word = $allMasksOnBoard[$wordNumber][1];
+                          $wordLetterPositions = &javascriptArrayFromLetterPositions(@{$letterPositionsOfWord[$wordNumber][1]});
+                          $temp4 .= qq|if (horizvert == 1) {choose("$word" , $x , $y , [$wordLetterPositions])};|;
+                          }
+                      if ($wordcount == 1) #horiz word here
+                          {#just choose the one word
+                          if ($ThisSquareBelongsToWordNumber[$x][$y][0] ne undef)
+                               {
+                               $wordNumber = $ThisSquareBelongsToWordNumber[$x][$y][0];
+                               $word = $allMasksOnBoard[$wordNumber][0];
+                               $wordLetterPositions = &javascriptArrayFromLetterPositions(@{$letterPositionsOfWord[$wordNumber][0]});
+                               $temp4 = qq|choose("$word" , $x , $y , [$wordLetterPositions]);|;
+                               }
+                          if ($ThisSquareBelongsToWordNumber[$x][$y][1] ne undef)
+                               {
+                               $wordNumber = $ThisSquareBelongsToWordNumber[$x][$y][1];
+                               $word = $allMasksOnBoard[$wordNumber][1];
+                               $wordLetterPositions = &javascriptArrayFromLetterPositions(@{$letterPositionsOfWord[$wordNumber][1]});
+                               $temp4 = qq|choose("$word" , $x , $y , [$wordLetterPositions]);|;
+                               }
+                          }
+                      $temp4 .= qq|ToggleHV();|;
+
+                      #$temp5 = 'document.getElementById(CurrentFocus).innerHTML=String.fromCharCode(event.keyCode||event.which);HighlightNextBox();';
+                      #$temp5 = 'document.getElementById(CurrentFocus).innerHTML=String.fromCharCode(event.which);HighlightNextBox();';
+                      #$temp5 = 'document.getElementById("cell_$x\_$y").innerHTML=String.fromCharCode(event.which);HighlightNextBox();';
+                      #$temp5 = qq|document.getElementById(cell_$x\_$y).innerHTML=String.fromCharCode(event.keyCode\|\|event.which);HighlightNextBox();|;
+                      #$temp5 = qq|this.innerHTML=String.fromCharCode(event.keyCode\|\|event.which);HighlightNextBox();|;
+
+                      #lay down table stuff here
+
+                      #black square
+                      if ($puzzle[$x][$y]->{Letter} eq $padChar) #make sure our page width is fixed
+                             {$temp .= "<td CLASS='tdblackclass'><spacer width='20 pt'></td>";}
+
+                      #number square
+                      if ($temppuzzle[$x][$y]->{Letter} =~ /[0-9]/)
+                            {
+                            $temp .= qq|
+                            <TD VALIGN='TOP' ALIGN='LEFT' CLASS='tdnumberclass'>
+                            <DIV  style='position: absolute; z-index: 2;'>$temppuzzle[$x][$y]->{Letter}</DIV>
+                            <TABLE CELLPADDING="0" CELLSPACING="0">
+                                  <TBODY>
+                                         <TR>
+                                                <TD title='$temp3' CLASS='tdwhiteclass' ID='cell_$x\_$y'
+                                                ONCLICK='$temp4' VALIGN='middle' WIDTH='20' ALIGN='center'
+                                                HEIGHT='25'>&nbsp;</TD>
+                                         </TR>
+                                  </TBODY>
+                                </TABLE>
+                            </TD>
+                            |;
+                            }
+
+                      #unoccupied square
+                      #if ($temppuzzle[$x][$y]->{Letter} =~ /[A-Z,o]/)
+                      if ($temppuzzle[$x][$y]->{Letter} =~ /[A-Z]/)
+                            {
+                            $temp .= qq| <td title='$temp3' ID='cell_$x\_$y' CLASS='tdwhiteclass' ONCLICK='$temp4'>&nbsp;</td>|;
+                            }
+                      }
+        $temp .= "</tr>\n";
+        }
+
+$temp .= "</table>\n";
+return $temp;
+};
+
+
+ */
+
+/*
 sub LoadWordList {
 my $filename = $_[0];
 my $line;
@@ -519,20 +678,6 @@ my $wordCount;
 my $directory = "./wordlists/$in{wordfile}/words/";
 #read word and clue file
 if (not -d $directory) {die "directory $directory does not exist"};
-
-=pod
-#build binary mask lists for all the word lengths 3-15
-# @{ $binaryMasks{ $numberOfLetters ) }
-for ( my $numberOfLetters = 2 ; $numberOfLetters < 21 ; $numberOfLetters++)
-      {
-      if ( $wordLength{$numberOfLetters} != 1 ) {next;}; #skip words that are of a length that are not on grid
-      for ($decimal = 0 ; $decimal < 2 ** $numberOfLetters ; $decimal++)
-            {
-            my $mask = sprintf "%0*b" , $numberOfLetters , $decimal;   #convert to binary# ensure it is a string and has leading 0's
-            push @{ $binaryMasks{$numberOfLetters} } , "$mask";
-            }
-      }
-=cut
 
 #new routine just loads word files of requested word lengths
 #work files were separated earlier
@@ -572,20 +717,6 @@ foreach $wordLength ( keys %wordLengths)
                            substr ( $mask , $letterPosition , 1 , $letter); #change mask with next letter added to it Cooo to COoo
                            $letterPosition++;
                            }
-=pod
-                   foreach $mask (@{ $binaryMasks{$wordLength} })
-                            {
-                            #convert RICKETS into ooooooS oooooTo oooooTS , etc
-                            #from : http://stackoverflow.com/questions/1871092/masking-a-string-in-perl-using-a-mask-string
-                            #$str =~ s/(.)/substr($mask, pos $str, 1) eq 'o' ? $1 : 'x'/eg;
-                            $maskedWord = $word;
-                            $maskedWord =~ s/(.)/substr($mask, pos($maskedWord) , 1) eq '0' ? $1 : 'o'/eg; #mask the word with our boolean mask. replace all 0 positions in $mask with a o in our $maskedWord
-                            #then we add RICKETS to ${ooooooS}{RICKETS} ${oooooTo}{RICKETS} ${oooooTS}{RICKETS} , etc
-                            #$wordListByMask{$maskedWord}{$word} = '1'; # the keys built by $word are the list
-                            push @{$wordListByMask{$maskedWord}} , $word;
-                            #@kkeys = keys %{$wordListByMask{$maskedWord}};
-                            }
-=cut
                   }
          close (DATA);
          }
@@ -600,8 +731,6 @@ foreach my $length (sort keys %wordsOfLength)
 my $tt = time() - $t;
 if ($debug ) {print "$lineCount lines and $wordCount words loaded in $tt sec \n\n";}
 }
-
-
 */
 
 var gridsvar = 'These are some standard pre-generated grids. See below if you want to contribute other grids.';
