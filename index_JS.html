@@ -515,6 +515,8 @@ function printPuzzle(){
   var temp , temp2 , temp3;
   var x , y , dir;
   var temp_puzzle = [];
+  var word;
+  var direction;
 
   temp = "<table cellspacing='0' cellpadding='0' CLASS='tableclass'>";
     for(y = 0; y < puzzle_height; y++){
@@ -524,13 +526,73 @@ function printPuzzle(){
             if(typeof temp_puzzle[y] === 'undefined'){temp_puzzle[y] = [];}
             temp_puzzle[y][x] = puzzle[y][x]; //mimic filled in puzzle
             for (dir = 0 ; dir < 2 ; dir++){
-                if (typeof position_in_word[dir][y][x] === 'undefined'){continue;}
+                if (typeof position_in_word[dir][y][x] === 'undefined'){continue;} //not a word.
                 if ($PositionInWord[$x][$y][$dir] == 0){  //we are at start of word so there will be a number here
                     temp_puzzle[y][x] = $ThisSquareBelongsToWordNumber[$x][$y][$dir];
-                    //print"startofword $ThisSquareBelongsToWordNumber[$x][$y][$dir] x:$x y:$y dir:$dir\n";
                 }
 
+                //build a hover clue text for each square
+                word = all_masks_on_board[ this_square_belongs_to_word_number[dir][y][x] ][dir];
+                if (typeof word !== 'undefined'){
+                  if (dir == dir_across) {direction = 'Across';}
+                  if (dir == dir_down) {direction = 'Down';}
+                  //temp3 += "direction: $clues{$word} \n";
+                  //temp3 =~ s/[\'\"]//g; //remove quotes from title s it is in a tag
+                }
             }
+
+          temp4 = ""; //clear the soon to be choose() routine variable
+          var word_count = 0;
+          if (typeof $this_square_belongs_to_word_number[dir_across][y][x] !== 'undefined') {word_count++;} //horiz word here
+          if (typeof this_square_belongs_to_word_number[dir_down][y][x] !== 'undefined') {$word_count++;} //vert word here
+          var pre_text = '';
+          var post_text = '';
+          if (word_count == 2){pre_text = 'if (horiz_vert == 0) {'; post_text='}';}
+          //new
+          if (typeof this_square_belongs_to_word_number[dir_across][y][x] !== 'undefined'){
+                word_number = his_square_belongs_to_word_number[dir_across][y][x];
+                $word = $allMasksOnBoard[$wordNumber][dir_across];
+                $temp4 += `${pre_text}choose("${word}" , ${x} , ${y} , ${ letter_positions_of_word[word_number][dir_across] } ); ${post_text}`;
+          }
+          if (typeof this_square_belongs_to_word_number[dir_down][y][x] !== 'undefined'){
+                word_number = his_square_belongs_to_word_number[dir_down][y][x];
+                $word = $allMasksOnBoard[$wordNumber][dir_down];
+                $temp4 += `${pre_text}choose("${word}" , ${x} , ${y} , ${ letter_positions_of_word[word_number][dir_down] } ); ${post_text}`;
+          }
+
+        /*
+        if (word_count == 2){ //horiz and vert word here
+          var word_number = this_square_belongs_to_word_number[dir_across][y][x];
+          word = all_masks_on_board[word_number][dir_across];
+          //var word_letter_positions = letter_positions_of_word[word_number][dir_across];
+          $temp4 += `if (horiz_vert == 0) {choose("${word}" , ${x} , ${y} , ${ letter_positions_of_word[word_number][dir_across] } );} `;
+          word_number = this_square_belongs_to_word_number[dir_down][y][x];
+          word = all_masks_on_board[word_number][dir_down];
+          temp4 += `if (horiz_vert == 1) {choose( "${word}" , ${x} , ${y} , ${ letter_positions_of_word[word_number][dir_down] } );} `;
+
+        if ($wordcount == 1){ //horiz word here
+            //just choose the one word
+            if (typeof this_square_belongs_to_word_number[dir_across][y][x] !== 'undefined'){
+              word_number = his_square_belongs_to_word_number[dir_across][y][x];
+              $word = $allMasksOnBoard[$wordNumber][dir_across];
+              $temp4 += `choose("${word}" , ${x} , ${y} , ${ letter_positions_of_word[word_number][dir_across] } ); `;
+            }
+            if (typeof this_square_belongs_to_word_number[dir_down][y][x] !== 'undefined'){
+              word_number = his_square_belongs_to_word_number[dir_down][y][x];
+              $word = $allMasksOnBoard[$wordNumber][dir_down];
+              $temp4 += `choose("${word}" , ${x} , ${y} , ${ letter_positions_of_word[word_number][dir_down] } ); `;
+            }
+        }
+        */
+
+
+
+
+        }
+
+
+
+
         }
     }
 
@@ -589,11 +651,11 @@ for ($y = 0; $y < $in{height}; $y++)
                           $wordNumber = $ThisSquareBelongsToWordNumber[$x][$y][0];
                           $word = $allMasksOnBoard[$wordNumber][0];
                           $wordLetterPositions = &javascriptArrayFromLetterPositions(@{$letterPositionsOfWord[$wordNumber][0]});
-                          $temp4 .= qq|if (horizvert == 0) {choose("$word" , $x , $y , [$wordLetterPositions])};|;
+                          $temp4 .= qq|if (horiz_vert == 0) {choose("$word" , $x , $y , [$wordLetterPositions])};|;
                           $wordNumber = $ThisSquareBelongsToWordNumber[$x][$y][1];
                           $word = $allMasksOnBoard[$wordNumber][1];
                           $wordLetterPositions = &javascriptArrayFromLetterPositions(@{$letterPositionsOfWord[$wordNumber][1]});
-                          $temp4 .= qq|if (horizvert == 1) {choose("$word" , $x , $y , [$wordLetterPositions])};|;
+                          $temp4 .= qq|if (horiz_vert == 1) {choose("$word" , $x , $y , [$wordLetterPositions])};|;
                           }
                       if ($wordcount == 1) #horiz word here
                           {#just choose the one word
