@@ -66,7 +66,7 @@ function grid_change( file_name ){
 
   numberBlankSquares();
   var big_String = printPuzzle();
-  document.getElementById('show_puzzle').innerHTML = big_String;
+  document.getElementById('puzzle_place').innerHTML = big_String;
 
   tt = 9;
 }
