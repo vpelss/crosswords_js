@@ -272,6 +272,11 @@ oxxo</PRE></TD>
 		</TR>
 	  </TABLE></CENTER>
 
+<div id='show_puzzle'>
+
+</div>
+
+
 <SCRIPT>
 
 var pad_char = 'x';
@@ -340,6 +345,9 @@ function grid_change( file_name ){
   });
 
   numberBlankSquares();
+  var big_String = printPuzzle();
+  document.getElementById('show_puzzle').innerHTML = big_String;
+
   tt = 9;
 }
 
@@ -512,7 +520,7 @@ function loadWordList(){
 }
 
 function printPuzzle(){
-  var temp , temp2 , temp3;
+  var temp , temp2 , temp3 , temp4;
   var x , y , dir;
   var temp_puzzle = [];
   var word;
@@ -520,15 +528,15 @@ function printPuzzle(){
 
   temp = "<table cellspacing='0' cellpadding='0' CLASS='tableclass'>";
     for(y = 0; y < puzzle_height; y++){
-        $temp += "<tr>";
+        temp += "<tr>";
         for (x = 0; x < puzzle_width; x++){
             temp3 = '';
             if(typeof temp_puzzle[y] === 'undefined'){temp_puzzle[y] = [];}
             temp_puzzle[y][x] = puzzle[y][x]; //mimic filled in puzzle
             for (dir = 0 ; dir < 2 ; dir++){
                 if (typeof position_in_word[dir][y][x] === 'undefined'){continue;} //not a word.
-                if ($PositionInWord[$x][$y][$dir] == 0){  //we are at start of word so there will be a number here
-                    temp_puzzle[y][x] = $ThisSquareBelongsToWordNumber[$x][$y][$dir];
+                if (position_in_word[dir][y][x] == 0){  //we are at start of word so there will be a number here. place that number
+                    temp_puzzle[y][x] = this_square_belongs_to_word_number[dir][y][x];
                 }
 
                 //build a hover clue text for each square
@@ -543,7 +551,7 @@ function printPuzzle(){
 
           temp4 = ""; //clear the soon to be choose() routine variable
           var word_count = 0;
-          if (typeof $this_square_belongs_to_word_number[dir_across][y][x] !== 'undefined') {word_count++;} //horiz word here
+          if (typeof this_square_belongs_to_word_number[dir_across][y][x] !== 'undefined') {word_count++;} //horiz word here
           if (typeof this_square_belongs_to_word_number[dir_down][y][x] !== 'undefined') {$word_count++;} //vert word here
           var pre_text = '';
           var post_text = '';
@@ -551,14 +559,49 @@ function printPuzzle(){
           //new
           if (typeof this_square_belongs_to_word_number[dir_across][y][x] !== 'undefined'){
                 word_number = his_square_belongs_to_word_number[dir_across][y][x];
-                $word = $allMasksOnBoard[$wordNumber][dir_across];
-                $temp4 += `${pre_text}choose("${word}" , ${x} , ${y} , ${ letter_positions_of_word[word_number][dir_across] } ); ${post_text}`;
+                word = all_masks_on_board[word_number][dir_across];
+                temp4 += `${pre_text}choose("${word}" , ${x} , ${y} , ${ letter_positions_of_word[word_number][dir_across] } ); ${post_text}`;
           }
           if (typeof this_square_belongs_to_word_number[dir_down][y][x] !== 'undefined'){
                 word_number = his_square_belongs_to_word_number[dir_down][y][x];
-                $word = $allMasksOnBoard[$wordNumber][dir_down];
-                $temp4 += `${pre_text}choose("${word}" , ${x} , ${y} , ${ letter_positions_of_word[word_number][dir_down] } ); ${post_text}`;
+                 word = all_masks_on_board[word_number][dir_down];
+                temp4 += `${pre_text}choose("${word}" , ${x} , ${y} , ${ letter_positions_of_word[word_number][dir_down] } ); ${post_text}`;
           }
+          temp += "ToggleHV();";
+
+          //lay down table stuff here
+
+          //black square
+          if(puzzle[y][x] == pad_char){ //make sure our page width is fixed
+            temp += "<td CLASS='tdblackclass'><spacer width='20 pt'></td>";
+          }
+
+          //number square
+          if(typeof temp_puzzle[y][x] === 'number'){
+            temp += ` <TD VALIGN='TOP' ALIGN='LEFT' CLASS='tdnumberclass'>
+            <DIV  style='position: absolute; z-index: 2;'>${temp_puzzle[y][x]}</DIV>
+            <TABLE CELLPADDING="0" CELLSPACING="0">
+              <TBODY>
+                <TR>
+                <TD title='${temp3}' CLASS='tdwhiteclass' ID='cell_${x}_${y}'
+                ONCLICK='${temp4}' VALIGN='middle' WIDTH='20' ALIGN='center'
+                HEIGHT='25'>&nbsp;</TD>
+                </TR>
+              </TBODY>
+            </TABLE>
+            </TD> `;
+          }
+
+          //unoccupied square
+          if(typeof temp_puzzle[y][x] === 'string'){
+            temp += ` <td title='${temp3}' ID='cell_${x}_${y}' CLASS='tdwhiteclass' ONCLICK='${temp4}'>&nbsp;</td> `;
+            }
+        }
+    temp += "</tr>\n";
+    }
+temp += "</table>\n";
+return temp;
+}
 
         /*
         if (word_count == 2){ //horiz and vert word here
@@ -584,21 +627,6 @@ function printPuzzle(){
             }
         }
         */
-
-
-
-
-        }
-
-
-
-
-        }
-    }
-
-
-
-}
 
 /*
 
