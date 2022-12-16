@@ -22,6 +22,34 @@ var this_square_belongs_to_word_number = []; //this_square_belongs_to_word_numbe
 
 var all_masks_on_board = []; //all_masks_on_board[dir][word_number] returns the mask of letters that have been laid down. eg: XoLoooo
 
+main();
+function main(){
+
+//url arg processing
+const queryString = window.location.search;
+const urlParams = new URLSearchParams(queryString);
+
+if(! urlParams.has('wordfile')){
+		alert('Please call from main form.');
+		throw new Error('done');
+}
+
+var arg_grid =  urlParams.get('grid');
+grid_change( arg_grid );
+
+numberBlankSquares();
+
+var arg_wordfile = urlParams.get('wordfile');
+loadWordList( arg_wordfile );
+
+var big_String = printPuzzle();
+document.getElementById('puzzle_place').innerHTML = big_String;
+
+tt = 9;
+
+}
+
+
 function readStringFromFileAtPath(pathOfFileToReadFrom){
 	const request = new XMLHttpRequest();
 	request.addEventListener("error", function(){return 0;});
@@ -64,11 +92,6 @@ function grid_change( file_name ){
     }
   });
 
-  numberBlankSquares();
-  var big_String = printPuzzle();
-  document.getElementById('puzzle_place').innerHTML = big_String;
-
-  tt = 9;
 }
 
 function getLetters(currentValue , index) {
@@ -113,7 +136,7 @@ var word_pos = [];
       was_there_an_across_word = 0; //assume not
       for (dir = 0 ; dir < 2 ; dir++) { //#for both across 0 and down 1 words
         if(puzzle[y][x] == pad_char){continue;}
-        word_pos = getWordPos(x , y , dir);
+        word_pos = getWordLetterPositions(x , y , dir);
         if(word_pos){
           if( (word_pos[0][0] == x) && (word_pos[0][1] == y) ){//first letter in word?
              word_length = word_pos.length;
@@ -177,11 +200,9 @@ var pad_cells = 0;
     console.log(currentValue);
    });
 
-   loadWordList();
-
 }
 
-function getWordPos(x,y,dir){
+function getWordLetterPositions(x,y,dir){
   var dx,dy;
   var xx = x , yy = y;
   var letter_pos = [];
@@ -217,9 +238,9 @@ function getDxDy(dir){
 return [dx,dy];
 }
 
-function loadWordList(){
+function loadWordList( arg_wordfile ){
     var the_text;
-    var db = document.querySelector('input[name="wordfile"]:checked').value;
+    var db = arg_wordfile;
     var wl = Object.keys(word_lengths);
       wl.forEach(function(currentValue){
         var file_and_path = './wordlists/' + db + '/words/' + currentValue + '.txt';
@@ -287,7 +308,7 @@ function printPuzzle(){
                  word = all_masks_on_board[dir_down][word_number];
                 temp4 += `${pre_text}choose("${word}" , ${x} , ${y} , ${ letter_positions_of_word[dir_down][word_number] } ); ${post_text}`;
           }
-          temp += "ToggleHV();";
+          temp4 += "ToggleHV();";
 
           //lay down table stuff here
 
@@ -312,8 +333,8 @@ function printPuzzle(){
             </TD> `;
           }
 
-          //unoccupied square
-          if(typeof temp_puzzle[y][x] === 'string'){
+          //unoccupied square, but not a pad_char
+          if( (typeof temp_puzzle[y][x] === 'string') && (temp_puzzle[y][x] != pad_char) ){
             temp += ` <td title='${temp3}' ID='cell_${x}_${y}' CLASS='tdwhiteclass' ONCLICK='${temp4}'>&nbsp;</td> `;
             }
         }

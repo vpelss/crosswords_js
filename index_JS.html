@@ -140,7 +140,7 @@ overflow:auto;
 							  </TR>
 							  <TR>
 								<TD VALIGN="TOP">
-								  <SELECT id="grid" NAME="grid" SIZE="6" onchange="grid_change(this.value);">
+								  <SELECT id="grid" NAME="grid" SIZE="6">
 									<OPTION VALUE="3x3"
 									 CLASS="gridOption">Double Word Squares - no black squares</OPTION>
 									<OPTION VALUE="3x3">3x3</OPTION>
@@ -377,16 +377,6 @@ oxxo</PRE></TD>
 		</TR>
 	  </TABLE></CENTER>
 
-
-
-
-<SCRIPT src='./crosswords.js'/>
-
-
-
-
-
-
 <script>
 var gridsvar = 'These are some standard pre-generated grids. See below if you want to contribute other grids.';
 var britishgridsvar = 'This will generate a random British style grid (double spaced). Nothe that it is not symetrical.';
@@ -396,90 +386,7 @@ var optimumbacktrackvar = 'Optimal Backtrack vastly speeds up the search by remo
 var slowdownvar = 'Only use this if you want to see the walk in slow time. It is not useful in generating crosswords.';
 var shufflevar = 'If unchecked, it will try to lay words down in alphabetic order. So it will generate the same puzzle each time. It is not useful in generating crosswords. It is only usefull if you want to replicate a crossword generation scenario.';
 var simplewordmaskvar = 'This lets the recursion figure out if the crossing words will play nice. Although is speeds up the words layed per second, it is slower overall.';
+</script>
 
-//get processing.txt often
-function Get_Processing()
-        {
-        // Assign handlers immediately after making the request,
-        //and remember the jqxhr object for this request
-        var d = new Date();
-        var tm = d.getTime();
-        var jqxhr = $.get( "./processing.txt?" + tm
-                               , function(){ $("#PrintProcessing").html( jqxhr.responseText ); }
-                                           , "html"
-                                          )
-                                          //.done(function() {} )
-                                //.always(function() { //alert( "finished"); })
-                                 .fail(function() { $("#PrintProcessing").html( '...no other crosswords running...' ); } );
-        //setTimeout( "Get_Processing();" , 1000 ); //keep the ball rolling
-        }
-
-//get results.txt often
-function Get_Results()
-        {
-        // Assign handlers immediately after making the request,
-        //and remember the jqxhr object for this request
-        var d = new Date();
-        var tm = d.getTime();
-        var jqxhr = $.get( "./results.txt?" + tm
-                               , function(){ $("#PrintResults").html( jqxhr.responseText ); }
-                                           , "html"
-                                          )
-                                          //.done(function() {} )
-                                //.always(function() { //alert( "finished"); })
-                                .fail(function() { $("#PrintResults").html( 'no results file' ); } );
-        //setTimeout( "Get_Results();" , 1000 ); //keep the ball rolling
-        }
-
-// Attach a submit handler to the MyForm
-$( "#StartForm" ).submit(
-                                                function(event)
-                                                        {
-                                                        // Stop form from submitting normally
-                                                        event.preventDefault();
-                                                        // Get some values from elements on the page:
-                                                        var $form = $( this ) , term = $form.serialize(), url = $form.attr( "action" );
-                                                        // Send the data using post
-                                                        var posting = $.post( url, term );
-                                                        posting.done(
-                                                                                function( data )
-                                                                                        {
-                                                                                        //$("#PrintResult").html( data );
-                                                                                        alert(data);
-                                                                                        }
-                                                                                );
-                                                        posting.fail(
-                                                                                function( data )
-                                                                                        {
-                                                                                        //$("#PrintResult").html( data );
-                                                                                        alert(data);
-                                                                                        }
-                                                                                );
-                                                        //$("#PrintResult").html( 'Wait for it.....' ); #starts output directed to #PrintResult
-                                                        }
-                                                );
-
-function pause(milliseconds) {
-        var dt = new Date();
-        while ((new Date()) - dt <= milliseconds) { /* Do nothing */ }
-        }
-
-// Attach a        submit handler to the EraseForm
-$( "#EraseForm" ).submit( function( event )
-                                               {
-                                               // Stop form from submitting normally
-                                               event.preventDefault();
-                                               // Get some        values from elements on the page:
-                                               var $form = $( this ), term = $form.serialize(), url = $form.attr( "action" );
-                                               // Send the data using post
-                                               var posting = $.post( url, term );
-                                               posting.success( function(data){alert(data);} );
-                                               posting.fail( function( data ){ alert(data); } );
-                                               //alert('Stalled crossword erased');
-                                               posting.done( function( data ){ asd = data; } );
-                                               }
-                                       );
-//var timer1 = setInterval("Get_Processing();",1000); //start ball rolling
-//var timer2 = setInterval( "Get_Results();" , 1000 ); //start the ball rolling
-</SCRIPT> </BODY>
+ </BODY>
 </HTML>
