@@ -14,6 +14,8 @@ var puzzle_height;
 var dir_across = 0;
 var dir_down = 1;
 var word_lengths = {}; //wordLengths[wordLength] = 1 ; so we have a list of word sizes = object.keys(wordLengths);
+var words_of_length = {}; //a count of the number of words of length x : words_of_length[x]
+
 //key orders should be [dir][yy][xx] for readability when troubleshooting !!!!!!!!!!!!!!!!!!!
 var letter_positions_of_word = []; //letter_positions_of_word[dir][word_number] returns [ ofLetterPositions ];
 var position_in_word = []; //position_in_word[dir][yy][xx] = position_count
@@ -21,6 +23,8 @@ var position_in_word = []; //position_in_word[dir][yy][xx] = position_count
 var this_square_belongs_to_word_number = []; //this_square_belongs_to_word_number[dir][yy][xx]
 
 var all_masks_on_board = []; //all_masks_on_board[dir][word_number] returns the mask of letters that have been laid down. eg: XoLoooo
+
+var walkpath = '';
 
 main();
 function main(){
@@ -40,7 +44,8 @@ grid_change( arg_grid );
 numberBlankSquares();
 
 var arg_wordfile = urlParams.get('wordfile');
-loadWordList( arg_wordfile );
+var arg_walkpath = urlParams.get('walkpath');
+loadWordList( arg_wordfile , arg_walkpath);
 
 var big_String = printPuzzle();
 document.getElementById('puzzle_place').innerHTML = big_String;
@@ -238,21 +243,33 @@ function getDxDy(dir){
 return [dx,dy];
 }
 
-function loadWordList( arg_wordfile ){
+function loadWordList( arg_wordfile , arg_walkpath){
     var the_text;
     var db = arg_wordfile;
     var wl = Object.keys(word_lengths);
-      wl.forEach(function(currentValue){
-        var file_and_path = './wordlists/' + db + '/words/' + currentValue + '.txt';
-        the_text = readStringFromFileAtPath(file_and_path);
+      wl.forEach(function(word_length){
+        var file_and_path = './wordlists/' + db + '/words/' + word_length + '.txt';
+        var word_list_text = readStringFromFileAtPath(file_and_path);
         //still need to process
-        //$wordsOfLength{$wordLength}++
+								var word_list_array = word_list_text.split(/\r?\n|\r|\n/g); //split on lines into array
+								if( word_list_array[word_list_array.length-1].trim() == '' ){
+										lines.pop();
+										}//remove last line if empty
+
+								words_of_length[word_length] = 	word_list_array.length;
+								//process word_list_array
+								word_list_array.forEach( function(){
 
         //choose which one based on word or letter search
+        if( arg_walkpath.includes('Letter') ){//letter walk
+										//$linearWordSearch{mask}
+								}
+								else{//word walk
+										//wordsOfLengthString
+								}
 
-        //wordsOfLengthString
+									});
 
-        //$linearWordSearch{mask}
 
       });
 
@@ -266,6 +283,9 @@ function printPuzzle(){
   var temp_puzzle = [];
   var word;
   var direction;
+		var word_count = 0;
+  var pre_text = '';
+  var post_text = '';
 
   temp = "<table cellspacing='0' cellpadding='0' CLASS='tableclass'>";
     for(y = 0; y < puzzle_height; y++){
@@ -291,23 +311,32 @@ function printPuzzle(){
             }
 
           temp4 = ""; //clear the soon to be choose() routine variable
-          var word_count = 0;
+          //var word_count = 0;
           if (typeof this_square_belongs_to_word_number[dir_across][y][x] !== 'undefined') {word_count++;} //horiz word here
           if (typeof this_square_belongs_to_word_number[dir_down][y][x] !== 'undefined') {word_count++;} //vert word here
-          var pre_text = '';
-          var post_text = '';
-          if (word_count == 2){pre_text = 'if (horiz_vert == 0) {'; post_text='}';}
+
+          //if (word_count == 2){
+											//pre_text = 'if (horiz_vert == 0) {';
+											//post_text='};';
+											//}
           //new
-          if (typeof this_square_belongs_to_word_number[dir_across][y][x] !== 'undefined'){
-                word_number = this_square_belongs_to_word_number[dir_across][y][x];
-                word = all_masks_on_board[dir_across][word_number];
+										for (dir = 0 ; dir < 2 ; dir++){
+											/*	if (typeof this_square_belongs_to_word_number[dir][y][x] !== 'undefined'){
+                word_number = this_square_belongs_to_word_number[dir][y][x];
+                word = all_masks_on_board[dir][word_number];
                 temp4 += `${pre_text}choose("${word}" , ${x} , ${y} , ${ letter_positions_of_word[dir_across][word_number] } ); ${post_text}`;
-          }
-          if (typeof this_square_belongs_to_word_number[dir_down][y][x] !== 'undefined'){
-                word_number = this_square_belongs_to_word_number[dir_down][y][x];
-                 word = all_masks_on_board[dir_down][word_number];
-                temp4 += `${pre_text}choose("${word}" , ${x} , ${y} , ${ letter_positions_of_word[dir_down][word_number] } ); ${post_text}`;
-          }
+												}*/
+												if (word_count == 2){
+														pre_text = `if (horiz_vert == ${dir}) {`;
+														post_text='};';
+														}
+												if (typeof this_square_belongs_to_word_number[dir][y][x] !== 'undefined'){
+                word_number = this_square_belongs_to_word_number[dir][y][x];
+                 word = all_masks_on_board[dir][word_number];
+																var letter_positions_of_word_json =  JSON.stringify( letter_positions_of_word[dir][word_number] );
+                temp4 += `${pre_text}choose("${word}" , ${x} , ${y} , ${letter_positions_of_word_json}); ${post_text}`;
+												}
+										}
           temp4 += "ToggleHV();";
 
           //lay down table stuff here
@@ -415,3 +444,217 @@ my $tt = time() - $t;
 if ($debug ) {print "$lineCount lines and $wordCount words loaded in $tt sec \n\n";}
 }
 */
+
+//--------------------------------------
+
+
+
+var forever = new Date('October 17, 2030 03:24:00'); //use in cookies
+//var isAClickableClass['tdwordselectedclass'] = 1;
+//isAClickableClass['tdwhiteclass'] = 1;
+var isAClickableClass = {tdwordselectedclass:1 , tdwhiteclass:1 , tdselectedclass:1};
+
+function SetCellsFromCookies()
+{
+	var theCookies = document.cookie.split(';');
+    var aString = '';
+    for (var i = 0 ; i < theCookies.length ; i++) {
+		var mycookie = theCookies[i].split('=');
+		var theletter = mycookie[1];
+		theletter = theletter.trim();
+		var thecell = mycookie[0];
+		thecell = thecell.trim();
+		//is it a cell???
+		if (mycookie[0].indexOf("cell") != -1) {
+			document.getElementById(thecell).innerHTML = theletter;
+			}
+   }
+}
+
+function gup( name )
+{
+  name = name.replace(/[\[]/,"\\\[").replace(/[\]]/,"\\\]");
+  var regexS = "[\\?&]"+name+"=([^&#]*)";
+  var regex = new RegExp( regexS );
+  var results = regex.exec( window.location.href );
+  if( results == null )
+    return "";
+  else
+    return results[1];
+}
+
+var browserType;
+if (document.layers) {browserType = "nn4";}
+if (document.all) {browserType = "ie";}
+if (window.navigator.userAgent.toLowerCase().match("gecko")) {browserType= "gecko";}
+
+function hide2(szDivID)
+{
+document.getElementById(szDivID).style.display =  "none";
+}
+
+function show2(szDivID)
+{
+document.getElementById(szDivID).style.display = "inline";
+}
+
+function doSaveAs(){
+		if (browserType != "ie") {alert("Not IE. You must right click and select 'Save page as...'");}
+		if (document.execCommand) {document.execCommand("SaveAs");}
+}
+
+
+var startx ; //based on word #1 across or down
+var starty ;
+if(typeof letter_positions_of_word[dir_across][1]){
+	starty = letter_positions_of_word[dir_across][1][0][0][0];
+	startx = letter_positions_of_word[dir_across][1][0][0][1];
+}
+else{
+	starty = letter_positions_of_word[dir_down][1][0][0][0];
+	startx = letter_positions_of_word[dir_down][1][0][0][1];
+}
+
+var LetterPosArray = new Array(startx,starty);
+var OldLetterPosArray = new Array(startx,starty);
+var horiz_vert = 0; //0 is  horiz 1 is vert
+var OldClue = '';
+var CurrentFocus = ''; //ID Name  where letters will be inserted
+var CurrentClass = 'tdwhiteclass'; //for remembering the class to return the square too
+var NthPosition = 0; //so we can find the next square to type a letter into
+var CurrentPos = new Array(startx,starty); //CURRENTLY HIGLIGHTED BOX COORDINATES
+
+function ToggleHV()
+{
+if (horiz_vert == 0) {horiz_vert=1;}
+else {horiz_vert=0;}
+}
+
+function ClearBox(cell)
+{
+if (CurrentFocus != "") {document.getElementById(CurrentFocus).className = CurrentClass;} //restore the class name to white
+}
+
+function HighlightBox(cell)
+{
+CurrentClass = document.getElementById(cell).className; //store the class name of the square in the process of being focused
+document.getElementById(cell).className = 'tdselectedclass'; //select/focus the square
+CurrentFocus = document.getElementById(cell).getAttribute('ID');
+}
+
+function HighlightNextBox()
+{
+var xpos = CurrentPos[0];
+var ypos = CurrentPos[1];
+var cell = "cell_" + xpos + "_" + ypos;
+
+ClearBox(cell);
+NthPosition = NthPosition + 2;
+if (NthPosition >= LetterPosArray.length) {NthPosition = 0;}
+xpos = LetterPosArray[NthPosition];
+ypos = LetterPosArray[NthPosition+1];
+cell = "cell_" + xpos + "_" + ypos;
+HighlightBox(cell);
+}
+
+function HighlightClue(theword)
+{
+if (OldClue != "")
+        {document.getElementById(OldClue).className = 'cluesCleared';} //clear old clue
+document.getElementById(theword).className = 'cluesSelected'; //select/focus the clue
+OldClue = theword;
+}
+
+function HighlightWord(LetterPosArrayArg)
+{
+	var t;
+//white out old word
+for (i = 0; i < OldLetterPosArray.length; i = i + 2)
+        {
+        t = "cell_" + OldLetterPosArray[i] + "_" + OldLetterPosArray[i+1];
+        document.getElementById(t).className = 'tdwhiteclass';
+        }
+//set current word to old word so we can white it out later
+OldLetterPosArray = LetterPosArrayArg.slice();
+//highlight the current word
+for (i = 0; i < LetterPosArrayArg.length; i = i + 2)
+        {
+        t = "cell_" + LetterPosArrayArg[i] + "_" + LetterPosArrayArg[i+1];
+        document.getElementById(t).className = 'tdwordselectedclass';
+        }
+}
+
+function FindNthPosition(xpos,ypos,LetterPosArrayArg)
+{
+for (i = 0; i < LetterPosArrayArg.length; i = i + 2)
+        {
+        if ( (xpos == LetterPosArrayArg[i]) && (ypos == LetterPosArrayArg[i+1]) ) {return(i);}
+        }
+}
+
+function choose(word , xpos , ypos , LetterPosArrayArg)
+{
+CurrentPos = [xpos,ypos];
+//CurrentPos = [LetterPosArrayArg[0],LetterPosArrayArg[1]];
+var cell = "cell_" + xpos + "_" + ypos; //generate text class ID for the chosen square
+ClearBox(cell);//clear old box
+LetterPosArray = LetterPosArrayArg.slice();
+HighlightClue(word);
+HighlightWord(LetterPosArray);
+HighlightBox(cell);
+NthPosition = FindNthPosition(xpos,ypos,LetterPosArray);
+}
+
+//---------------------------------------
+
+	function send_cell_update(k)
+	{
+//first see if it is an arrow key
+var xpos = CurrentPos[0];
+var ypos = CurrentPos[1];
+//move cell. if square is clickable run document.getElementById(cell).onclick() and return, else,return
+if (k == 37) { xpos-- ;} //left
+if (k == 38) { ypos-- ;} //up
+if (k == 39) { xpos++ ;} //right
+if (k == 40) { ypos++ ;} //down
+if (k == 191) {  } // forward slash. just change horiz and vert
+if ( (k == 37) || (k == 38) || (k == 39) || (k == 40) || (k == 191) ) { //arrow keys
+	 cell = "cell_" + xpos + "_" + ypos;
+	 if (isAClickableClass[document.getElementById(cell).className] == 1) {
+	 	document.getElementById(cell).onclick();
+		return false;
+		}
+    else {return false;}
+	 }
+
+//no arrow keys. lay the letter
+var letter = String.fromCharCode(k);
+document.getElementById(CurrentFocus).innerHTML = letter;//place keystroke on crossword
+setCookie(CurrentFocus , letter , forever , '' , '' , ''); //CurrentFocus = cell_x_y
+HighlightNextBox();//go to next box
+}
+
+function CreateBookmarkLink()
+	{
+	var title = "Crossword game %game%";
+	var url = "%archiveurl%/%uid%/%game%";
+	if (window.sidebar)
+ 		{ // Mozilla Firefox Bookmark
+		window.sidebar.addPanel(title, url,"");
+		}
+	else if( window.external )
+		{ // IE Favorite
+		window.external.AddFavorite( url, title);
+		}
+	else if(window.opera && window.print)
+		{ // Opera Hotlist
+		return true;
+		}
+ 	}
+
+
+		//-------------------------------------
+
+
+//hide2('Answers');
+//SetCellsFromCookies();
