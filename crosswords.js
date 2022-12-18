@@ -15,6 +15,8 @@ var dir_across = 0;
 var dir_down = 1;
 var word_lengths = {}; //wordLengths[wordLength] = 1 ; so we have a list of word sizes = object.keys(wordLengths);
 var words_of_length = {}; //a count of the number of words of length x : words_of_length[x]
+var words_of_length_string = {}; // ,word1,word2, etc
+var linear_word_search = {}; // linear_word_search[WORo] = next letter
 
 //key orders should be [dir][yy][xx] for readability when troubleshooting !!!!!!!!!!!!!!!!!!!
 var letter_positions_of_word = []; //letter_positions_of_word[dir][word_number] returns [ ofLetterPositions ];
@@ -244,7 +246,6 @@ return [dx,dy];
 }
 
 function loadWordList( arg_wordfile , arg_walkpath){
-    var the_text;
     var db = arg_wordfile;
     var wl = Object.keys(word_lengths);
       wl.forEach(function(word_length){
@@ -253,26 +254,39 @@ function loadWordList( arg_wordfile , arg_walkpath){
         //still need to process
 								var word_list_array = word_list_text.split(/\r?\n|\r|\n/g); //split on lines into array
 								if( word_list_array[word_list_array.length-1].trim() == '' ){
-										lines.pop();
+										word_list_array.pop();
 										}//remove last line if empty
 
 								words_of_length[word_length] = 	word_list_array.length;
 								//process word_list_array
-								word_list_array.forEach( function(){
+								words_of_length_string[word_length] = ''; //start blank
+								word_list_array.forEach( function(word){
 
         //choose which one based on word or letter search
         if( arg_walkpath.includes('Letter') ){//letter walk
 										//$linearWordSearch{mask}
+										var word_length = word.length;
+										var mask_pre = '';
+										var mask = '';
+										for (var char of word) {
+												mask_pre += char;
+												if(mask_pre.length == word_length){
+														continue;
+														}
+												mask = mask_pre.padEnd(word_length , unoccupied);
+												linear_word_search[mask] = char;
+										}
+
 								}
 								else{//word walk
-										//wordsOfLengthString
+										words_of_length_string[word_length] = words_of_length_string[word_length] + ',' + word.toUpperCase();
 								}
 
 									});
 
 
       });
-
+				word_list_text = ''; //cleanup
     ii = 9;
 
 }
@@ -656,5 +670,5 @@ function CreateBookmarkLink()
 		//-------------------------------------
 
 
-//hide2('Answers');
+hide2('Answers');
 //SetCellsFromCookies();
