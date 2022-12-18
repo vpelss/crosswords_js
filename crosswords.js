@@ -27,6 +27,12 @@ var this_square_belongs_to_word_number = []; //this_square_belongs_to_word_numbe
 var all_masks_on_board = []; //all_masks_on_board[dir][word_number] returns the mask of letters that have been laid down. eg: XoLoooo
 
 var walkpath = '';
+var mode = ''; //letter or word
+
+var nextLetterPositionsOnBoard = [];
+// all letter position on board used for cycling through letter placements, etc
+// [{x => $x, y => $y} , , ]
+// nextLetterPositionsOnBoard[]{x} NextWordPositionsOnBoard[]{y}
 
 main();
 function main(){
@@ -49,13 +55,93 @@ var arg_wordfile = urlParams.get('wordfile');
 var arg_walkpath = urlParams.get('walkpath');
 loadWordList( arg_wordfile , arg_walkpath);
 
-var big_String = printPuzzle();
-document.getElementById('puzzle_place').innerHTML = big_String;
+//word paths
+//letter walks
+if (arg_walkpath == 'GenerateNextLetterPositionsOnBoardZigZag'){
+		generateNextLetterPositionsOnBoardZigZag();
+  mode = 'letter';
+  rr = 9;
+  }
+if (arg_walkpath == 'GenerateNextLetterPositionsOnBoardFlat'){
+		generateNextLetterPositionsOnBoardFlat();
+  mode = 'letter';
+  rr = 9;
+  }
 
-tt = 9;
+//word walks
 
+
+
+var puzzle_string = printPuzzle();
+document.getElementById('puzzle_place').innerHTML = puzzle_string;
 }
 
+
+function generateNextLetterPositionsOnBoardZigZag(){
+		//create a top right to bottom left list in which we will lay down words. FIFO
+		//zigzag alternate top right to bottom left then bottom left to top right
+		var x = 1;
+		var y = -1;
+		var divX = -1;
+		var divY = 1;
+
+		nextLetterPositionsOnBoard = [];
+		do {
+				//move cursor
+				x = x + divX;
+				y = y + divY;
+				//test cursor position
+				if ( (x < 0) && (y >= puzzle_height) ) {//bottom left corner
+						divX = -divX; divY = -divY; //change directions
+						x = 1;
+						y = puzzle_height - 1;
+				}
+				if ( (x >= puzzle_width) && (y < 0) ) {//top right corner
+						divX = -divX; divY = -divY; //change directions
+						x = puzzle_width - 1;
+						y = 1;
+				}
+				if (x < 0){//off left
+						divX = -divX; divY = -divY; //change directions
+						x = 0;
+				}
+				if (y < 0){//off top
+						divX = -divX; divY = -divY; //change directions
+						y = 0;
+				}
+				if (x >=  puzzle_width){//off right
+						divX = -divX; divY = -divY; //change directions
+						x =  puzzle_width - 1;
+						y = y + 2;
+				}
+				if (y >=  puzzle_height){//off bottom
+									divX = -divX; divY = -divY; //change directions
+									x =  x + 2;
+									y = puzzle_height - 1;
+									}
+				//process cursor position
+				if (puzzle[y][x] != pad_char){
+						nextLetterPositionsOnBoard.push([x,y]);
+				}
+  } 	while( (x != puzzle_width - 1) && (y != puzzle_height - 1) );
+		//until ( ($x == $in{width} - 1) and ($y == $in{height} - 1) );
+		tt = 9;
+}
+
+function generateNextLetterPositionsOnBoardFlat(){
+//create right to left top to bottom list in which we will lay down words. FIFO
+		var x = 0;
+		var y = 0;
+
+		nextLetterPositionsOnBoard = [];
+		for (y = 0 ; y < puzzle_height ; y++){
+     for (x = 0 ; x < puzzle_width ; x++){
+							if (puzzle[y][x] != pad_char){
+									nextLetterPositionsOnBoard.push([x,y]);
+       }
+     }
+  }
+}
 
 function readStringFromFileAtPath(pathOfFileToReadFrom){
 	const request = new XMLHttpRequest();
@@ -128,14 +214,14 @@ function numberBlankSquares(){
 //letterPositionsOfWord[$numberCount][$dir] = [TempLetterPositions];
 //all_masks_on_board[$numberCount][$dir] = $blankWord;
 
-var x , xx;
-var y , yy;
+var x;
+var y;
 var word_length;
 var word_number = 0;
 var was_there_an_across_word = 0; //
 var blank_word = '';
 var dir;
-var word_pos = [];
+var word_letter_positions_array = [];
 
 //label all grid squares with data
   for (y = 0 ; y < puzzle_height ; y++) {
@@ -143,29 +229,29 @@ var word_pos = [];
       was_there_an_across_word = 0; //assume not
       for (dir = 0 ; dir < 2 ; dir++) { //#for both across 0 and down 1 words
         if(puzzle[y][x] == pad_char){continue;}
-        word_pos = getWordLetterPositions(x , y , dir);
-        if(word_pos){
-          if( (word_pos[0][0] == x) && (word_pos[0][1] == y) ){//first letter in word?
-             word_length = word_pos.length;
+        word_letter_positions_array = getWordLetterPositions(x , y , dir);
+        if(word_letter_positions_array){
+          if( (word_letter_positions_array[0][0] == x) && (word_letter_positions_array[0][1] == y) ){//first letter in word?
+             word_length = word_letter_positions_array.length;
              word_lengths[word_length] = 1; //mark globally that there is a word of this length
              if(! was_there_an_across_word ) word_number++; //allows us to not increase count if across and down share first letter pos
              was_there_an_across_word = 1;
              //set letter_positions_of_word[$numberCount][$dir] = [TempLetterPositions];
              if(typeof letter_positions_of_word[dir] === 'undefined' ){letter_positions_of_word[dir] = [];}
-             letter_positions_of_word[dir][word_number] = JSON.parse(JSON.stringify(word_pos)); //deep copy multi dim array
+             letter_positions_of_word[dir][word_number] = JSON.parse(JSON.stringify(word_letter_positions_array)); //deep copy multi dim array
              //set all_masks_on_board[dir][word_number] = 'ooooooooo';
              blank_word = blank_word.padEnd(word_length , unoccupied);
              if(typeof all_masks_on_board[dir] === 'undefined' ){all_masks_on_board[dir] = [];}
              all_masks_on_board[dir][word_number] = blank_word;
              //set position_in_word , this_square_belongs_to_word_number
-             word_pos.forEach(function(currentValue , index){
-                   //set position_in_word for all word_pos in this word
-                   xx = currentValue[0];
-                   yy = currentValue[1];
+             word_letter_positions_array.forEach(function(currentValue , index){
+                   //set position_in_word for all word_letter_positions_array in this word
+                   var xx = currentValue[0];
+                   var yy = currentValue[1];
                    if(typeof position_in_word[dir] === 'undefined' ){position_in_word[dir] = [];}
                    if(typeof position_in_word[dir][yy] === 'undefined' ){position_in_word[dir][yy] = [];}
                    position_in_word[dir][yy][xx] = index;
-                   //set this_square_belongs_to_word_number[dir][yy][xx] for all word_pos in this word
+                   //set this_square_belongs_to_word_number[dir][yy][xx] for all word_letter_positions_array in this word
                    if(typeof this_square_belongs_to_word_number[dir] === 'undefined' ){this_square_belongs_to_word_number[dir] = [];}
                    if(typeof this_square_belongs_to_word_number[dir][yy] === 'undefined' ){this_square_belongs_to_word_number[dir][yy] = [];}
                    this_square_belongs_to_word_number[dir][yy][xx] = word_number;
@@ -476,23 +562,6 @@ function SetCellsFromCookies()
 			}
    }
 }
-
-function gup( name )
-{
-  name = name.replace(/[\[]/,"\\\[").replace(/[\]]/,"\\\]");
-  var regexS = "[\\?&]"+name+"=([^&#]*)";
-  var regex = new RegExp( regexS );
-  var results = regex.exec( window.location.href );
-  if( results == null )
-    return "";
-  else
-    return results[1];
-}
-
-var browserType;
-if (document.layers) {browserType = "nn4";}
-if (document.all) {browserType = "ie";}
-if (window.navigator.userAgent.toLowerCase().match("gecko")) {browserType= "gecko";}
 
 function hide2(szDivID)
 {
