@@ -261,34 +261,26 @@ function loadWordList( arg_wordfile , arg_walkpath){
 								//process word_list_array
 								words_of_length_string[word_length] = ''; //start blank
 								word_list_array.forEach( function(word){
-
-        //choose which one based on word or letter search
-        if( arg_walkpath.includes('Letter') ){//letter walk
-										//$linearWordSearch{mask}
-										var word_length = word.length;
-										var mask_pre = '';
-										var mask = '';
-										for (var char of word) {
-												mask_pre += char;
-												if(mask_pre.length == word_length){
-														continue;
-														}
-												mask = mask_pre.padEnd(word_length , unoccupied);
-												linear_word_search[mask] = char;
+										if( arg_walkpath.includes('Letter') ){//letter walk
+												var mask_pre = '';
+												var mask = '';
+												var letters_array = word.split('');
+												letters_array.forEach( function( letter , index ) {
+														mask_pre += letter;
+														if(index + 1 == word_length){	return; }//skip last letter
+														mask = mask_pre.padEnd(word_length , unoccupied);
+														if(typeof linear_word_search[mask] == 'undefined'){ linear_word_search[mask] = {}; } //create on first access
+														var next_letter = letters_array[index+1];
+														linear_word_search[mask][next_letter] = 1; //letter list will be accessible by object.keys()
+												});
+										}
+										else{//word walk
+												words_of_length_string[word_length] = words_of_length_string[word_length] + ',' + word.toUpperCase();
 										}
 
-								}
-								else{//word walk
-										words_of_length_string[word_length] = words_of_length_string[word_length] + ',' + word.toUpperCase();
-								}
-
 									});
-
-
       });
 				word_list_text = ''; //cleanup
-    ii = 9;
-
 }
 
 function printPuzzle(){
