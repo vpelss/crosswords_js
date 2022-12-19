@@ -34,6 +34,11 @@ var nextLetterPositionsOnBoard = [];
 // [{x => $x, y => $y} , , ]
 // nextLetterPositionsOnBoard[]{x} NextWordPositionsOnBoard[]{y}
 
+var next_word_on_board = []; //next_word_on_board = [ [word_number , dir] , [] , ... ]
+//all words position on board used for cycling through word placements, etc
+// [{wordNumber => $wordNumber, dir => $dir},{},{}...]
+//$nextWordOnBoard[]{wordNumber} $nextWordOnBoard[]{dir}
+
 main();
 function main(){
 
@@ -55,27 +60,99 @@ var arg_wordfile = urlParams.get('wordfile');
 var arg_walkpath = urlParams.get('walkpath');
 loadWordList( arg_wordfile , arg_walkpath);
 
-//word paths
+//word walks
+if (arg_walkpath == 'GenerateNextWordPositionsOnBoardCrossing'){
+		generateNextWordPositionsOnBoardCrossing();
+  mode = 'word';
+  }
+
 //letter walks
 if (arg_walkpath == 'GenerateNextLetterPositionsOnBoardZigZag'){
 		generateNextLetterPositionsOnBoardZigZag();
   mode = 'letter';
-  rr = 9;
   }
 if (arg_walkpath == 'GenerateNextLetterPositionsOnBoardFlat'){
 		generateNextLetterPositionsOnBoardFlat();
   mode = 'letter';
-  rr = 9;
   }
-
-//word walks
-
-
 
 var puzzle_string = printPuzzle();
 document.getElementById('puzzle_place').innerHTML = puzzle_string;
 }
 
+function generateNextWordPositionsOnBoardCrossing(){
+		//tart with 1 horiz.
+		//ind all crossing words
+	//find all their crossing words.
+		//only add # and direction once!
+		//FIFO
+
+		//get my @WordLetterPositions = @{$letterPositionsOfWord[$wordNumber][$dir]}
+		//used to find crossing words fast with @ThisSquareBelongsToWordNumber
+
+		var word_letter_positions = [];
+		var already_in_list = {}; // already_in_list[number][direction] = 1 if already in list
+		var word_number = 1;
+		var dir = 0;
+
+		if (typeof all_masks_on_board[dir][word_number] === 'undefined' ) {$dir = 1;}// no horizontal #1 word. go vertical
+		var to_do_list = []; //list of words and directions to process. ((1,0) , (2,0) , .... ) shift off and push on so we do in an orderly fasion!
+		to_do_list.push( [word_number , dir] );
+		if(typeof already_in_list[dir] === 'undefined'){already_in_list[dir] = {};}
+		already_in_list[dir][word_number] = 1;
+		next_word_on_board.push( [word_number , dir] );
+		while ( to_do_list.length > 0 ){
+										[word_number , dir] = to_do_list.shift();
+										var crossing_words = getCrossingWords( word_number , dir );
+										while ( scalar @crossingWords > 0 )
+																		{
+																		($wordNumber , $dir) = @{ shift @crossingWords };
+																		if ( $alreadyInList{$wordNumber}{$dir} == 1)
+																							{
+																							next;
+																							}
+																		push @toDoList , [$wordNumber , $dir];
+																		push @nextWordOnBoard , {wordNumber => $wordNumber, dir => $dir};
+																		$alreadyInList{$wordNumber}{$dir} = 1;
+																		}
+										}
+		foreach my $item (@nextWordOnBoard)
+											{
+											if ($debug ) {print "($item->{wordNumber},$item->{dir})";}
+											}
+}
+
+function getCrossingWords()
+{
+//input: word number and direction
+//output: [[$crossingWordNumber,$crossingWordDir],[$crossingWordNumber,$crossingWordDir],[$crossingWordNumber,$crossingWordDir],...]
+
+my @crossingWords;
+my $wordNumber = $_[0];
+my $dir = $_[1];
+
+my $x;
+my $y;
+my $crossingWordDir;
+my $letterPosition;
+my $crossingWordNumber;
+
+my @wordLetterPositions = @{$letterPositionsOfWord[$wordNumber][$dir]};
+foreach $letterPosition (@wordLetterPositions)
+  {
+  $x = $letterPosition->[0];
+  $y = $letterPosition->[1];
+  $crossingWordDir =  $OppositeDirection[$dir];
+
+  #find and mark crossing words
+  $crossingWordNumber = $ThisSquareBelongsToWordNumber[$x][$y][$crossingWordDir];
+  if ( $crossingWordNumber > 0 )
+        {
+        push @crossingWords , [$crossingWordNumber,$crossingWordDir];
+        }
+    }
+return @crossingWords;
+}
 
 function generateNextLetterPositionsOnBoardZigZag(){
 		//create a top right to bottom left list in which we will lay down words. FIFO
@@ -123,9 +200,7 @@ function generateNextLetterPositionsOnBoardZigZag(){
 				if (puzzle[y][x] != pad_char){
 						nextLetterPositionsOnBoard.push([x,y]);
 				}
-  } 	while( (x != puzzle_width - 1) && (y != puzzle_height - 1) );
-		//until ( ($x == $in{width} - 1) and ($y == $in{height} - 1) );
-		tt = 9;
+  } 	while( (x != puzzle_width - 1) || (y != puzzle_height - 1) );
 }
 
 function generateNextLetterPositionsOnBoardFlat(){
