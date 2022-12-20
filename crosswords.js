@@ -61,7 +61,7 @@ var arg_walkpath = urlParams.get('walkpath');
 loadWordList( arg_wordfile , arg_walkpath);
 
 //word walks
-if (arg_walkpath == 'GenerateNextWordPositionsOnBoardCrossing'){
+if (arg_walkpath == 'crossingwords'){
 		generateNextWordPositionsOnBoardCrossing();
   mode = 'word';
   }
@@ -81,24 +81,24 @@ document.getElementById('puzzle_place').innerHTML = puzzle_string;
 }
 
 function generateNextWordPositionsOnBoardCrossing(){
-		//tart with 1 horiz.
-		//ind all crossing words
+		//start with 1 horiz.
+		//find all crossing words
 	//find all their crossing words.
 		//only add # and direction once!
 		//FIFO
 
 		//get my @WordLetterPositions = @{$letterPositionsOfWord[$wordNumber][$dir]}
 		//used to find crossing words fast with @ThisSquareBelongsToWordNumber
-
-		var word_letter_positions = [];
 		var already_in_list = {}; // already_in_list[number][direction] = 1 if already in list
+		already_in_list[dir_across] = {};
+		already_in_list[dir_down] = {};
 		var word_number = 1;
 		var dir = 0;
 
 		if (typeof all_masks_on_board[dir][word_number] === 'undefined' ) {$dir = 1;}// no horizontal #1 word. go vertical
 		var to_do_list = []; //list of words and directions to process. ((1,0) , (2,0) , .... ) shift off and push on so we do in an orderly fasion!
 		to_do_list.push( [word_number , dir] );
-		if(typeof already_in_list[dir] === 'undefined'){already_in_list[dir] = {};}
+		//if(typeof already_in_list[dir] === 'undefined'){already_in_list[dir] = {};}
 		already_in_list[dir][word_number] = 1;
 		next_word_on_board.push( [word_number , dir] );
 		while ( to_do_list.length > 0 ){
@@ -106,11 +106,13 @@ function generateNextWordPositionsOnBoardCrossing(){
 					var crossing_words = getCrossingWords( word_number , dir );
 					while ( crossing_words.length > 0 ){
 							[word_number , dir] =crossing_words.shift();
-							if ( already_in_list[dir][word_number] == 1){
+							//if(typeof already_in_list[dir] === 'undefined'){already_in_list[dir] = {};}
+							if (typeof already_in_list[dir][word_number] !== 'undefined'){
 												continue;
-							}
+							}//already added. skip
 							to_do_list.push( [word_number , dir] );
 							next_word_on_board.push( [word_number , dir] );
+							if(typeof already_in_list[dir] === 'undefined'){already_in_list[dir] = {};}
 							already_in_list[dir][word_number] = 1;
 					}
 		}
@@ -119,7 +121,7 @@ function generateNextWordPositionsOnBoardCrossing(){
 function getCrossingWords(word_number, dir) {
 	//input: word number and direction
 	//output: [[crossing_word_number,crossing_word_number],[crossing_word_number,crossing_word_number], ...]
-	var crossing_words;
+	var crossing_words = [];
 	var x;
 	var y;
 	var crossing_word_number;
