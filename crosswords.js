@@ -102,58 +102,42 @@ function generateNextWordPositionsOnBoardCrossing(){
 		already_in_list[dir][word_number] = 1;
 		next_word_on_board.push( [word_number , dir] );
 		while ( to_do_list.length > 0 ){
-										[word_number , dir] = to_do_list.shift();
-										var crossing_words = getCrossingWords( word_number , dir );
-										while ( scalar @crossingWords > 0 )
-																		{
-																		($wordNumber , $dir) = @{ shift @crossingWords };
-																		if ( $alreadyInList{$wordNumber}{$dir} == 1)
-																							{
-																							next;
-																							}
-																		push @toDoList , [$wordNumber , $dir];
-																		push @nextWordOnBoard , {wordNumber => $wordNumber, dir => $dir};
-																		$alreadyInList{$wordNumber}{$dir} = 1;
-																		}
-										}
-		foreach my $item (@nextWordOnBoard)
-											{
-											if ($debug ) {print "($item->{wordNumber},$item->{dir})";}
-											}
+				[word_number , dir] = to_do_list.shift();
+					var crossing_words = getCrossingWords( word_number , dir );
+					while ( crossing_words.length > 0 ){
+							[word_number , dir] =crossing_words.shift();
+							if ( already_in_list[dir][word_number] == 1){
+												continue;
+							}
+							to_do_list.push( [word_number , dir] );
+							next_word_on_board.push( [word_number , dir] );
+							already_in_list[dir][word_number] = 1;
+					}
+		}
 }
 
-function getCrossingWords()
-{
-//input: word number and direction
-//output: [[$crossingWordNumber,$crossingWordDir],[$crossingWordNumber,$crossingWordDir],[$crossingWordNumber,$crossingWordDir],...]
+function getCrossingWords(word_number, dir) {
+	//input: word number and direction
+	//output: [[crossing_word_number,crossing_word_number],[crossing_word_number,crossing_word_number], ...]
+	var crossing_words;
+	var x;
+	var y;
+	var crossing_word_number;
 
-my @crossingWords;
-my $wordNumber = $_[0];
-my $dir = $_[1];
+	var word_letter_positions = letter_positions_of_word[dir][word_number];
+	word_letter_positions.forEach(function(letter_position) {
+		x = letter_position[0];
+		y = letter_position[1];
+		crossing_word_dir = 1 - dir;
 
-my $x;
-my $y;
-my $crossingWordDir;
-my $letterPosition;
-my $crossingWordNumber;
-
-my @wordLetterPositions = @{$letterPositionsOfWord[$wordNumber][$dir]};
-foreach $letterPosition (@wordLetterPositions)
-  {
-  $x = $letterPosition->[0];
-  $y = $letterPosition->[1];
-  $crossingWordDir =  $OppositeDirection[$dir];
-
-  #find and mark crossing words
-  $crossingWordNumber = $ThisSquareBelongsToWordNumber[$x][$y][$crossingWordDir];
-  if ( $crossingWordNumber > 0 )
-        {
-        push @crossingWords , [$crossingWordNumber,$crossingWordDir];
-        }
-    }
-return @crossingWords;
+		//find and mark crossing words
+		crossing_word_number = this_square_belongs_to_word_number[crossing_word_dir][y][x];
+		if (crossing_word_number > 0) {
+			crossing_words.push([crossing_word_number, crossing_word_dir]);
+		}
+	});
+	return crossing_words;
 }
-
 function generateNextLetterPositionsOnBoardZigZag(){
 		//create a top right to bottom left list in which we will lay down words. FIFO
 		//zigzag alternate top right to bottom left then bottom left to top right
