@@ -10,22 +10,42 @@ Emogic's Crossword Generation Algorithm \ulnone\b0\f1\fs24\par
 \f0\fs20 It is intended more as a tool to study the various ways that algorithms can generate crossword puzzles and the differences between them.\f1\fs24\par
 \f0\fs20 It is not intended to generate New York Times quality puzzles. \f1\fs24\par
 \f0\fs20\par
-See: "Design and Implementation of Crossword Compilation Programs Using Serial Approaches" (CCP) {\lang255{\field{\*\fldinst{HYPERLINK http://thesis.cambon.dk/ }}{\fldrslt{http://thesis.cambon.dk/\ul0\cf0}}}}\f0\fs20  for many of the concepts mentioned in this text. If you want to create your own crossword generator script,it is a great place to start. That site has sample code in C. I do disagree that a letter search is as good (or equivalent) to a word search. In a logical sense it is, but not in a practical sense. Letter searches take longer to discover we have chosen a wrong path copared to full word searches. Thus there will likely be more cycles burned on a letter search.\par
+See: "Design and Implementation of Crossword Compilation Programs Using Serial Approaches" (CCP). It was at {\lang255{\field{\*\fldinst{HYPERLINK http://thesis.cambon.dk/ }}{\fldrslt{http://thesis.cambon.dk/\ul0\cf0}}}}\f0\fs20 . But that site no longer exists. The author has granted permission for me to post it on my github. I have used many of the concepts mentioned in his thesis. If you want to create your own crossword generator script,it is a great place to start. The thisis has sample code in C. \par
+\par
+It has been suggested that a letter by letter search is as good (or equivalent) to a word by word search. In a logical sense it is, but not in a practical sense. Yes a letter search can mimic a word search. But letter searches take longer to discover dead ends in the search space, compared to full word searches. So unless your letter search is minicing a word search, there will likely be many more CPU cycles burned on a letter search.\par
 \par
 \ul Why PERL?\ulnone\f1\fs24\par
 \f0\fs20\par
 PERL is not known for it's speed. It also has a higher memory overhead for variable management. But it does have a few benefits. Regular expressions are powerful and fast. Hash variables (associative array) allow for an easy way to eliminate duplicate values and make it easy to search and look-up values.\f1\fs24\par
 \f0\fs20\par
-PERL is ubiquitous. PERL is elegant. PERL is, in my opinion, organic. I just like PERL.\f1\fs24\par
-\f0\fs20\par
+PERL is ubiquitous. PERL is elegant. PERL is, in my opinion, organic. I just like PERL.\par
+\par
 My new Crossword Source Code is at:\f1\fs24\par
 {\f0\fs20{\field{\*\fldinst{HYPERLINK https://github.com/vpelss/crosswords }}{\fldrslt{https://github.com/vpelss/crosswords\ul0\cf0}}}}\f1\fs24\par
-\f0\fs20 The word lists are not included. A wonderful one is at  {{\field{\*\fldinst{HYPERLINK www.otsys.com/clue }}{\fldrslt{www.otsys.com/clue\ul0\cf0}}}}\f0\fs20  but it must be modified to work with my code.\f1\fs24\par
-\f0\fs20 My code is commented. But I make no apologies if it makes no sense to you. \f1\fs24\par
-\f0\fs20 No free support will be given.\f1\fs24\par
 \f0\fs20\par
-You can download the code for my old British style Crossword Generator at {{\field{\*\fldinst{HYPERLINK https://www.emogic.com/store/free_crossword_script }}{\fldrslt{https://www.emogic.com/store/free_crossword_script\ul0\cf0}}}}\f0\fs20 . No free support will be given.\f1\fs24\par
+The word lists are not included. A wonderful one was at  {{\field{\*\fldinst{HYPERLINK www.otsys.com/clue }}{\fldrslt{www.otsys.com/clue\ul0\cf0}}}}\f0\fs20  (now: {{\field{\*\fldinst{HYPERLINK https://tiwwdty.com/clue/ }}{\fldrslt{https://tiwwdty.com/clue/\ul0\cf0}}}}\f0\fs20 ).\par
+There was a plain text database there in the past, but it is no longer provided. \par
+You could petition the author, Matt Ginsburg, if he is still a member at:\par
+{{\field{\*\fldinst{HYPERLINK https://www.cruciverb.com/ }}{\fldrslt{https://www.cruciverb.com/\ul0\cf0}}}}\f0\fs20\par
+Cruciverb is a great source for infomation also. The community is very freindly.\par
+\par
+My code is commented. \par
+I make no apologies if it makes no sense to you. \f1\fs24\par
 \f0\fs20\par
+You can download the code for my old British style Crossword Generator at: {{\field{\*\fldinst{HYPERLINK https://www.emogic.com/store/free_crossword_script }}{\fldrslt{https://www.emogic.com/store/free_crossword_script\ul0\cf0}}}}\f0\fs20 . \f1\fs24\par
+\f0\fs20\par
+\ul What, a Javascript Version Too?\ulnone\par
+\par
+Why a Script version? Well it is ubiquitous also. \par
+\par
+I also wanted to compare the speed with my Perl version.\par
+\par
+Converting my Perl code to JS also gave me a chance to revisit my code to see if it could be improved or modified.\par
+\par
+JS associative arrays are not as easy to use and flexible as the Perl hash, but Perl is awsome. So unless I had to use an associative array I convered most of the data structures to arrays. \par
+\par
+Note that the JS version downloads the database from my site, the files are not stored locally.\par
+\par
 \ul Some things I have learned\ulnone\f1\fs24\par
 \f0\fs20\par
 1. The bigger the word database the better.\f1\fs24\par

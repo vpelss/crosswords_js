@@ -39,6 +39,22 @@ var next_word_on_board = []; //next_word_on_board = [ [word_number , dir] , [] ,
 // [{wordNumber => $wordNumber, dir => $dir},{},{}...]
 //$nextWordOnBoard[]{wordNumber} $nextWordOnBoard[]{dir}
 
+#optimal search variables
+var wordNumberDirUsed; //$wordNumberDirUsed{$wordNumber}{$dir} so we only backtrack or note words that have been filled
+var naiveBacktrack; //a counter
+var optimalBacktrack; //a counter
+var touchingWordsForBackTrack; //global as we need to backtrack to the first  member of it we encounter. if not == () we are in a backtrack state!
+var targetWordsForBackTrack; //global as we need to backtrack to the first  member of it we encounter. if $targetWordsForBackTrack{# source}{dir source} == undef there are NO targets!
+//eg $targetWordsForBackTrack{$wordNumberSource}{$dirSource}{$crossingWordNumber}{$crossingWordDir}
+
+//rule 1. All letters in the horizontal and vertical words (up to the failed letter) can affect the failure of laying a letter
+//rule 2. All crossing words of both the horizontal and vertical words of the failed letter can affect the failure of laying a letter
+//rule 3 Remove shadows by only keeping the intersection of rule 1 and 2
+//rule 3 is ignored (> 1) and is nor (> 0) as it fails (over prunes) on British style crosswords
+//# eg: $targetLettersForBackTrack{x failed letter}{y failed letter}{x}{y} > 0 #pregenerated for speed!
+var target_letters_for_backtrack; //global as we need to backtrack to the first  member of it we encounter. if $targetLettersForBackTrack{x failed letter}{y failed letter} == undef there are NO targets!
+
+
 main();
 function main(){
 
@@ -76,6 +92,10 @@ if (arg_walkpath == 'Generatenext_letter_position_on_boardFlat'){
   mode = 'letter';
   }
 
+
+// is simplewordmasksearch=on
+var arg_simplewordmasksearch = urlParams.get('simplewordmasksearch');
+
 var arg_optimalbacktrack = urlParams.get('optimalbacktrack');
 if( arg_optimalbacktrack ){
      calculateOptimalBacktracks();
@@ -105,10 +125,12 @@ var dir;
 var up_to_current_word;
 var up_to_current_word_temp;
 var word_positions;
+var next_letter_positions_on_board_temp = JSON.parse( JSON.stringify( next_letter_positions_on_board ) ); //backup as we are going to tear it up
+var next_word_on_board_temp = JSON.parse( JSON.stringify( next_word_on_board ) ); //backup as we are going to tear it up
 
 if (mode == "letter") {
-     while (next_letter_positions_on_board.length != 0) {
-            cell_position = next_letter_positions_on_board.shift(); //remove next letter position
+     while (next_letter_positions_on_board_temp.length != 0) {
+            cell_position = next_letter_positions_on_board_temp.shift(); //remove next letter position
             x = cell_position[0];
             y = cell_position[1];
 
@@ -127,43 +149,50 @@ if (mode == "letter") {
             up_to_xy_temp = JSON.parse( JSON.stringify(up_to_xy) ); //maintain @upToXY
             up_to_xy_temp.pop(); //remove the square we are on, as it will never be a bactrack target. it is the source
             var trigger = true ; //assume no optimal backtrack targets
-            foreach my $item (@upToXYTemp) { //try and prove wrong
-                    $xx = ${$item}{x};
-                    $yy = ${$item}{y};
-                    if ( $targetLettersForBackTrack{$x}{$y}{$xx}{$yy} != undef ) {
-                        $trigger = 0; #found at least one target
-                        last;
-                        }
-                    }
-            if ($trigger == 1) {
-                 undef $targetLettersForBackTrack{$x}{$y}; #set to undef so it will alet us later there are no backtrack targets.
-                 if ($debug) { print "optimal fail at $x $y no backtrack targets. \$targetLettersForBackTrack{$x}{$y} now equals $targetLettersForBackTrack{$x}{$y}\n"};
+						up_to_xy_temp.forEach(function( item ){
+							if(trigger == false){return;}//skip the rest. We already found a target
+							xx = item[0];
+              yy = item[1];
+              //if ( target_letters_for_backtrack{$x}{$y}{$xx}{$yy} != undef ) {
+              if (typeof target_letters_for_backtrack["{x}_{y}_{xx}_{yy}"] != 'undefined') {
+								trigger = false; //found at least one target
+              }
+						});
+
+            if (trigger == true) {
+							target_letters_for_backtrack = undefined; //set to undef so it will alet us later there are no backtrack targets.
+                 //if ($debug) { print "optimal fail at $x $y no backtrack targets. \$targetLettersForBackTrack{$x}{$y} now equals $targetLettersForBackTrack{$x}{$y}\n"};
                  }
             }
-     @next_letter_position_on_board = @upToXY; #IMPORTANT restore @next_letter_position_on_board
+     //next_letter_position_on_board = @upToXY; //IMPORTANT restore @next_letter_position_on_board
      }
 
-if ($in{mode} eq 'word') {
-     while (scalar @nextWordOnBoard != 0) {
-            %wordPosition =  %{ shift @nextWordOnBoard }; #keep in subroutine unchaged as we may need to unshift on a recursive return
-            $wordNumber = $wordPosition{wordNumber};
-            $dir = $wordPosition{dir};
-            push @upToCurrentWord , {%wordPosition} ;  # put it on @upToCurrentWord
-            if ($debug) {print "Word # $wordNumber dir $dir\n"}
-            #increase $targetWordsForBackTrack for all crossing words
-            &MarkTargetBackTrackWordsThatCross($wordNumber,$dir,$wordNumber,$dir);
+if (mode == 'word') {
+     while (next_word_on_board_temp.length != 0) {
+            word_position =  next_word_on_board_temp.shift(); //keep in subroutine unchaged as we may need to unshift on a recursive return
+            word_number = word_position[0];
+            dir = word_position[1];
+            up_to_current_word.push( word_position );  //put it on @upToCurrentWord
+            //if ($debug) {print "Word # $wordNumber dir $dir\n"}
+            //increase $targetWordsForBackTrack for all crossing words
+            markTargetBackTrackWordsThatCross( word_number , dir , word_number , dir);
 
-            #increase $targetWordsForBackTrack for all crossing words that crossed our words
-            #ignore double crossing if simple mask search
-            if (not $in{simplewordmasksearch}) {
-                if ($debug) {print "crossing\n "}
-                @wordPositions = &GetCrossingWords($wordNumber,$dir);
+            //increase $targetWordsForBackTrack for all crossing words that crossed our words
+            //ignore double crossing if simple mask search
+            if ( ! arg_simplewordmasksearch ) {
+                //if ($debug) {print "crossing\n "}
+                word_positions = getCrossingWords(word_number,dir);
+								word_positions.forEach(function( word_position ){
+
+								});
+
                 foreach my $wordPosition (@wordPositions) {
                      my $wordNumberCrossing = ${$wordPosition}[0];
                      my $dirCrossing = ${$wordPosition}[1];
                      if ($debug) {print "for word letter pos $xx $yy : "}
                      &MarkTargetBackTrackWordsThatCross($wordNumber,$dir,$wordNumberCrossing,$dirCrossing);
                      }
+
                 if ($debug) {print "\n\n"}
                 }
 
@@ -220,6 +249,32 @@ foreach  $letterPosition (@wordLetterPositions) {
          }
 if ($debug ) {print "\n"}
 return  @wordLetterPositions;
+}
+
+function markTargetBackTrackWordsThatCross()
+{
+#input: word number and direcction
+#find all crossing words and for each:
+#output: global hash (quick access) of words number and direction of words that are backtrack targets
+# $targetWordsForBackTrack{# of source}{dir of source}{# target}{dir target} = 1
+
+my $wordNumberSource = $_[0];
+my $dirSource = $_[1];
+
+my $wordNumber = $_[2];
+my $dir = $_[3];
+
+my @crossingWords;
+my $crossingWord;
+my $crossingWordDir;
+my $crossingWordNumber;
+
+@crossingWords = &GetCrossingWords($wordNumber,$dir);
+foreach $crossingWord (@crossingWords)  {
+         $crossingWordNumber = ${$crossingWord}[0];
+         $crossingWordDir = $OppositeDirection[$dir];
+         $targetWordsForBackTrack{$wordNumberSource}{$dirSource}{$crossingWordNumber}{$crossingWordDir}++;
+         }
 }
 
 function generateNextWordPositionsOnBoardCrossing(){
