@@ -183,18 +183,12 @@ if (mode == 'word') {
                 //if ($debug) {print "crossing\n "}
                 word_positions = getCrossingWords(word_number,dir);
 								word_positions.forEach(function( word_position ){
-
+									var word_number_crossing = word_position[0];
+                  dir_crossing = word_position[1];
+                  //if ($debug) {print "for word letter pos $xx $yy : "}
+                  markTargetBackTrackWordsThatCross(word_number,dir,word_number_crossing,dir_crossing);
 								});
-
-                foreach my $wordPosition (@wordPositions) {
-                     my $wordNumberCrossing = ${$wordPosition}[0];
-                     my $dirCrossing = ${$wordPosition}[1];
-                     if ($debug) {print "for word letter pos $xx $yy : "}
-                     &MarkTargetBackTrackWordsThatCross($wordNumber,$dir,$wordNumberCrossing,$dirCrossing);
-                     }
-
-                if ($debug) {print "\n\n"}
-                }
+            }
 
             #Walk back from # dir if no optimal targets, then optimal will not work here. So delete %targetWordsForBackTrack{#}{dir}
             @upToCurrentWordTemp = @upToCurrentWord; #maintain @upToCurrentWord
