@@ -29,10 +29,10 @@ var all_masks_on_board = []; //all_masks_on_board[dir][word_number] returns the 
 var walkpath = '';
 var mode = ''; //letter or word
 
-var nextLetterPositionsOnBoard = [];
+var next_letter_position_on_board = [];
 // all letter position on board used for cycling through letter placements, etc
 // [{x => $x, y => $y} , , ]
-// nextLetterPositionsOnBoard[]{x} NextWordPositionsOnBoard[]{y}
+// next_letter_position_on_board[]{x} NextWordPositionsOnBoard[]{y}
 
 var next_word_on_board = []; //next_word_on_board = [ [word_number , dir] , [] , ... ]
 //all words position on board used for cycling through word placements, etc
@@ -67,12 +67,12 @@ if (arg_walkpath == 'crossingwords'){
   }
 
 //letter walks
-if (arg_walkpath == 'GenerateNextLetterPositionsOnBoardZigZag'){
-		generateNextLetterPositionsOnBoardZigZag();
+if (arg_walkpath == 'Generatenext_letter_position_on_boardZigZag'){
+		generatenext_letter_position_on_boardZigZag();
   mode = 'letter';
   }
-if (arg_walkpath == 'GenerateNextLetterPositionsOnBoardFlat'){
-		generateNextLetterPositionsOnBoardFlat();
+if (arg_walkpath == 'Generatenext_letter_position_on_boardFlat'){
+		generatenext_letter_position_on_boardFlat();
   mode = 'letter';
   }
 
@@ -85,7 +85,7 @@ var puzzle_string = printPuzzle();
 document.getElementById('puzzle_place').innerHTML = puzzle_string;
 }
 
-function CalculateOptimalBacktracks(){
+function calculateOptimalBacktracks(){
 //touchingWordsForBackTrack; #global as we need to backtrack to the first  member of it we encounter. if not == () we are in a backtrack state!
 
 //rule 1. All letters in the horizontal and vertical words (up to the failed letter) can affect the failure of laying a letter
@@ -94,7 +94,7 @@ function CalculateOptimalBacktracks(){
 //targetLettersForBackTrack{x failed letter}{y failed letter}{x}{y} = 1 #pre-generated for speed!
 var x , y , xx , yy , letter_position;
 var up_to_xy; //this will be the shifter part we will check to see if there is an
-      //optimal target in the backtrack. We need 2 as one needs to be pristine so we can reassign it to @nextLetterPositionsOnBoard
+      //optimal target in the backtrack. We need 2 as one needs to be pristine so we can reassign it to @next_letter_position_on_board
 var up_to_xy_temp ;
 var word_letter_positions;
 var cell_position;
@@ -108,28 +108,26 @@ var word_positions;
 
 if (mode == "letter") {
      while (next_letter_positions_on_board.length != 0) {
-            $cellPosition =  shift @nextLetterPositionsOnBoard ; #remove next letter position
-            $x = ${$cellPosition}{x};
-            $y = ${$cellPosition}{y};
-            #push @upToXY , {x => $x , y => $y};  # put it on @upToXY
-            push @upToXY , $cellPosition;  # put it on @upToXY
-            if ($debug) {print "Letter Pos $x,$y dir $dir\n"}
-            #increase $targetLettersForBackTrack for all letter positions in word
-            @wordLetterPositions = &MarktargetLettersForBackTrackFromWordLetterPositions($x,$y,$x,$y,$dir);
-            #increase $targetLettersForBackTrack for all letter positions in crossing words
-            if ($debug) {print "crossing\n "}
-            foreach $letterPosition (@wordLetterPositions) {
-                     $xx = $letterPosition->[0];
-                     $yy = $letterPosition->[1];
-                     if ($debug) {print "for word letter pos $xx $yy : "}
-                     &MarktargetLettersForBackTrackFromWordLetterPositions($x , $y , $xx , $yy , $OppositeDirection[$dir]);
-                     }
-            if ($debug) {print "\n\n"}
-            #Walk back from $x , $y if no optimal targets, then optimal will not work here. So delete %targetLettersForBackTrack{$x}{$y}
-            @upToXYTemp = @upToXY; #maintain @upToXY
-            pop @upToXYTemp; #remove the square we are on, as it will never be a bactrack target. it is the source
-            my $trigger = 1 ; #assume no optimal backtrack targets
-            foreach my $item (@upToXYTemp) { #try and prove wrong
+            cell_position = next_letter_positions_on_board.shift(); //remove next letter position
+            x = cell_position[0];
+            y = cell_position[1];
+
+            up_to_xy.push( cell_position);  // put it on @upToXY
+            //increase $targetLettersForBackTrack for all letter positions in word
+            word_letter_positions = markTargetLettersForBackTrackFromWordLetterPositions(x,y,x,y,$dir);
+            //increase $targetLettersForBackTrack for all letter positions in crossing words
+            //if ($debug) {print "crossing\n "}
+						word_letter_positions.forEach(function( letter_position ){
+							xx = letter_position[0];
+              yy = letter_position[1];
+              //if ($debug) {print "for word letter pos $xx $yy : "}
+              markTargetLettersForBackTrackFromWordLetterPositions(x , y , xx , yy , 1-dir);
+						});
+            //Walk back from $x , $y if no optimal targets, then optimal will not work here. So delete %targetLettersForBackTrack{$x}{$y}
+            up_to_xy_temp = JSON.parse( JSON.stringify(up_to_xy) ); //maintain @upToXY
+            up_to_xy_temp.pop(); //remove the square we are on, as it will never be a bactrack target. it is the source
+            var trigger = true ; //assume no optimal backtrack targets
+            foreach my $item (@upToXYTemp) { //try and prove wrong
                     $xx = ${$item}{x};
                     $yy = ${$item}{y};
                     if ( $targetLettersForBackTrack{$x}{$y}{$xx}{$yy} != undef ) {
@@ -142,7 +140,7 @@ if (mode == "letter") {
                  if ($debug) { print "optimal fail at $x $y no backtrack targets. \$targetLettersForBackTrack{$x}{$y} now equals $targetLettersForBackTrack{$x}{$y}\n"};
                  }
             }
-     @nextLetterPositionsOnBoard = @upToXY; #IMPORTANT restore @nextLetterPositionsOnBoard
+     @next_letter_position_on_board = @upToXY; #IMPORTANT restore @next_letter_position_on_board
      }
 
 if ($in{mode} eq 'word') {
@@ -190,6 +188,38 @@ if ($in{mode} eq 'word') {
             }
      @nextWordOnBoard  = @upToCurrentWord; #IMPORTANT restore @nextWordOnBoard
      }
+}
+
+function markTargetLettersForBackTrackFromWordLetterPositions(){
+//MarktargetLettersForBackTrackFromWordLetterPositions(x opt start , y opt start , x calc , y calc , dir calc)
+//input start with $x,$y for optimized start position and $x $y for calculation start position and letter position and $dir
+//increase value in global $targetLettersForBackTrack{$x}{$y}{$xx}{$yy}
+//return word letter positions [[x0,y0],[x1,y1],.....]
+
+my $x = shift @_;
+my $y = shift @_;
+my $xx = shift @_;
+my $yy = shift @_;
+my $dir = shift @_;
+
+my ($xxx , $yyy , $letterPosition);
+
+my $wordNumber;
+my @wordLetterPositions;
+
+$wordNumber = $ThisSquareBelongsToWordNumber[$xx][$yy][$dir];
+if ($wordNumber == undef) {return()}
+@wordLetterPositions = @{$letterPositionsOfWord[$wordNumber][$dir]};
+
+if ($debug) {print "letter positions:\n"}
+foreach  $letterPosition (@wordLetterPositions) {
+         $xxx = $letterPosition->[0];
+         $yyy = $letterPosition->[1];
+         $targetLettersForBackTrack{$x}{$y}{$xxx}{$yyy}++ ;
+         if ($debug ) {print "\$targetLettersForBackTrack{$x}{$y}{$xxx}{$yyy}  = $targetLettersForBackTrack{$x}{$y}{$xxx}{$yyy}\n"}
+         }
+if ($debug ) {print "\n"}
+return  @wordLetterPositions;
 }
 
 function generateNextWordPositionsOnBoardCrossing(){
@@ -252,7 +282,7 @@ function getCrossingWords(word_number, dir) {
 	});
 	return crossing_words;
 }
-function generateNextLetterPositionsOnBoardZigZag(){
+function generatenext_letter_position_on_boardZigZag(){
 		//create a top right to bottom left list in which we will lay down words. FIFO
 		//zigzag alternate top right to bottom left then bottom left to top right
 		var x = 1;
@@ -260,7 +290,7 @@ function generateNextLetterPositionsOnBoardZigZag(){
 		var divX = -1;
 		var divY = 1;
 
-		nextLetterPositionsOnBoard = [];
+		next_letter_position_on_board = [];
 		do {
 				//move cursor
 				x = x + divX;
@@ -296,21 +326,21 @@ function generateNextLetterPositionsOnBoardZigZag(){
 									}
 				//process cursor position
 				if (puzzle[y][x] != pad_char){
-						nextLetterPositionsOnBoard.push([x,y]);
+						next_letter_position_on_board.push([x,y]);
 				}
   } 	while( (x != puzzle_width - 1) || (y != puzzle_height - 1) );
 }
 
-function generateNextLetterPositionsOnBoardFlat(){
+function generatenext_letter_position_on_boardFlat(){
 //create right to left top to bottom list in which we will lay down words. FIFO
 		var x = 0;
 		var y = 0;
 
-		nextLetterPositionsOnBoard = [];
+		next_letter_position_on_board = [];
 		for (y = 0 ; y < puzzle_height ; y++){
      for (x = 0 ; x < puzzle_width ; x++){
 							if (puzzle[y][x] != pad_char){
-									nextLetterPositionsOnBoard.push([x,y]);
+									next_letter_position_on_board.push([x,y]);
        }
      }
   }
