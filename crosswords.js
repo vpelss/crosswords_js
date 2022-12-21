@@ -57,9 +57,9 @@ grid_change( arg_grid );
 numberBlankSquares();
 
 var arg_wordfile = urlParams.get('wordfile');
-var arg_walkpath = urlParams.get('walkpath');
 loadWordList( arg_wordfile , arg_walkpath);
 
+var arg_walkpath = urlParams.get('walkpath');
 //word walks
 if (arg_walkpath == 'crossingwords'){
 		generateNextWordPositionsOnBoardCrossing();
@@ -76,8 +76,120 @@ if (arg_walkpath == 'GenerateNextLetterPositionsOnBoardFlat'){
   mode = 'letter';
   }
 
+var arg_optimalbacktrack = urlParams.get('optimalbacktrack');
+if( arg_optimalbacktrack ){
+     calculateOptimalBacktracks();
+     }
+
 var puzzle_string = printPuzzle();
 document.getElementById('puzzle_place').innerHTML = puzzle_string;
+}
+
+function CalculateOptimalBacktracks(){
+//touchingWordsForBackTrack; #global as we need to backtrack to the first  member of it we encounter. if not == () we are in a backtrack state!
+
+//rule 1. All letters in the horizontal and vertical words (up to the failed letter) can affect the failure of laying a letter
+//rule 2. All crossing words of both the horizontal and vertical words of the failed letter can affect the failure of laying a letter
+//rule 3 Remove shadows by only keeping the intersection of rule 1 and 2
+//targetLettersForBackTrack{x failed letter}{y failed letter}{x}{y} = 1 #pre-generated for speed!
+var x , y , xx , yy , letter_position;
+var up_to_xy; //this will be the shifter part we will check to see if there is an
+      //optimal target in the backtrack. We need 2 as one needs to be pristine so we can reassign it to @nextLetterPositionsOnBoard
+var up_to_xy_temp ;
+var word_letter_positions;
+var cell_position;
+
+var word_position;
+var word_number;
+var dir;
+var up_to_current_word;
+var up_to_current_word_temp;
+var word_positions;
+
+if (mode == "letter") {
+     while (next_letter_positions_on_board.length != 0) {
+            $cellPosition =  shift @nextLetterPositionsOnBoard ; #remove next letter position
+            $x = ${$cellPosition}{x};
+            $y = ${$cellPosition}{y};
+            #push @upToXY , {x => $x , y => $y};  # put it on @upToXY
+            push @upToXY , $cellPosition;  # put it on @upToXY
+            if ($debug) {print "Letter Pos $x,$y dir $dir\n"}
+            #increase $targetLettersForBackTrack for all letter positions in word
+            @wordLetterPositions = &MarktargetLettersForBackTrackFromWordLetterPositions($x,$y,$x,$y,$dir);
+            #increase $targetLettersForBackTrack for all letter positions in crossing words
+            if ($debug) {print "crossing\n "}
+            foreach $letterPosition (@wordLetterPositions) {
+                     $xx = $letterPosition->[0];
+                     $yy = $letterPosition->[1];
+                     if ($debug) {print "for word letter pos $xx $yy : "}
+                     &MarktargetLettersForBackTrackFromWordLetterPositions($x , $y , $xx , $yy , $OppositeDirection[$dir]);
+                     }
+            if ($debug) {print "\n\n"}
+            #Walk back from $x , $y if no optimal targets, then optimal will not work here. So delete %targetLettersForBackTrack{$x}{$y}
+            @upToXYTemp = @upToXY; #maintain @upToXY
+            pop @upToXYTemp; #remove the square we are on, as it will never be a bactrack target. it is the source
+            my $trigger = 1 ; #assume no optimal backtrack targets
+            foreach my $item (@upToXYTemp) { #try and prove wrong
+                    $xx = ${$item}{x};
+                    $yy = ${$item}{y};
+                    if ( $targetLettersForBackTrack{$x}{$y}{$xx}{$yy} != undef ) {
+                        $trigger = 0; #found at least one target
+                        last;
+                        }
+                    }
+            if ($trigger == 1) {
+                 undef $targetLettersForBackTrack{$x}{$y}; #set to undef so it will alet us later there are no backtrack targets.
+                 if ($debug) { print "optimal fail at $x $y no backtrack targets. \$targetLettersForBackTrack{$x}{$y} now equals $targetLettersForBackTrack{$x}{$y}\n"};
+                 }
+            }
+     @nextLetterPositionsOnBoard = @upToXY; #IMPORTANT restore @nextLetterPositionsOnBoard
+     }
+
+if ($in{mode} eq 'word') {
+     while (scalar @nextWordOnBoard != 0) {
+            %wordPosition =  %{ shift @nextWordOnBoard }; #keep in subroutine unchaged as we may need to unshift on a recursive return
+            $wordNumber = $wordPosition{wordNumber};
+            $dir = $wordPosition{dir};
+            push @upToCurrentWord , {%wordPosition} ;  # put it on @upToCurrentWord
+            if ($debug) {print "Word # $wordNumber dir $dir\n"}
+            #increase $targetWordsForBackTrack for all crossing words
+            &MarkTargetBackTrackWordsThatCross($wordNumber,$dir,$wordNumber,$dir);
+
+            #increase $targetWordsForBackTrack for all crossing words that crossed our words
+            #ignore double crossing if simple mask search
+            if (not $in{simplewordmasksearch}) {
+                if ($debug) {print "crossing\n "}
+                @wordPositions = &GetCrossingWords($wordNumber,$dir);
+                foreach my $wordPosition (@wordPositions) {
+                     my $wordNumberCrossing = ${$wordPosition}[0];
+                     my $dirCrossing = ${$wordPosition}[1];
+                     if ($debug) {print "for word letter pos $xx $yy : "}
+                     &MarkTargetBackTrackWordsThatCross($wordNumber,$dir,$wordNumberCrossing,$dirCrossing);
+                     }
+                if ($debug) {print "\n\n"}
+                }
+
+            #Walk back from # dir if no optimal targets, then optimal will not work here. So delete %targetWordsForBackTrack{#}{dir}
+            @upToCurrentWordTemp = @upToCurrentWord; #maintain @upToCurrentWord
+            pop @upToCurrentWordTemp; #remove the word we are on, as it will never be a bactrack target. it is the source
+            my $trigger = 1 ; #assume no optimal backtrack targets
+            foreach my $item (@upToCurrentWordTemp) { #try and prove wrong
+                    my $wordNumberTarg = ${$item}{wordNumber};
+                    my $dirTarg = ${$item}{dir};
+                    if ( $targetWordsForBackTrack{$wordNumber}{$dir}{$wordNumberTarg}{$dirTarg} != undef ) {
+                        $trigger = 0; #found at least one target
+                        last;
+                        }
+                    }
+            if ($trigger == 1) {
+                 undef $targetWordsForBackTrack{$wordNumber}{$dir}; #set to undef so it will alet us later there are no backtrack targets.
+                 #$targetLettersForBackTrack{$x}{$y} = ();
+                 if ($debug) { print "optimal fail at $x $y no backtrack targets. \$targetLettersForBackTrack{$x}{$y} now equals $targetLettersForBackTrack{$x}{$y}\n"};
+                 }
+
+            }
+     @nextWordOnBoard  = @upToCurrentWord; #IMPORTANT restore @nextWordOnBoard
+     }
 }
 
 function generateNextWordPositionsOnBoardCrossing(){

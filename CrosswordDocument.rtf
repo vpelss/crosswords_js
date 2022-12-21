@@ -1,15 +1,17 @@
-{\rtf1\ansi\ansicpg1252\deff0{\fonttbl{\f0\froman\fprq2\fcharset0 Arial;}{\f1\froman\fprq2\fcharset0 Liberation Serif;}{\f2\fnil\fcharset0 Calibri;}}
+{\rtf1\ansi\ansicpg1252\deff0\nouicompat{\fonttbl{\f0\froman\fprq2\fcharset0 Arial;}{\f1\froman\fprq2\fcharset0 Liberation Serif;}{\f2\fnil\fcharset0 Calibri;}}
 {\colortbl ;\red0\green0\blue255;\red0\green0\blue0;\red255\green0\blue0;\red0\green128\blue0;}
-{\*\generator Msftedit 5.41.21.2510;}\viewkind4\uc1\pard\nowidctlpar\hyphpar0\ri-1440\tx9450\lang1033\kerning1\ul\b\f0\fs20 Emogic's Crossword Generation Algorithm \ulnone\b0\f1\fs24\par
+{\*\generator Riched20 10.0.19041}\viewkind4\uc1 
+\pard\nowidctlpar\hyphpar0\ri-1440\tx9450\kerning1\ul\b\f0\fs20\lang1033 Working on....\par
+\par
+Emogic's Crossword Generation Algorithm \ulnone\b0\f1\fs24\par
+
 \pard\nowidctlpar\hyphpar0\ri-1440\f0\par
-\fs20 My web based Crossword Generator is operational at \cf1\ul{\field{\*\fldinst{HYPERLINK "http://www.emogic.com/cgi/crosswords/"}}{\fldrslt{\ul\cf1 http://www.emogic.com/cgi/crosswords/}}}\cf0\ulnone\f1\fs24\par
+\fs20 My web based Crossword Generator is operational at {{\field{\*\fldinst{HYPERLINK http://www.emogic.com/cgi/crosswords/ }}{\fldrslt{http://www.emogic.com/cgi/crosswords/\ul0\cf0}}}}\f1\fs24\par
 \f0\fs20 It is intended more as a tool to study the various ways that algorithms can generate crossword puzzles and the differences between them.\f1\fs24\par
 \f0\fs20 It is not intended to generate New York Times quality puzzles. \f1\fs24\par
 \f0\fs20\par
-See: "Design and Implementation of Crossword Compilation Programs Using Serial Approaches" (CCP) \cf1\lang255\ul{\field{\*\fldinst{HYPERLINK "http://thesis.cambon.dk/"}}{\fldrslt{\ul\cf1 http://thesis.cambon.dk/}}}\cf0\lang1033\ulnone\f0\fs20  for many of the concepts mentioned in this text. If you want to create your own crossword generator script,it is a great place to start. It can be unclear in many areas, but still has plenty of good ideas. That site has sample code in C. There are a few logical errors on his site based on assumptions. one big one is that a letter search is as good (or equivalent) to a word search. In a sense it is, but not when it comes to the time required to generate a crossword. \f1\fs24\par
-\f0\fs20\par
-Please use the 'Contact Us' link at the bottom if you found this useful or would like to share a thought.\f1\fs24\par
-\f0\fs20\par
+See: "Design and Implementation of Crossword Compilation Programs Using Serial Approaches" (CCP) {\lang255{\field{\*\fldinst{HYPERLINK http://thesis.cambon.dk/ }}{\fldrslt{http://thesis.cambon.dk/\ul0\cf0}}}}\f0\fs20  for many of the concepts mentioned in this text. If you want to create your own crossword generator script,it is a great place to start. That site has sample code in C. I do disagree that a letter search is as good (or equivalent) to a word search. In a logical sense it is, but not in a practical sense. Letter searches take longer to discover we have chosen a wrong path copared to full word searches. Thus there will likely be more cycles burned on a letter search.\par
+\par
 \ul Why PERL?\ulnone\f1\fs24\par
 \f0\fs20\par
 PERL is not known for it's speed. It also has a higher memory overhead for variable management. But it does have a few benefits. Regular expressions are powerful and fast. Hash variables (associative array) allow for an easy way to eliminate duplicate values and make it easy to search and look-up values.\f1\fs24\par
@@ -17,15 +19,12 @@ PERL is not known for it's speed. It also has a higher memory overhead for varia
 PERL is ubiquitous. PERL is elegant. PERL is, in my opinion, organic. I just like PERL.\f1\fs24\par
 \f0\fs20\par
 My new Crossword Source Code is at:\f1\fs24\par
-\cf1\ul\f0\fs20{\field{\*\fldinst{HYPERLINK "https://github.com/vpelss/crosswords"}}{\fldrslt{\ul\cf1 https://github.com/vpelss/crosswords}}}\cf0\ulnone\f1\fs24\par
-\f0\fs20 The word lists are not included. A wonderful one is at  \cf1\ul{\field{\*\fldinst{HYPERLINK "www.otsys.com/clue"}}{\fldrslt{\ul\cf1 www.otsys.com/clue}}}\cf0\ulnone\f0\fs20  but it must be modified to work with my code.\f1\fs24\par
+{\f0\fs20{\field{\*\fldinst{HYPERLINK https://github.com/vpelss/crosswords }}{\fldrslt{https://github.com/vpelss/crosswords\ul0\cf0}}}}\f1\fs24\par
+\f0\fs20 The word lists are not included. A wonderful one is at  {{\field{\*\fldinst{HYPERLINK www.otsys.com/clue }}{\fldrslt{www.otsys.com/clue\ul0\cf0}}}}\f0\fs20  but it must be modified to work with my code.\f1\fs24\par
 \f0\fs20 My code is commented. But I make no apologies if it makes no sense to you. \f1\fs24\par
-\f0\fs20 It is always being modified and updated. \f1\fs24\par
-\f0\fs20 If I am in the middle of a big upgrade, the code may not work.\f1\fs24\par
 \f0\fs20 No free support will be given.\f1\fs24\par
-\f0\fs20 If you have suggestions, please use the "Contact Us" link.\f1\fs24\par
 \f0\fs20\par
-You can download the code for my old British style Crossword Generator at \cf1\ul{\field{\*\fldinst{HYPERLINK "https://www.emogic.com/store/free_crossword_script"}}{\fldrslt{\ul\cf1 https://www.emogic.com/store/free_crossword_script}}}\cf0\ulnone\f0\fs20 . No free support will be given.\f1\fs24\par
+You can download the code for my old British style Crossword Generator at {{\field{\*\fldinst{HYPERLINK https://www.emogic.com/store/free_crossword_script }}{\fldrslt{https://www.emogic.com/store/free_crossword_script\ul0\cf0}}}}\f0\fs20 . No free support will be given.\f1\fs24\par
 \f0\fs20\par
 \ul Some things I have learned\ulnone\f1\fs24\par
 \f0\fs20\par
@@ -48,7 +47,7 @@ The grid templates are text files containing rows made up of 'o' and 'x'.\cf0\f1
 \cf2\f0\fs20 The x and o were chosen as they are the same size and this gives an easily visual representation of the actual grid in notepad.\cf0\f1\fs24\par
 \cf2\f0\fs20\par
 In the script they are retained as such, and do not conflict, as the inserted letters will always be capital letters.\cf0\f1\fs24\par
-\cf2\f0\fs20 The main array will be in the form of $puzzle[x][y]->\{Letter\}, but we have MANY different ways of storing this data for quick and efficient lookups and manipulation. All these alternate storage models must be updated at the same time.\cf0\f1\fs24\par
+\cf2\f0\fs20 The main puzzle array will be in the form of $puzzle[x][y]->\{Letter\} = T\cf0\f1\fs24\par
 \cf2\f0\fs20\par
 eg:\cf0\f1\fs24\par
 \cf2\f0\fs20 xooooo\cf0\f1\fs24\par
@@ -64,7 +63,7 @@ There are many types of searches we can perform to try and determine what word o
 \cf2\f0\fs20\par
 Given the prefix letters for a word, return the next possible letters.\cf0\f1\fs24\par
 \cf2\f0\fs20 eg: given 'boa--' found in the space for a 5 letter word, the next letter might be t or r.\cf0\f1\fs24\par
-\cf2\f0\fs20 This is useful only if you plan to build words from beginning to end. It will not allow for filling in random letter positions.\cf0\f1\fs24\par
+\cf2\f0\fs20 This is useful only if you plan to build words from beginning to end. It will not allow for filling in random letter positions (eg: it cant solve for TO?TH)\cf0\f1\fs24\par
 \cf2\f0\fs20\par
 Method 1. For each word length I built a chain of hash references. This required that we follow the chain of hash references. It was more complex but it was fast. \cf0\f1\fs24\par
 \cf2\f0\fs20 $nextLetter[numberOfLettersInWord] would point to a list of hashes where the keys were possible first letters. So a "keys %nextLetter[5]" would return all the first letters of possible 5 letter words. If we chose the letter 'b', and referenced $nextLetter[5]\{b\} we would get a list of hash references to all the potential 2nd letters of 5 letter words that start with 'b'. etc...\cf0\f1\fs24\par
@@ -337,7 +336,7 @@ AEA|Thespians' org.\cf0\f1\fs24\par
 \cf2\f0\fs20\par
 \ul Benchmarks\cf0\ulnone\f1\fs24\par
 \cf2\f0\fs20\par
-Based on the section on Double Word Squares at: \cf1\lang255\ul{\field{\*\fldinst{HYPERLINK "http://en.wikipedia.org/wiki/Word_square"}}{\fldrslt{\ul\cf1 http://en.wikipedia.org/wiki/Word_square}}}\cf0\lang1033\ulnone\f1\fs24\par
+Based on the section on Double Word Squares at: {\cf0\lang255{\field{\*\fldinst{HYPERLINK http://en.wikipedia.org/wiki/Word_square }}{\fldrslt{http://en.wikipedia.org/wiki/Word_square\ul0\cf0}}}}\cf0\f1\fs24\par
 \cf2\f0\fs20 I feel my program is running well. The article states that 8 x 8 is around the largest order Double Word Square to be found using dictionary words. Considering my limited dictionary, my program can create frequently generate a 6 x 6 crossword in around 3 seconds.\cf0\f1\fs24\par
 \cf2\f0\fs20\par
 \par
@@ -352,7 +351,9 @@ Are dynamic walks (where the next walk location is chosen based on the current p
 Can we further increase generation time by choosing more suitable or likely words first? \cf0\f1\fs24\par
 \cf2\f0\fs20\par
 I need to write a better clue selection routine to allow for different styles.\cf0\f1\fs24\par
-\pard\nowidctlpar\hyphpar0{\field{\*\fldinst{HYPERLINK "http://en.wikipedia.org/wiki/Word_square" }}{\fldrslt{}}}\f1\fs24\par
-\pard\sa200\sl276\slmult1\lang9\kerning0\f2\fs22\par
+
+\pard\nowidctlpar\hyphpar0 {{\field{\*\fldinst{HYPERLINK http://en.wikipedia.org/wiki/Word_square }}{\fldrslt{http://en.wikipedia.org/wiki/Word_square\ul0\cf0}}}}\f1\fs24\par
+
+\pard\sa200\sl276\slmult1\kerning0\f2\fs22\lang9\par
 }
  
