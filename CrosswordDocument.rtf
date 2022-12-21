@@ -78,6 +78,8 @@ Searches\cf0\ulnone\f1\fs24\par
 \cf2\f0\fs20\par
 There are many types of searches we can perform to try and determine what word or letter will fit on our crossword.\cf0\f1\fs24\par
 \cf2\f0\fs20\par
+\ul Letter Searches\ulnone\par
+\par
 \b Prefix / Linear Searches : Return the next potential letters after a given series of letters\cf0\b0\f1\fs24\par
 \cf2\b\f0\fs20 Note: This  is for a letter by letter search.\cf0\b0\f1\fs24\par
 \cf2\f0\fs20\par
@@ -96,6 +98,8 @@ Method 1. For each word length I built a chain of hash references. This required
 \cf2\f0\fs20 It is 1.5 times slower than the old way.\cf0\f1\fs24\par
 \cf2\f0\fs20 Memory storage is about the same.\cf0\f1\fs24\par
 \cf2\f0\fs20\par
+\ul Word Searches\par
+\ulnone\par
 \b Mask Searches : @words = &WordsFromMask($mask) $mask = \lquote GOoD\rquote  :  Return a list of potential words for a given mask\cf0\b0\f1\fs24\par
 \cf2\f0\fs20\par
 Method 1. For a given mask (eg GOoD), cycle through all the letters given. For each letter given, return a list (built before) of all words, the same length as the mask, that have that letter in that position. Do that for all all letters that we have in the mask. Then we compare all the lists and keep the words that exist in all the lists. \cf0\f1\fs24\par
@@ -109,7 +113,7 @@ Method 1. For a given mask (eg GOoD), cycle through all the letters given. For e
 \cf2\f0\fs20\par
 my $tempMask = $mask;\cf0\fs24\line\cf2\fs20 $tempMask =~ s/$unoccupied/\\./g; #make a mask of 'GO$unoccupiedT' into 'GO.T' for the regexp (in my code $unoccupied is = o)\cf0\fs24\line\cf2\fs20 my $wordLength = length($tempMask);\cf0\fs24\line\cf2\fs20 @word_list = ($WordsOfLengthString[$wordLength] =~ /($tempMask),/g);\cf0\f1\fs24\par
 \cf2\f0\fs20\par
-Method 3. Binary Mask. For each word we build a binary mask. Then for each mask we create a list of words that belong to that mask.\cf0\f1\fs24\par
+Method 3. Binary Mask. For each word we build every possible mask. Then for each mask we create a list of words that belong to that mask.\cf0\f1\fs24\par
 \cf2\f0\fs20 Eg: CAT -> CAT , CAo , CoT , Coo , oAT , etc\cf0\f1\fs24\par
 \cf2\f0\fs20 In theory it should be very fast. But it is only slightly faster than the Words of Length String word search in some cases. \cf0\f1\fs24\par
 \cf2\f0\fs20 Copying or accessing the list takes the majority of the time and therefore is not much faster for cases where the list returned will be large. Small returned lists are faster as the Method 2 still needs to search the complete comma delimited string. \cf0\f1\fs24\par
@@ -119,23 +123,23 @@ Method 3. Binary Mask. For each word we build a binary mask. Then for each mask 
 \cf2\f0\fs20\par
 \b Possible words from letter lists Search (meta search) : choosing words that fit based on the crossing words.\cf0\b0\f1\fs24\par
 \cf2\f0\fs20\par
-A routine that takes a list of possible letters (calculated and based on all the crossing word masks) for each position in a word. \cf0\f1\fs24\par
-\cf2\f0\fs20 It's output is a list of words that can be made with said letters.\cf0\f1\fs24\par
-\cf2\f0\fs20 @words = &WordsFromLetterLists(['C','D','F','T','Z'] , ['E','R','T','Y','O'] , ['T','R','E','W','Q','Z']);\cf0\f1\fs24\par
-\cf2\f0\fs20 Used if we check all possible letters at the same word position of crossing words. Then we can find the possible perpendicular words that are possible for this spot\cf0\f1\fs24\par
-\cf2\f0\fs20 Obviously it takes a lot of processing time. We must first search for possible letters in our word for all the crossing words.\cf0\f1\fs24\par
+This routine that takes a list of possible letters (based on all the crossing word masks) for each position in a word and will output a list of words that can be made with said letters.\cf0\f1\fs24\par
+\cf2\f0\fs20 @words = &WordsFromLetterLists(['C','D','F','T','Z'] , ['E','R','T','Y','O'] , ['T','R','E','W','Q','Z']);\par
+Eg: We want to find possible words at 5 down. We find all the masks that cross this word. We find all the possible letters that can exist in our word's cells. Then we calculate what words we can make with these sets of letters.\par
+\par
+It takes a lot of processing time. We must first search for possible letters in our word based on all the crossing words. Then we must search all the cobinations of those letter sets for words in our dictionary.\cf0\f1\fs24\par
 \cf2\f0\fs20\par
 ----o---\cf0\f1\fs24\par
 \cf2\f0\fs20 ----o---\cf0\f1\fs24\par
 \cf2\f0\fs20 ----o---\cf0\f1\fs24\par
 \cf2\f0\fs20\par
-Even though this can take up to 250 times longer than a simple mask word search (letting a simple recursive routine figure out the errors), and 833 times slower than the letter search it is faster on many types of grids as it looks at blocks of letters, not just crossing words. Therefore it notices errors sooner and avoids a lot of inefficient blind recursions. \cf0\f1\fs24\par
+It can take up to 250 times longer than a simple mask word search ), and 833 times slower than the letter search on some grids. However, it is faster on many types of grids as it looks at blocks of letters, not just crossing words. Therefore it notices errors sooner (less recursions) and avoids a lot of inefficient blind recursions that can occur with the other search methods. \cf0\f1\fs24\par
 \cf2\f0\fs20\par
 Note: It really shines if your walking/search path ensures that each following word crosses the previous one(s).\cf0\f1\fs24\par
 \cf2\f0\fs20\par
 \ul Optimum Backtrack for Word by Word Builds\cf0\ulnone\f1\fs24\par
 \cf2\f0\fs20\par
-By adding an optimum backtrack check and routine for this search, I have improved the generation time by a factor of 2500 times or more in "some" cases. If a word attempt fails, I make a list of the crossing word positions and the adjacent words positions (above, below or left/right). Those are the words that influence the word positions that failed. Then I backtrack until I hit one of the word positions in that list. You must stop on the first one encountered or you risk loosing possible puzzle solutions.\cf0\f1\fs24\par
+By adding an optimum backtrack routine, I have improved the generation time by a factor of 2500 times or more in "some" cases. If a word attempt fails, I make a list of the crossing word positions and the adjacent words positions (above, below or left / right). Those are the words that influence the word positions that failed. This is the same with a letter search. Cells above, below, left and right can affect the ability to place a letter. Then I backtrack until I hit one of the word positions in that list. You must stop on the first one encountered or you risk loosing possible puzzle solutions.\cf0\f1\fs24\par
 \cf2\f0\fs20\par
 Grids that do not seem to benefit are the Double Word Grids with 100% interlock. This makes sense as all or most crossing words affect the word you are trying to solve for.\cf0\f1\fs24\par
 \cf2\f0\fs20\par
