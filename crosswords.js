@@ -39,12 +39,12 @@ var next_word_on_board = []; //next_word_on_board = [ [word_number , dir] , [] ,
 // [{wordNumber => $wordNumber, dir => $dir},{},{}...]
 //$nextWordOnBoard[]{wordNumber} $nextWordOnBoard[]{dir}
 
-#optimal search variables
+//optimal search variables
 var wordNumberDirUsed; //$wordNumberDirUsed{$wordNumber}{$dir} so we only backtrack or note words that have been filled
 var naiveBacktrack; //a counter
 var optimalBacktrack; //a counter
 //var touchingWordsForBackTrack; //global as we need to backtrack to the first  member of it we encounter. if not == () we are in a backtrack state!
-var target_cells_for_letter_backtrack; //global as we need to backtrack to the first  member of it we encounter. if $targetLettersForBackTrack{x failed letter}{y failed letter} == undef there are NO targets!
+var target_cells_for_letter_backtrack = {}; //global as we need to backtrack to the first  member of it we encounter. if $targetLettersForBackTrack{x failed letter}{y failed letter} == undef there are NO targets!
 var target_words_for_word_backtrack; //global as we need to backtrack to the first  member of it we encounter. if $target_words_for_word_backtrack{# source}{dir source} == undef there are NO targets!
 //eg $target_words_for_word_backtrack{$wordNumberSource}{$dirSource}{$crossingWordNumber}{$crossingWordDir}
 
@@ -66,25 +66,23 @@ grid_change( arg_grid );
 numberBlankSquares();
 
 var arg_wordfile = urlParams.get('wordfile');
+var arg_walkpath = urlParams.get('walkpath');
+if(arg_walkpath.includes('Letter')){mode = 'letter';}
+else {mode = 'word';}
 loadWordList( arg_wordfile , arg_walkpath);
 
-var arg_walkpath = urlParams.get('walkpath');
 //word walks
 if (arg_walkpath == 'crossingwords'){
 		generateNextWordPositionsOnBoardCrossing();
-  mode = 'word';
   }
 
 //letter walks
-if (arg_walkpath == 'Generatenext_letter_position_on_boardZigZag'){
-		generatenext_letter_position_on_boardZigZag();
-  mode = 'letter';
-  }
-if (arg_walkpath == 'Generatenext_letter_position_on_boardFlat'){
-		generatenext_letter_position_on_boardFlat();
-  mode = 'letter';
-  }
-
+if (arg_walkpath == 'GenerateNextLetterPositionsOnBoardZigZag') {
+	generateNextLetterPositionOnBoardZigzag();
+}
+if (arg_walkpath == 'GenerateNextLetterPositionsOnBoardFlat') {
+	generateNextLetterPositionOnBoardFlat();
+}
 
 // is simplewordmasksearch=on
 var arg_simplewordmasksearch = urlParams.get('simplewordmasksearch');
@@ -102,12 +100,11 @@ function calculateOptimalBacktracks(){
 //touching_words_for_backtrack; #global as we need to backtrack to the first  member of it we encounter. if not == () we are in a backtrack state!
 
 //letter backtrack
-//cycle through each letter cell, provided by next_letter_positions_on_board_temp, and build : target_cells_for_letter_backtrack
+//cycle through each letter cell, provided by next_letter_position_on_board_temp, and build : target_cells_for_letter_backtrack
 //optimal backtrack targets are all n,e,w,s letters of the horizontal and vertical word centered on the cell.
 //don't include our cell
-we MUST only include cells that are prior to our cell in the walk path.
-//note: it does not matter if some of the cells in target_cells_for_letter_backtrack are not yet included in the chosen walk.
-//when using optimal backtrack, we use the naive backtrack and stop  at the first encountered member of target_cells_for_letter_backtrack
+//we MUST only include cells that precede our cell in the walk path.
+//when using optimal backtrack, we use the naive backtrack and stop at the first encountered member of target_cells_for_letter_backtrack
 
 //word backtrack
 //cycle through all words on board, provided by next_word_on_board_temp, and build : target_words_for_word_backtrack
@@ -121,9 +118,7 @@ we MUST only include cells that are prior to our cell in the walk path.
 
 
 var x , y , xx , yy , letter_position;
-var walk_cells_up_to_xy; //this will be the shifter part we will check to see if there is an
-      //optimal target in the backtrack. We need 2 as one needs to be pristine so we can reassign it to @next_letter_position_on_board
-//var walk_cells_up_to_xy_temp ;
+var walk_cells_up_to_xy = [];
 var word_letter_positions;
 var cell_position;
 
@@ -133,35 +128,38 @@ var dir;
 var up_to_current_word;
 var up_to_current_word_temp;
 var word_positions;
-var next_letter_positions_on_board_temp = JSON.parse( JSON.stringify( next_letter_positions_on_board ) ); //backup as we are going to tear it up
+var next_letter_position_on_board_temp = JSON.parse( JSON.stringify( next_letter_position_on_board ) ); //backup as we are going to tear it up
 var next_word_on_board_temp = JSON.parse( JSON.stringify( next_word_on_board ) ); //backup as we are going to tear it up
 
 if (mode == "letter") {
-    while (next_letter_positions_on_board_temp.length != 0) {
-			cell_position = next_letter_positions_on_board_temp.shift(); //remove next letter position
+    while (next_letter_position_on_board_temp.length != 0) {
+			cell_position = next_letter_position_on_board_temp.shift(); //remove next letter position
 			x = cell_position[0];
 			y = cell_position[1];
-			walk_cells_up_to_xy.push( JSON.stringify(cell_position) );
 
 			for(dir = 0; dir < 2 ;dir++){
+				if(typeof walk_cells_up_to_xy === 'undefined'){continue;} //code will not work if walk_cells_up_to_xy is empty
 				if(typeof this_square_belongs_to_word_number[dir][y][x] === 'undefined'){continue;}//no word
 				let tsbtwn = this_square_belongs_to_word_number[dir][y][x];
 				word_letter_positions = letter_positions_of_word[dir][tsbtwn];
 				//is word_letter_positions in walk_cells_up_to_xy : use array intersection routine
 				//var filteredArray = word_letter_positions.filter(function(value){//for true returns array is added
-				word_letter_positions.forEach(function(word_position){/
+				word_letter_positions.forEach(function(word_position){
 					xx = word_position[0];
 					yy = word_position[1];
+					var x_y = `${x}_${y}`;
+					var xx_yy = `${xx}_${yy}`;
+					if(x_y == xx_yy){return;}//skip current cell as it should not be a backtrack destination
 					let val = JSON.stringify(word_position);
 					if( walk_cells_up_to_xy.includes(val) ){//add to target_cells_for_letter_backtrack
-						if(typeof target_cells_for_letter_backtrack["{x}_{y}"] === 'undefined'){target_cells_for_letter_backtrack["{x}_{y}"] = {};}
-						tester = "{xx}_{yy}";
-						target_cells_for_letter_backtrack["{x}_{y}"]["{xx}_{yy}"] = 1;
+						if(typeof target_cells_for_letter_backtrack[x_y] === 'undefined'){target_cells_for_letter_backtrack[x_y] = {};}
+						//tester = "${xx}_${yy}";
+						target_cells_for_letter_backtrack[x_y][xx_yy] = 1;
 					}
 					//return walk_cells_up_to_xy.includes(val); //true if true
 				});
 			}
-
+			walk_cells_up_to_xy.push( JSON.stringify(cell_position) );
 
 			/*---------------------
 
@@ -179,9 +177,11 @@ if (mode == "letter") {
 			}
 			*/
 
-
 		}
+	}
+temp = 9;
 
+		/*
 if (mode == 'word') {
      while (next_word_on_board_temp.length != 0) {
             word_position =  next_word_on_board_temp.shift(); //keep in subroutine unchaged as we may need to unshift on a recursive return
@@ -226,6 +226,7 @@ if (mode == 'word') {
             }
      //@nextWordOnBoard  = @upToCurrentWord; //IMPORTANT restore @nextWordOnBoard
      }
+     */
 }
 
 /*
@@ -259,7 +260,7 @@ foreach  $letterPosition (@wordLetterPositions) {
 return  @wordLetterPositions;
 }
 */
-
+/*
 function markTargetBackTrackWordsThatCross()
 {
 #input: word number and direcction
@@ -323,6 +324,7 @@ function generateNextWordPositionsOnBoardCrossing(){
 					}
 		}
 }
+*/
 
 function getCrossingWords(word_number, dir) {
 	//input: word number and direction
@@ -346,7 +348,8 @@ function getCrossingWords(word_number, dir) {
 	});
 	return crossing_words;
 }
-function generatenext_letter_position_on_boardZigZag(){
+
+function generateNextLetterPositionOnBoardZigzag(){
 		//create a top right to bottom left list in which we will lay down words. FIFO
 		//zigzag alternate top right to bottom left then bottom left to top right
 		var x = 1;
@@ -395,7 +398,7 @@ function generatenext_letter_position_on_boardZigZag(){
   } 	while( (x != puzzle_width - 1) || (y != puzzle_height - 1) );
 }
 
-function generatenext_letter_position_on_boardFlat(){
+function generateNextLetterPositionOnBoardFlat(){
 //create right to left top to bottom list in which we will lay down words. FIFO
 		var x = 0;
 		var y = 0;
@@ -614,7 +617,7 @@ function loadWordList( arg_wordfile , arg_walkpath){
 								//process word_list_array
 								words_of_length_string[word_length] = ''; //start blank
 								word_list_array.forEach( function(word){
-										if( arg_walkpath.includes('Letter') ){//letter walk
+										if( mode == 'letter' ){//letter walk
 												var mask_pre = '';
 												var mask = '';
 												var letters_array = word.split('');
