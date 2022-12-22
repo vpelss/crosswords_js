@@ -143,10 +143,10 @@ By adding an optimum backtrack routine, I have improved the generation time by a
 \par
 If a word attempt fails, I make a list of the crossing word positions and the adjacent words positions (above, below or left / right). Those are the words that influence the word positions that failed. \par
 \par
-This is the same with a letter search. All cells in both the horizontal word, and vertical word can affect the ability to place a letter. \par
+This is similar with a letter search. All cells in both the horizontal word, and vertical word, of the cell,  can affect the ability to place a letter in that cell. \par
 \par
 I backtrack until I hit one of the word positions (or letter positions) in that list. \par
-You must stop on the first one encountered or you risk loosing possible puzzle solutions.\cf0\f1\fs24\par
+You must stop on the first one encountered or you risk losing possible puzzle solutions.\cf0\f1\fs24\par
 \cf2\f0\fs20\par
 Grids that do not seem to benefit are the Double Word Grids with 100% interlock. This makes sense as all or most crossing words affect the word you are trying to solve for.\cf0\f1\fs24\par
 \cf2\f0\fs20\par

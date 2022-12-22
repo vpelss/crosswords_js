@@ -43,17 +43,10 @@ var next_word_on_board = []; //next_word_on_board = [ [word_number , dir] , [] ,
 var wordNumberDirUsed; //$wordNumberDirUsed{$wordNumber}{$dir} so we only backtrack or note words that have been filled
 var naiveBacktrack; //a counter
 var optimalBacktrack; //a counter
-var touchingWordsForBackTrack; //global as we need to backtrack to the first  member of it we encounter. if not == () we are in a backtrack state!
-var targetWordsForBackTrack; //global as we need to backtrack to the first  member of it we encounter. if $targetWordsForBackTrack{# source}{dir source} == undef there are NO targets!
-//eg $targetWordsForBackTrack{$wordNumberSource}{$dirSource}{$crossingWordNumber}{$crossingWordDir}
-
-//rule 1. All letters in the horizontal and vertical words (up to the failed letter) can affect the failure of laying a letter
-//rule 2. All crossing words of both the horizontal and vertical words of the failed letter can affect the failure of laying a letter
-//rule 3 Remove shadows by only keeping the intersection of rule 1 and 2
-//rule 3 is ignored (> 1) and is nor (> 0) as it fails (over prunes) on British style crosswords
-//# eg: $targetLettersForBackTrack{x failed letter}{y failed letter}{x}{y} > 0 #pregenerated for speed!
+//var touchingWordsForBackTrack; //global as we need to backtrack to the first  member of it we encounter. if not == () we are in a backtrack state!
 var target_cells_for_letter_backtrack; //global as we need to backtrack to the first  member of it we encounter. if $targetLettersForBackTrack{x failed letter}{y failed letter} == undef there are NO targets!
-
+var target_words_for_word_backtrack; //global as we need to backtrack to the first  member of it we encounter. if $target_words_for_word_backtrack{# source}{dir source} == undef there are NO targets!
+//eg $target_words_for_word_backtrack{$wordNumberSource}{$dirSource}{$crossingWordNumber}{$crossingWordDir}
 
 main();
 function main(){
@@ -112,10 +105,13 @@ function calculateOptimalBacktracks(){
 //cycle through each letter cell, provided by next_letter_positions_on_board_temp, and build : target_cells_for_letter_backtrack
 //optimal backtrack targets are all n,e,w,s letters of the horizontal and vertical word centered on the cell.
 //don't include our cell
+we MUST only include cells that are prior to our cell in the walk path.
 //note: it does not matter if some of the cells in target_cells_for_letter_backtrack are not yet included in the chosen walk.
 //when using optimal backtrack, we use the naive backtrack and stop  at the first encountered member of target_cells_for_letter_backtrack
 
 //word backtrack
+//cycle through all words on board, provided by next_word_on_board_temp, and build : target_words_for_word_backtrack
+//optimal backtrack targets are all crossing words ??
 
 
 //rule 1. All letters in the horizontal and vertical words (up to the failed letter) can affect the failure of laying a letter
@@ -125,9 +121,9 @@ function calculateOptimalBacktracks(){
 
 
 var x , y , xx , yy , letter_position;
-var up_to_xy; //this will be the shifter part we will check to see if there is an
+var walk_cells_up_to_xy; //this will be the shifter part we will check to see if there is an
       //optimal target in the backtrack. We need 2 as one needs to be pristine so we can reassign it to @next_letter_position_on_board
-var up_to_xy_temp ;
+//var walk_cells_up_to_xy_temp ;
 var word_letter_positions;
 var cell_position;
 
@@ -145,6 +141,30 @@ if (mode == "letter") {
 			cell_position = next_letter_positions_on_board_temp.shift(); //remove next letter position
 			x = cell_position[0];
 			y = cell_position[1];
+			walk_cells_up_to_xy.push( JSON.stringify(cell_position) );
+
+			for(dir = 0; dir < 2 ;dir++){
+				if(typeof this_square_belongs_to_word_number[dir][y][x] === 'undefined'){continue;}//no word
+				let tsbtwn = this_square_belongs_to_word_number[dir][y][x];
+				word_letter_positions = letter_positions_of_word[dir][tsbtwn];
+				//is word_letter_positions in walk_cells_up_to_xy : use array intersection routine
+				//var filteredArray = word_letter_positions.filter(function(value){//for true returns array is added
+				word_letter_positions.forEach(function(word_position){/
+					xx = word_position[0];
+					yy = word_position[1];
+					let val = JSON.stringify(word_position);
+					if( walk_cells_up_to_xy.includes(val) ){//add to target_cells_for_letter_backtrack
+						if(typeof target_cells_for_letter_backtrack["{x}_{y}"] === 'undefined'){target_cells_for_letter_backtrack["{x}_{y}"] = {};}
+						tester = "{xx}_{yy}";
+						target_cells_for_letter_backtrack["{x}_{y}"]["{xx}_{yy}"] = 1;
+					}
+					//return walk_cells_up_to_xy.includes(val); //true if true
+				});
+			}
+
+
+			/*---------------------
+
 			for(dir = 0; dir < 2 ;dir++){
 				if(typeof this_square_belongs_to_word_number[dir][y][x] === 'undefined'){continue;}//no word
 				let tsbtwn = this_square_belongs_to_word_number[dir][y][x];
@@ -157,6 +177,9 @@ if (mode == "letter") {
 						target_cells_for_letter_backtrack["{x}_{y}"].push("{xx}_{yy}");
 					});
 			}
+			*/
+
+
 		}
 
 if (mode == 'word') {
@@ -166,10 +189,10 @@ if (mode == 'word') {
             dir = word_position[1];
             up_to_current_word.push( word_position );  //put it on @upToCurrentWord
             //if ($debug) {print "Word # $wordNumber dir $dir\n"}
-            //increase $targetWordsForBackTrack for all crossing words
+            //increase $target_words_for_word_backtrack for all crossing words
             markTargetBackTrackWordsThatCross( word_number , dir , word_number , dir);
 
-            //increase $targetWordsForBackTrack for all crossing words that crossed our words
+            //increase $target_words_for_word_backtrack for all crossing words that crossed our words
             //ignore double crossing if simple mask search
             if ( ! arg_simplewordmasksearch ) {
                 //if ($debug) {print "crossing\n "}
@@ -182,22 +205,22 @@ if (mode == 'word') {
 								});
             }
 
-            //Walk back from # dir if no optimal targets, then optimal will not work here. So delete %targetWordsForBackTrack{#}{dir}
-            @upToCurrentWordTemp = @upToCurrentWord; #maintain @upToCurrentWord
-            pop @upToCurrentWordTemp; #remove the word we are on, as it will never be a bactrack target. it is the source
-            my $trigger = 1 ; #assume no optimal backtrack targets
-            foreach my $item (@upToCurrentWordTemp) { #try and prove wrong
+            //Walk back from # dir if no optimal targets, then optimal will not work here. So delete %target_words_for_word_backtrack{#}{dir}
+            @upToCurrentWordTemp = @upToCurrentWord; //maintain @upToCurrentWord
+            pop @upToCurrentWordTemp; //remove the word we are on, as it will never be a bactrack target. it is the source
+            my $trigger = 1 ; //assume no optimal backtrack targets
+            foreach my $item (@upToCurrentWordTemp) { //#try and prove wrong
                     my $wordNumberTarg = ${$item}{wordNumber};
                     my $dirTarg = ${$item}{dir};
-                    if ( $targetWordsForBackTrack{$wordNumber}{$dir}{$wordNumberTarg}{$dirTarg} != undef ) {
+                    if ( $target_words_for_word_backtrack{$wordNumber}{$dir}{$wordNumberTarg}{$dirTarg} != undef ) {
                         $trigger = 0; #found at least one target
                         last;
                         }
                     }
             if ($trigger == 1) {
-                 undef $targetWordsForBackTrack{$wordNumber}{$dir}; #set to undef so it will alet us later there are no backtrack targets.
-                 #$targetLettersForBackTrack{$x}{$y} = ();
-                 if ($debug) { print "optimal fail at $x $y no backtrack targets. \$targetLettersForBackTrack{$x}{$y} now equals $targetLettersForBackTrack{$x}{$y}\n"};
+                 undef $target_words_for_word_backtrack{$wordNumber}{$dir}; #set to undef so it will alet us later there are no backtrack targets.
+                 //#$targetLettersForBackTrack{$x}{$y} = ();
+                 //if ($debug) { print "optimal fail at $x $y no backtrack targets. \$targetLettersForBackTrack{$x}{$y} now equals $targetLettersForBackTrack{$x}{$y}\n"};
                  }
 
             }
@@ -242,7 +265,7 @@ function markTargetBackTrackWordsThatCross()
 #input: word number and direcction
 #find all crossing words and for each:
 #output: global hash (quick access) of words number and direction of words that are backtrack targets
-# $targetWordsForBackTrack{# of source}{dir of source}{# target}{dir target} = 1
+# $target_words_for_word_backtrack{# of source}{dir of source}{# target}{dir target} = 1
 
 my $wordNumberSource = $_[0];
 my $dirSource = $_[1];
@@ -259,7 +282,7 @@ my $crossingWordNumber;
 foreach $crossingWord (@crossingWords)  {
          $crossingWordNumber = ${$crossingWord}[0];
          $crossingWordDir = $OppositeDirection[$dir];
-         $targetWordsForBackTrack{$wordNumberSource}{$dirSource}{$crossingWordNumber}{$crossingWordDir}++;
+         $target_words_for_word_backtrack{$wordNumberSource}{$dirSource}{$crossingWordNumber}{$crossingWordDir}++;
          }
 }
 
