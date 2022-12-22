@@ -97,8 +97,6 @@ document.getElementById('puzzle_place').innerHTML = puzzle_string;
 }
 
 function calculateOptimalBacktracks(){
-//touching_words_for_backtrack; #global as we need to backtrack to the first  member of it we encounter. if not == () we are in a backtrack state!
-
 //letter backtrack
 //cycle through each letter cell, provided by next_letter_position_on_board_temp, and build : target_cells_for_letter_backtrack
 //optimal backtrack targets are all n,e,w,s letters of the horizontal and vertical word centered on the cell.
@@ -108,16 +106,18 @@ function calculateOptimalBacktracks(){
 
 //word backtrack
 //cycle through all words on board, provided by next_word_on_board_temp, and build : target_words_for_word_backtrack
-//optimal backtrack targets are all crossing words ??
+//optimal backtrack targets are all crossing words, for now.... test and investigate later
 
+
+//from PERL version
+//touching_words_for_backtrack; #global as we need to backtrack to the first  member of it we encounter. if not == () we are in a backtrack state!
 
 //rule 1. All letters in the horizontal and vertical words (up to the failed letter) can affect the failure of laying a letter
 //rule 2. All crossing words of both the horizontal and vertical words of the failed letter can affect the failure of laying a letter
 //rule 3 Remove shadows by only keeping the intersection of rule 1 and 2
 //targetLettersForBackTrack{x failed letter}{y failed letter}{x}{y} = 1 #pre-generated for speed!
 
-
-var x , y , xx , yy , letter_position;
+var x, y, xx, yy, letter_position;
 var walk_cells_up_to_xy = [];
 var word_letter_positions;
 var cell_position;
@@ -125,148 +125,88 @@ var cell_position;
 var word_position;
 var word_number;
 var dir;
-var up_to_current_word;
-var up_to_current_word_temp;
+var walk_words_up_to_current_word = [];
+//var up_to_current_word_temp;
 var word_positions;
-var next_letter_position_on_board_temp = JSON.parse( JSON.stringify( next_letter_position_on_board ) ); //backup as we are going to tear it up
-var next_word_on_board_temp = JSON.parse( JSON.stringify( next_word_on_board ) ); //backup as we are going to tear it up
+var next_letter_position_on_board_temp = JSON.parse(JSON.stringify(next_letter_position_on_board)); //backup as we are going to tear it up
+var next_word_on_board_temp = JSON.parse(JSON.stringify(next_word_on_board)); //backup as we are going to tear it up
 
 if (mode == "letter") {
-    while (next_letter_position_on_board_temp.length != 0) {
-			cell_position = next_letter_position_on_board_temp.shift(); //remove next letter position
-			x = cell_position[0];
-			y = cell_position[1];
+	while (next_letter_position_on_board_temp.length != 0) {
+		cell_position = next_letter_position_on_board_temp.shift(); //remove next letter position
+		x = cell_position[0];
+		y = cell_position[1];
 
-			for(dir = 0; dir < 2 ;dir++){
-				if(typeof walk_cells_up_to_xy === 'undefined'){continue;} //code will not work if walk_cells_up_to_xy is empty
-				if(typeof this_square_belongs_to_word_number[dir][y][x] === 'undefined'){continue;}//no word
-				let tsbtwn = this_square_belongs_to_word_number[dir][y][x];
-				word_letter_positions = letter_positions_of_word[dir][tsbtwn];
-				//is word_letter_positions in walk_cells_up_to_xy : use array intersection routine
-				//var filteredArray = word_letter_positions.filter(function(value){//for true returns array is added
-				word_letter_positions.forEach(function(word_position){
-					xx = word_position[0];
-					yy = word_position[1];
-					var x_y = `${x}_${y}`;
-					var xx_yy = `${xx}_${yy}`;
-					if(x_y == xx_yy){return;}//skip current cell as it should not be a backtrack destination
-					let val = JSON.stringify(word_position);
-					if( walk_cells_up_to_xy.includes(val) ){//add to target_cells_for_letter_backtrack
-						if(typeof target_cells_for_letter_backtrack[x_y] === 'undefined'){target_cells_for_letter_backtrack[x_y] = {};}
-						//tester = "${xx}_${yy}";
-						target_cells_for_letter_backtrack[x_y][xx_yy] = 1;
+		for (dir = 0; dir < 2; dir++) {
+			if (typeof walk_cells_up_to_xy === 'undefined') {
+				continue;
+			} //code will not work if walk_cells_up_to_xy is empty
+			if (typeof this_square_belongs_to_word_number[dir][y][x] === 'undefined') {
+				continue;
+			} //no word
+			let tsbtwn = this_square_belongs_to_word_number[dir][y][x];
+			word_letter_positions = letter_positions_of_word[dir][tsbtwn];
+			//is word_letter_positions in walk_cells_up_to_xy : use array intersection routine
+			word_letter_positions.forEach(function(word_position) {
+				xx = word_position[0];
+				yy = word_position[1];
+				var x_y = '' + x + '_' + y;
+				var xx_yy = '' + xx + '_' + yy;
+				if (x_y == xx_yy) {
+					return;
+				} //skip current cell as it should not be a backtrack destination
+				let val = JSON.stringify(word_position);
+				if (walk_cells_up_to_xy.includes(val)) { //add to target_cells_for_letter_backtrack
+					if (typeof target_cells_for_letter_backtrack[x_y] === 'undefined') {
+						target_cells_for_letter_backtrack[x_y] = {};
 					}
-					//return walk_cells_up_to_xy.includes(val); //true if true
-				});
-			}
-			walk_cells_up_to_xy.push( JSON.stringify(cell_position) );
-
-			/*---------------------
-
-			for(dir = 0; dir < 2 ;dir++){
-				if(typeof this_square_belongs_to_word_number[dir][y][x] === 'undefined'){continue;}//no word
-				let tsbtwn = this_square_belongs_to_word_number[dir][y][x];
-				word_letter_positions = letter_positions_of_word[dir][tsbtwn];
-					word_letter_positions.forEach(function(word_position){
-						xx = word_position[0];
-						yy = word_position[1];
-						if(typeof target_cells_for_letter_backtrack["{x}_{y}"] === 'undefined'){target_cells_for_letter_backtrack["{x}_{y}"] = [];}
-						tester = "{xx}_{yy}";
-						target_cells_for_letter_backtrack["{x}_{y}"].push("{xx}_{yy}");
-					});
-			}
-			*/
-
+					target_cells_for_letter_backtrack[x_y][xx_yy] = 1;
+				}
+			});
 		}
+		walk_cells_up_to_xy.push(JSON.stringify(cell_position));
 	}
-temp = 9;
+}
 
-		/*
+//for now ignore differences from simple word search and crossing word search
+//we will just backtrack to crossing words
+//after testing we may expand the crossing word backtrack
 if (mode == 'word') {
-     while (next_word_on_board_temp.length != 0) {
+    while (next_word_on_board_temp.length != 0) {
             word_position =  next_word_on_board_temp.shift(); //keep in subroutine unchaged as we may need to unshift on a recursive return
             word_number = word_position[0];
             dir = word_position[1];
-            up_to_current_word.push( word_position );  //put it on @upToCurrentWord
-            //if ($debug) {print "Word # $wordNumber dir $dir\n"}
-            //increase $target_words_for_word_backtrack for all crossing words
-            markTargetBackTrackWordsThatCross( word_number , dir , word_number , dir);
+						//let tsbtwn = this_square_belongs_to_word_number[dir][y][x];
+						word_letter_positions = letter_positions_of_word[dir][word_number];
+						//what words are crossing this word?
+						word_positions = getCrossingWords(word_number,dir);
+						word_positions.forEach(function( word_position ){
+							word_number_temp = word_position[0];
+							dir_temp = word_position[1];
+							var w_d = '' + word_number + '_' + dir;
+							var w_d_temp =  '' + word_number_temp + '_' + dir_temp;
+							if (w_d == w_d_temp) {
+								return;
+							}//skip current word as it should not be a backtrack destination
+							let val = JSON.stringify(word_position);
+							if (walk_words_up_to_current_word.includes(val)) { //add to target_words_for_word_backtrack
+								if (typeof target_words_for_word_backtrack[w_d_temp] === 'undefined') {
+										target_words_for_word_backtrack[w_d_temp] = {};
+								}
+								target_words_for_word_backtrack[w_d][w_d_temp] = 1;
+							}
+						});
+            walk_words_up_to_current_word.push( JSON.stringify(word_position) );  //put it on @upToCurrentWord
+		}
+	}
 
-            //increase $target_words_for_word_backtrack for all crossing words that crossed our words
-            //ignore double crossing if simple mask search
-            if ( ! arg_simplewordmasksearch ) {
-                //if ($debug) {print "crossing\n "}
-                word_positions = getCrossingWords(word_number,dir);
-								word_positions.forEach(function( word_position ){
-									var word_number_crossing = word_position[0];
-                  dir_crossing = word_position[1];
-                  //if ($debug) {print "for word letter pos $xx $yy : "}
-                  markTargetBackTrackWordsThatCross(word_number,dir,word_number_crossing,dir_crossing);
-								});
-            }
-
-            //Walk back from # dir if no optimal targets, then optimal will not work here. So delete %target_words_for_word_backtrack{#}{dir}
-            @upToCurrentWordTemp = @upToCurrentWord; //maintain @upToCurrentWord
-            pop @upToCurrentWordTemp; //remove the word we are on, as it will never be a bactrack target. it is the source
-            my $trigger = 1 ; //assume no optimal backtrack targets
-            foreach my $item (@upToCurrentWordTemp) { //#try and prove wrong
-                    my $wordNumberTarg = ${$item}{wordNumber};
-                    my $dirTarg = ${$item}{dir};
-                    if ( $target_words_for_word_backtrack{$wordNumber}{$dir}{$wordNumberTarg}{$dirTarg} != undef ) {
-                        $trigger = 0; #found at least one target
-                        last;
-                        }
-                    }
-            if ($trigger == 1) {
-                 undef $target_words_for_word_backtrack{$wordNumber}{$dir}; #set to undef so it will alet us later there are no backtrack targets.
-                 //#$targetLettersForBackTrack{$x}{$y} = ();
-                 //if ($debug) { print "optimal fail at $x $y no backtrack targets. \$targetLettersForBackTrack{$x}{$y} now equals $targetLettersForBackTrack{$x}{$y}\n"};
-                 }
-
-            }
-     //@nextWordOnBoard  = @upToCurrentWord; //IMPORTANT restore @nextWordOnBoard
-     }
-     */
 }
 
-/*
-function markTargetLettersForBackTrackFromWordLetterPositions(x , y , xx , yy , dir){
-//MarktargetLettersForBackTrackFromWordLetterPositions(x opt start , y opt start , x calc , y calc , dir calc)
-//input start with $x,$y for optimized start position and $x $y for calculation start position and letter position and $dir
-//increase value in global $targetLettersForBackTrack{$x}{$y}{$xx}{$yy}
-//return word letter positions [[x0,y0],[x1,y1],.....]
-
-//??? true??
-//For all letter positions in a given word return cells that can immediately influence that letter position.
-//These are N/S E/W cells of our horiz and vert word
-//These will be our backtrack targets.
-
-var xxx , yyy , letter_position;
-var word_number;
-var word_letter_positions;
-
-$wordNumber = $ThisSquareBelongsToWordNumber[$xx][$yy][$dir];
-if ($wordNumber == undef) {return()}
-@wordLetterPositions = @{$letterPositionsOfWord[$wordNumber][$dir]};
-
-//if ($debug) {print "letter positions:\n"}
-foreach  $letterPosition (@wordLetterPositions) {
-         $xxx = $letterPosition->[0];
-         $yyy = $letterPosition->[1];
-         $targetLettersForBackTrack{$x}{$y}{$xxx}{$yyy}++ ;
-         //if ($debug ) {print "\$targetLettersForBackTrack{$x}{$y}{$xxx}{$yyy}  = $targetLettersForBackTrack{$x}{$y}{$xxx}{$yyy}\n"}
-         }
-//if ($debug ) {print "\n"}
-return  @wordLetterPositions;
-}
-*/
-/*
-function markTargetBackTrackWordsThatCross()
-{
-#input: word number and direcction
-#find all crossing words and for each:
-#output: global hash (quick access) of words number and direction of words that are backtrack targets
-# $target_words_for_word_backtrack{# of source}{dir of source}{# target}{dir target} = 1
+function markTargetBackTrackWordsThatCross(){
+//input: word number and direction
+//find all crossing words and for each:
+//output: global hash (quick access) of words number and direction of words that are backtrack targets
+// $target_words_for_word_backtrack{# of source}{dir of source}{# target}{dir target} = 1
 
 my $wordNumberSource = $_[0];
 my $dirSource = $_[1];
