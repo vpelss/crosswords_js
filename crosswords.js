@@ -52,7 +52,7 @@ var targetWordsForBackTrack; //global as we need to backtrack to the first  memb
 //rule 3 Remove shadows by only keeping the intersection of rule 1 and 2
 //rule 3 is ignored (> 1) and is nor (> 0) as it fails (over prunes) on British style crosswords
 //# eg: $targetLettersForBackTrack{x failed letter}{y failed letter}{x}{y} > 0 #pregenerated for speed!
-var target_letters_for_backtrack; //global as we need to backtrack to the first  member of it we encounter. if $targetLettersForBackTrack{x failed letter}{y failed letter} == undef there are NO targets!
+var target_cells_for_letter_backtrack; //global as we need to backtrack to the first  member of it we encounter. if $targetLettersForBackTrack{x failed letter}{y failed letter} == undef there are NO targets!
 
 
 main();
@@ -106,12 +106,24 @@ document.getElementById('puzzle_place').innerHTML = puzzle_string;
 }
 
 function calculateOptimalBacktracks(){
-//touchingWordsForBackTrack; #global as we need to backtrack to the first  member of it we encounter. if not == () we are in a backtrack state!
+//touching_words_for_backtrack; #global as we need to backtrack to the first  member of it we encounter. if not == () we are in a backtrack state!
+
+//letter backtrack
+//cycle through each letter cell, provided by next_letter_positions_on_board_temp, and build : target_cells_for_letter_backtrack
+//optimal backtrack targets are all n,e,w,s letters of the horizontal and vertical word centered on the cell.
+//don't include our cell
+//note: it does not matter if some of the cells in target_cells_for_letter_backtrack are not yet included in the chosen walk.
+//when using optimal backtrack, we use the naive backtrack and stop  at the first encountered member of target_cells_for_letter_backtrack
+
+//word backtrack
+
 
 //rule 1. All letters in the horizontal and vertical words (up to the failed letter) can affect the failure of laying a letter
 //rule 2. All crossing words of both the horizontal and vertical words of the failed letter can affect the failure of laying a letter
 //rule 3 Remove shadows by only keeping the intersection of rule 1 and 2
 //targetLettersForBackTrack{x failed letter}{y failed letter}{x}{y} = 1 #pre-generated for speed!
+
+
 var x , y , xx , yy , letter_position;
 var up_to_xy; //this will be the shifter part we will check to see if there is an
       //optimal target in the backtrack. We need 2 as one needs to be pristine so we can reassign it to @next_letter_position_on_board
@@ -129,43 +141,23 @@ var next_letter_positions_on_board_temp = JSON.parse( JSON.stringify( next_lette
 var next_word_on_board_temp = JSON.parse( JSON.stringify( next_word_on_board ) ); //backup as we are going to tear it up
 
 if (mode == "letter") {
-     while (next_letter_positions_on_board_temp.length != 0) {
-            cell_position = next_letter_positions_on_board_temp.shift(); //remove next letter position
-            x = cell_position[0];
-            y = cell_position[1];
-
-            up_to_xy.push( cell_position);  // put it on @upToXY
-            //increase $targetLettersForBackTrack for all letter positions in word
-            word_letter_positions = markTargetLettersForBackTrackFromWordLetterPositions(x,y,x,y,$dir);
-            //increase $targetLettersForBackTrack for all letter positions in crossing words
-            //if ($debug) {print "crossing\n "}
-						word_letter_positions.forEach(function( letter_position ){
-							xx = letter_position[0];
-              yy = letter_position[1];
-              //if ($debug) {print "for word letter pos $xx $yy : "}
-              markTargetLettersForBackTrackFromWordLetterPositions(x , y , xx , yy , 1-dir);
-						});
-            //Walk back from $x , $y if no optimal targets, then optimal will not work here. So delete %targetLettersForBackTrack{$x}{$y}
-            up_to_xy_temp = JSON.parse( JSON.stringify(up_to_xy) ); //maintain @upToXY
-            up_to_xy_temp.pop(); //remove the square we are on, as it will never be a bactrack target. it is the source
-            var trigger = true ; //assume no optimal backtrack targets
-						up_to_xy_temp.forEach(function( item ){
-							if(trigger == false){return;}//skip the rest. We already found a target
-							xx = item[0];
-              yy = item[1];
-              //if ( target_letters_for_backtrack{$x}{$y}{$xx}{$yy} != undef ) {
-              if (typeof target_letters_for_backtrack["{x}_{y}_{xx}_{yy}"] != 'undefined') {
-								trigger = false; //found at least one target
-              }
-						});
-
-            if (trigger == true) {
-							target_letters_for_backtrack = undefined; //set to undef so it will alet us later there are no backtrack targets.
-                 //if ($debug) { print "optimal fail at $x $y no backtrack targets. \$targetLettersForBackTrack{$x}{$y} now equals $targetLettersForBackTrack{$x}{$y}\n"};
-                 }
-            }
-     //next_letter_position_on_board = @upToXY; //IMPORTANT restore @next_letter_position_on_board
-     }
+    while (next_letter_positions_on_board_temp.length != 0) {
+			cell_position = next_letter_positions_on_board_temp.shift(); //remove next letter position
+			x = cell_position[0];
+			y = cell_position[1];
+			for(dir = 0; dir < 2 ;dir++){
+				if(typeof this_square_belongs_to_word_number[dir][y][x] === 'undefined'){continue;}//no word
+				let tsbtwn = this_square_belongs_to_word_number[dir][y][x];
+				word_letter_positions = letter_positions_of_word[dir][tsbtwn];
+					word_letter_positions.forEach(function(word_position){
+						xx = word_position[0];
+						yy = word_position[1];
+						if(typeof target_cells_for_letter_backtrack["{x}_{y}"] === 'undefined'){target_cells_for_letter_backtrack["{x}_{y}"] = [];}
+						tester = "{xx}_{yy}";
+						target_cells_for_letter_backtrack["{x}_{y}"].push("{xx}_{yy}");
+					});
+			}
+		}
 
 if (mode == 'word') {
      while (next_word_on_board_temp.length != 0) {
@@ -190,7 +182,7 @@ if (mode == 'word') {
 								});
             }
 
-            #Walk back from # dir if no optimal targets, then optimal will not work here. So delete %targetWordsForBackTrack{#}{dir}
+            //Walk back from # dir if no optimal targets, then optimal will not work here. So delete %targetWordsForBackTrack{#}{dir}
             @upToCurrentWordTemp = @upToCurrentWord; #maintain @upToCurrentWord
             pop @upToCurrentWordTemp; #remove the word we are on, as it will never be a bactrack target. it is the source
             my $trigger = 1 ; #assume no optimal backtrack targets
@@ -209,41 +201,41 @@ if (mode == 'word') {
                  }
 
             }
-     @nextWordOnBoard  = @upToCurrentWord; #IMPORTANT restore @nextWordOnBoard
+     //@nextWordOnBoard  = @upToCurrentWord; //IMPORTANT restore @nextWordOnBoard
      }
 }
 
-function markTargetLettersForBackTrackFromWordLetterPositions(){
+/*
+function markTargetLettersForBackTrackFromWordLetterPositions(x , y , xx , yy , dir){
 //MarktargetLettersForBackTrackFromWordLetterPositions(x opt start , y opt start , x calc , y calc , dir calc)
 //input start with $x,$y for optimized start position and $x $y for calculation start position and letter position and $dir
 //increase value in global $targetLettersForBackTrack{$x}{$y}{$xx}{$yy}
 //return word letter positions [[x0,y0],[x1,y1],.....]
 
-my $x = shift @_;
-my $y = shift @_;
-my $xx = shift @_;
-my $yy = shift @_;
-my $dir = shift @_;
+//??? true??
+//For all letter positions in a given word return cells that can immediately influence that letter position.
+//These are N/S E/W cells of our horiz and vert word
+//These will be our backtrack targets.
 
-my ($xxx , $yyy , $letterPosition);
-
-my $wordNumber;
-my @wordLetterPositions;
+var xxx , yyy , letter_position;
+var word_number;
+var word_letter_positions;
 
 $wordNumber = $ThisSquareBelongsToWordNumber[$xx][$yy][$dir];
 if ($wordNumber == undef) {return()}
 @wordLetterPositions = @{$letterPositionsOfWord[$wordNumber][$dir]};
 
-if ($debug) {print "letter positions:\n"}
+//if ($debug) {print "letter positions:\n"}
 foreach  $letterPosition (@wordLetterPositions) {
          $xxx = $letterPosition->[0];
          $yyy = $letterPosition->[1];
          $targetLettersForBackTrack{$x}{$y}{$xxx}{$yyy}++ ;
-         if ($debug ) {print "\$targetLettersForBackTrack{$x}{$y}{$xxx}{$yyy}  = $targetLettersForBackTrack{$x}{$y}{$xxx}{$yyy}\n"}
+         //if ($debug ) {print "\$targetLettersForBackTrack{$x}{$y}{$xxx}{$yyy}  = $targetLettersForBackTrack{$x}{$y}{$xxx}{$yyy}\n"}
          }
-if ($debug ) {print "\n"}
+//if ($debug ) {print "\n"}
 return  @wordLetterPositions;
 }
+*/
 
 function markTargetBackTrackWordsThatCross()
 {

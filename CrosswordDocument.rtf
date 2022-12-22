@@ -139,7 +139,14 @@ Note: It really shines if your walking/search path ensures that each following w
 \cf2\f0\fs20\par
 \ul Optimum Backtrack for Word by Word Builds\cf0\ulnone\f1\fs24\par
 \cf2\f0\fs20\par
-By adding an optimum backtrack routine, I have improved the generation time by a factor of 2500 times or more in "some" cases. If a word attempt fails, I make a list of the crossing word positions and the adjacent words positions (above, below or left / right). Those are the words that influence the word positions that failed. This is the same with a letter search. Cells above, below, left and right can affect the ability to place a letter. Then I backtrack until I hit one of the word positions in that list. You must stop on the first one encountered or you risk loosing possible puzzle solutions.\cf0\f1\fs24\par
+By adding an optimum backtrack routine, I have improved the generation time by a factor of 2500 times or more in "some" cases. \par
+\par
+If a word attempt fails, I make a list of the crossing word positions and the adjacent words positions (above, below or left / right). Those are the words that influence the word positions that failed. \par
+\par
+This is the same with a letter search. All cells in both the horizontal word, and vertical word can affect the ability to place a letter. \par
+\par
+I backtrack until I hit one of the word positions (or letter positions) in that list. \par
+You must stop on the first one encountered or you risk loosing possible puzzle solutions.\cf0\f1\fs24\par
 \cf2\f0\fs20\par
 Grids that do not seem to benefit are the Double Word Grids with 100% interlock. This makes sense as all or most crossing words affect the word you are trying to solve for.\cf0\f1\fs24\par
 \cf2\f0\fs20\par
@@ -149,6 +156,24 @@ eg:\cf0\f1\fs24\par
 \cf2\f0\fs20 Word Search Meta : 0.05 sec per call. Less recursions.\cf0\f1\fs24\par
 \cf2\f0\fs20 Word Search Meta with optimum backtrack: 0.09 sec per call. Potenially fewest recursions.\cf0\f1\fs24\par
 \cf2\f0\fs20\par
+Letter search: ? can affect placements of letter at o\par
+\par
+-----x------\par
+-----?------\par
+--x?o??x\par
+-----?------\par
+-----x------\par
+\par
+Word Search: crossing words ? can affect placement of word ooo\par
+\par
+-----x------\par
+x??ox-----\par
+--x?o??x--\par
+----xo???x--\par
+-----xx------\par
+\par
+\par
+\par
 \ul Data Structures\cf0\ulnone\f1\fs24\par
 \cf2\f0\fs20\par
 \b %WordListBy_WordLength_Letter_LetterPosition\cf0\b0\f1\fs24\par
