@@ -49,52 +49,328 @@ var target_words_for_word_backtrack = {}; //global as we need to backtrack to th
 //eg $target_words_for_word_backtrack{$wordNumberSource}{$dirSource}{$crossingWordNumber}{$crossingWordDir}
 
 main();
-function main(){
+function main() {
 
-//url arg processing
-const queryString = window.location.search;
-const urlParams = new URLSearchParams(queryString);
+	//url arg processing
+	const queryString = window.location.search;
+	const urlParams = new URLSearchParams(queryString);
 
-if(! urlParams.has('wordfile')){
+	if (!urlParams.has('wordfile')) {
 		alert('Please call from main form.');
 		throw new Error('done');
-}
+	}
 
-var arg_grid =  urlParams.get('grid');
-grid_change( arg_grid );
+	var arg_grid = urlParams.get('grid');
+	grid_change(arg_grid);
 
-numberBlankSquares();
+	numberBlankSquares();
 
-var arg_wordfile = urlParams.get('wordfile');
-var arg_walkpath = urlParams.get('walkpath');
-if(arg_walkpath.includes('Letter')){mode = 'letter';}
-else {mode = 'word';}
-loadWordList( arg_wordfile , arg_walkpath);
+	var arg_wordfile = urlParams.get('wordfile');
+	var arg_walkpath = urlParams.get('walkpath');
+	if (arg_walkpath.includes('Letter')) {
+		mode = 'letter';
+	} else {
+		mode = 'word';
+	}
+	loadWordList(arg_wordfile, arg_walkpath);
 
-//word walks
-if (arg_walkpath == 'crossingwords'){
+	//word walks
+	if (arg_walkpath == 'crossingwords') {
 		generateNextWordPositionsOnBoardCrossing();
+	}
+
+	//letter walks
+	if (arg_walkpath == 'GenerateNextLetterPositionsOnBoardZigZag') {
+		generateNextLetterPositionOnBoardZigzag();
+	}
+	if (arg_walkpath == 'GenerateNextLetterPositionsOnBoardFlat') {
+		generateNextLetterPositionOnBoardFlat();
+	}
+
+	// is simplewordmasksearch=on
+	var arg_simplewordmasksearch = urlParams.get('simplewordmasksearch');
+
+	var arg_optimalbacktrack = urlParams.get('optimalbacktrack');
+	if (arg_optimalbacktrack) {
+		calculateOptimalBacktracks();
+	}
+
+	if (mode == 'word') {
+		if (recursiveWords() == 0) { //failed
+			temp = 7;
+		}
+	} else {
+		if (recursiveLetters() == 0) { //failed
+			temp = 6;
+		}
+	}
+
+	var arg_shuffle = urlParams.get('shuffle');
+
+	var puzzle_string = printPuzzle();
+	document.getElementById('puzzle_place').innerHTML = puzzle_string;
+}
+
+var letter_backtrack_source; //set to () to stop backtrack and set for backtrack $letterBackTrackSource{x} and  $letterBackTrackSource{y}
+function recursiveLetters()
+{
+//recursive try to lay down letters using @nextLetterPositionsOnBoard, this function will shift off, store and unshift if required
+//store locally the possible letters in  @possibleLetter
+//the next index in the list (@nextLetterPositionsOnBoard) is the next letter position we are trying to fill
+
+//recurse if we can't find possible letters (going forward) or run out of possible letters
+//next / loop if we can't lay a letter (word already used) and we have more possible letters to pick from
+//anytime we next / loop set to $unoccupied as we are processing (just in case)
+//anytime we recurse back (can't lay a letter or run out) a square we must unshift @nextLetterPositionsOnBoard , {x => $x, y => $y}; and return 0
+//if our recursive calls have returned from a failed letter, set $unoccupied (to try another letter) and next / loop to see if there are anymore possible letters for this square
+
+//note optimal recursion will not work if upper letter is part of a horizontal word
+//the reason is that we may be backtracking due to a later letter in the upper horizontal word.
+//If we wipe that word out without trying ALL the combinations in that upper word we may be missing possible words in the horizontal word we are working on now
+//an exception is if it is the last letter of a horizontal word
+//so: only optimal up if:
+     //1. the upper target letter it is not part of a horizontal word
+     //2. the upper target letter is the last letter in a horizontal word
+     //3. the letter that failed is in a single vertical word
+
+var letters_that_fit = [];
+var popped_letter;
+var word_number;
+var horiz_mask;
+var vert_mask;
+var horiz_inserted_word; //for quick removal on failed recursions
+var vert_inserted_word; //for quick removal on failed recursions
+
+letter_backtrack_source = []; //clear global indicating that we are moving forward and have cleared the backtrack state
+
+if (next_letter_positions_on_board.length == 0) {return 1;} //we have filled all the possible letter positions, we are done. This breaks us out of all recursive  success loops
+
+var cell_position =  next_letter_positions_on_board.shift(); //keep %cellPosition in subroutine unchaged as we may need to unshift on a recursive return
+var x = cell_position[0];
+var y = $cellPosition[1];
+
+if( arg_shuffle ) {
+     letters_that_fit =  shuffle( lettersPossibleAtCell(x,y) ); // 0.000059 sec per call
+     }
+else {
+      letters_that_fit = lettersPossibleAtCell(x,y).sort(); // 0.000059 sec per call
+      }
+
+recursive_count++; //count forward moving calls
+
+//if ($debug) {print "we are moving forward and working on pos $x $y , letters that fit: @lettersThatFit  \n"};
+
+var success = 0;
+while (success == 0)
+        {
+        if(letters_that_fit.length == 0) //are there any possible words? If no backtrack
+              {
+              //failed to find a list of letters going forward or we are out of letters in a recursion so go back a letter
+              //&SetXY($x,$y,$unoccupied);
+              next_letter_positions_on_board.unshift([x,y]); //always unshift our current position back on to @nextLetterPositionsOnBoard when we return!
+
+              #optimal backtrack option. saves hundreds of naive backtracks!
+              #get/set global touchingLetters and backtrack to the first  member of it we encounter. if not == () we are in a backtrack state!
+              if ($in{optimalbacktrack} == 1) {
+                   if (%letterBackTrackSource == ()) { #ignore setting backtrack if we are already backtracking
+                        if ( $targetLettersForBackTrack{$x}{$y} != undef ) { #check to see if there are any backtrack targets possible for $x $y first
+                              #&GetTouchingLetters($x,$y);
+                              $letterBackTrackSource{'x'} = $x;
+                              $letterBackTrackSource{'y'} = $y;
+                              if ($debug) {print "optimum set \%letterBackTrackSource  $letterBackTrackSource{x} $letterBackTrackSource{y}\n"}
+                              }
+                        }
+                  }
+              if ($debug) {print "out of letters at $x,$y  \n"}
+              return 0;
+              }; #no letters so fail
+
+        #try the next word that fit in this location
+        $popLetter = pop @lettersThatFit;
+        &SetXY($x,$y,$popLetter); #lay letter so we can test masks below
+        if ($debug) {print "laying $popLetter at $x,$y\n"}
+
+        #see if horizontal and vertical word is already selected. If so, fail + backtrack
+        #horiz
+        $wordNumber = $ThisSquareBelongsToWordNumber[$x][$y][0];
+        if ($wordNumber > 0) {
+             $horizMask = $allMasksOnBoard[$wordNumber][0];
+             if ( &IsWordAlreadyUsed($horizMask) ) { #this word is already used. fail
+                   &SetXY($x,$y,$unoccupied);
+                   if ($debug) {print "horiz mask exists at $x,$y\n"}
+                   next ; #choose another word ie. pop
+                   }
+             }
+        #vert
+        $wordNumber = $ThisSquareBelongsToWordNumber[$x][$y][1];
+        if ($wordNumber > 0) {
+             $vertMask = $allMasksOnBoard[$wordNumber][1];
+             if ( &IsWordAlreadyUsed($vertMask) ) { #this word is already used. fail
+                   &SetXY($x,$y,$unoccupied);
+                   if ($debug) {print "vert mask exists at $x,$y\n"}
+                   next ; #choose another word ie. pop
+                   }
+             }
+
+        #continue and mark horiz and vert words if full words
+
+        #check to see if horiz and vert mask are full words. if so then mark word as used
+        #how will we unmark?
+        #horiz
+        if ($horizMask != ()) { #is there a horiz mask?
+             if (not $horizMask =~ /$unoccupied/) {
+                 if ($wordsThatAreInserted{$horizMask} == 0) {#word not used set as used
+                      $horizInsertedWord = $horizMask; #so we can easily remove on failed recursions
+                      $wordsThatAreInserted{$horizMask} = 1;
+                      }
+                 else { #this word is already used. fail
+                         &SetXY($x,$y,$unoccupied);
+                         if ($debug) {print "horiz word exists at $x,$y\n"}
+                         next ; #choose another word ie. pop
+                         }
+                 }
+            }
+        #vert
+        if ($vertMask != ()) { #is there a vert mask?
+             if (not $vertMask =~ /$unoccupied/) {  #word not used set as used
+                 if ($wordsThatAreInserted{$vertMask} == 0) { #this word is already used. fail
+                      $vertInsertedWord = $vertMask; #so we can easily remove on failed recursions
+                      $wordsThatAreInserted{$vertMask} = 1;
+                      }
+                 else { #this word is already used. fail
+                         &SetXY($x,$y,$unoccupied);
+                         if ($debug) {print "vert word exists at $x,$y\n"}
+                         next ; #choose another word ie. pop
+                         }
+                 }
+             }
+
+        if (time() > $oldTime + 2) #print every 3 seconds
+              {
+              if ($debug) {print time()-$timeForCrossword . " sec wordNumber:$wordNumber , dir:$dir $popLetter optimalBacktrack:$optimalBacktrack naiveBacktrack:$naiveBacktrack recursive calls:$recursiveCount\n";}
+              else {print '.';} # otherwise apache timeout directive limit is reached
+              #print '.';
+              &PrintProcessing();
+              $oldTime = time();
+              }
+
+        #attempt to lay next letter
+        $success = &RecursiveLetters(); #lay next letter in the next position
+        if ($success == 1){return 1;}; #board is filled, return out of all recursive calls successfuly
+#---------------
+        #if we are here, the last recursive attempt to lay a word failed. So we are backtracking.
+        #returning from last letter which failed
+
+         #maybe undef $wordsThatAreInserted{$horizInsertedWord} for speed
+         delete $wordsThatAreInserted{$horizInsertedWord};  #allow us to reuse word
+         delete $wordsThatAreInserted{$vertInsertedWord};  #allow us to reuse word
+
+        #failed so reset letter to unoccupied
+        &SetXY($x,$y,$unoccupied);
+
+        if ($in{optimalbacktrack} == 0)
+             {
+             %letterBackTrackSource = (); #stop optimal recursion?
+             }
+
+        if ($debug) {print "letterbacktrack source: x:$letterBackTrackSource{x} y:$letterBackTrackSource{y}\n"};
+        #optimal backtrack check and processing
+        if (%letterBackTrackSource != ())
+             {
+              #we are doing an optimal backtrack
+              #if ($targetLettersForBackTrack{$x}{$y} == 1) {
+              if ($debug) {print "\$targetLettersForBackTrack{$letterBackTrackSource{x}}{$letterBackTrackSource{y}}{$x}{$y} = $targetLettersForBackTrack{$letterBackTrackSource{x}}{$letterBackTrackSource{y}}{$x}{$y}\n"}
+              #note that set to > 0 (no shadows as british style (odd not even) does not work with > 1 (shadows)
+              if ($targetLettersForBackTrack{$letterBackTrackSource{'x'}}{$letterBackTrackSource{'y'}}{$x}{$y} > 0) { #if it is equal to one, it is in a 'shaddow' and does not affect the failed letter
+                   #we have hit the optimal target. turn off optimal backtrack
+                   #%targetLettersForBackTrack = ();
+                   if ($debug) {print "wipe \%letterBackTrackSource\n"}
+                   %letterBackTrackSource = ();
+                   }
+              else {
+                    #still in optimal backtrack so keep going back
+                    unshift @nextLetterPositionsOnBoard , {x => $x, y => $y}; #always unshift our current position back on to @nextLetterPositionsOnBoard when we return!
+                    $optimalBacktrack++;
+                    if ($debug) {print "optimum skip at $x,$y\n"}
+                    return 0;
+                    }
+              }
+        if ($debug) {print "landed at $x,$y\n\n"}
+        $naiveBacktrack++;
+        next; #naive backtrack
+        }
+
+die('never get here'); #never get here
+}
+
+function shuffle(array) {
+  var m = array.length, t, i;
+
+  // While there remain elements to shuffle…
+  while (m) {
+
+    // Pick a remaining element…
+    i = Math.floor(Math.random() * m--);
+
+    // And swap it with the current element.
+	//or [array[i], array[m]] = [array[m], array[i]];
+    t = array[m];
+    array[m] = array[i];
+    array[i] = t;
   }
-
-//letter walks
-if (arg_walkpath == 'GenerateNextLetterPositionsOnBoardZigZag') {
-	generateNextLetterPositionOnBoardZigzag();
-}
-if (arg_walkpath == 'GenerateNextLetterPositionsOnBoardFlat') {
-	generateNextLetterPositionOnBoardFlat();
+  return array;
 }
 
-// is simplewordmasksearch=on
-var arg_simplewordmasksearch = urlParams.get('simplewordmasksearch');
+function lettersPossibleAtCell()
+{
+#at the input position x,y and given the prefix of a word for a mask, find and return all possible letters
+my $x = $_[0];
+my $y = $_[1];
+my @lettersThatFit;
+my $wordNumber;
+my @lettersVert;
+my @lettersHoriz;
+my $mask;
+my $isVertWord;
+my $isHorizWord;
 
-var arg_optimalbacktrack = urlParams.get('optimalbacktrack');
-if( arg_optimalbacktrack ){
-     calculateOptimalBacktracks();
+#find vert mask and possible letters
+$wordNumber = $ThisSquareBelongsToWordNumber[$x][$y][1];
+if ($wordNumber > 0) { #there is a vert mask
+     $isVertWord = 1;
+     $mask = $allMasksOnBoard[$wordNumber][1]; # get WORD or MASK at this crossword position
+     @lettersVert = keys %{$linearWordSearch{$mask}};
+     if (scalar @lettersVert == 0 ) { #should never get here as our $linearWordSearch does not stop mid word
+           die ('no \@lettersVert. impossible');
+           }
      }
 
-var puzzle_string = printPuzzle();
-document.getElementById('puzzle_place').innerHTML = puzzle_string;
-}
+#find horiz mask and possible letters
+$wordNumber = $ThisSquareBelongsToWordNumber[$x][$y][0];
+if ($wordNumber > 0) { #there is a horiz mask
+     $isHorizWord = 1;
+     $mask = $allMasksOnBoard[$wordNumber][0]; # get WORD or MASK at this crossword position
+     @lettersHoriz = keys %{$linearWordSearch{$mask}};
+     if ( scalar @lettersHoriz == 0 ) { #should never get here as our $linearWordSearch does not stop mid word
+            die ('no \@lettersHoriz. impossible');
+           }
+     }
+
+if (($isHorizWord) and ($isVertWord)) { #there is a horiz and vert word at this cell. find inersection of possible letters
+     @lettersThatFit = intersection(\@lettersHoriz , \@lettersVert);
+     if ($debug) {print "Horiz and Vert letters @lettersThatFit found at $x $y\n"}
+     return @lettersThatFit;
+     }
+if ((not $isHorizWord) and ($isVertWord)) { #there is only a vertical word at this cell
+     if ($debug) {print "Vert letters @lettersVert found at $x $y\n"}
+     return @lettersVert;
+     }
+if (($isHorizWord) and (not $isVertWord)) { #there is only a horizontal word at this cell
+      if ($debug) {print "Horiz letters @lettersHoriz found at $x $y\n"}
+     return @lettersHoriz;
+     }
+die('should not get to end of letterPossibleAt()');
+};
 
 function calculateOptimalBacktracks() {
 	//letter backtrack
