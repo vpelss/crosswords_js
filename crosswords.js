@@ -141,7 +141,7 @@ var vert_mask;
 var horiz_inserted_word; //for quick removal on failed recursions
 var vert_inserted_word; //for quick removal on failed recursions
 
-letter_backtrack_source = []; //clear global indicating that we are moving forward and have cleared the backtrack state
+letter_backtrack_source = undefined; //clear global indicating that we are moving forward and have cleared the backtrack state
 
 if (next_letter_positions_on_board.length == 0) {return 1;} //we have filled all the possible letter positions, we are done. This breaks us out of all recursive  success loops
 
@@ -161,98 +161,35 @@ recursive_count++; //count forward moving calls
 //if ($debug) {print "we are moving forward and working on pos $x $y , letters that fit: @lettersThatFit  \n"};
 
 var success = 0;
-while (success == 0)
-        {
-        if(letters_that_fit.length == 0) //are there any possible words? If no backtrack
-              {
+while (success == 0){
+        if(letters_that_fit.length == 0){ //are there any possible words? If no backtrack
               //failed to find a list of letters going forward or we are out of letters in a recursion so go back a letter
               //&SetXY($x,$y,$unoccupied);
               next_letter_positions_on_board.unshift([x,y]); //always unshift our current position back on to @nextLetterPositionsOnBoard when we return!
 
-              #optimal backtrack option. saves hundreds of naive backtracks!
-              #get/set global touchingLetters and backtrack to the first  member of it we encounter. if not == () we are in a backtrack state!
-              if ($in{optimalbacktrack} == 1) {
-                   if (%letterBackTrackSource == ()) { #ignore setting backtrack if we are already backtracking
-                        if ( $targetLettersForBackTrack{$x}{$y} != undef ) { #check to see if there are any backtrack targets possible for $x $y first
-                              #&GetTouchingLetters($x,$y);
-                              $letterBackTrackSource{'x'} = $x;
-                              $letterBackTrackSource{'y'} = $y;
-                              if ($debug) {print "optimum set \%letterBackTrackSource  $letterBackTrackSource{x} $letterBackTrackSource{y}\n"}
+              //optimal backtrack option. can save hundreds of naive backtracks!
+              //get/set global touchingLetters and backtrack to the first  member of it we encounter. if not == () we are in a backtrack state!
+              if( arg_optimalbacktrack ) {
+                   if (typeof letter_backtrack_source === 'undefined') { //ignore setting backtrack if we are already backtracking
+                        if (typeof target_cells_for_letter_backtrack["${x}_${y}"] === 'undefined') { //check to see if there are any backtrack targets possible for $x $y first
+                              //&GetTouchingLetters($x,$y);
+                              letter_backtrack_source = [x,y]; //we were not already optimal bactracking so let's start an optimal backtrack
+                              //if ($debug) {print "optimum set \%letterBackTrackSource  $letterBackTrackSource{x} $letterBackTrackSource{y}\n"}
                               }
                         }
                   }
-              if ($debug) {print "out of letters at $x,$y  \n"}
-              return 0;
-              }; #no letters so fail
+              //if ($debug) {print "out of letters at $x,$y  \n"}
+              return 0; //start our backtrack naive or optimal
+              } //no letters so fail
 
-        #try the next word that fit in this location
-        $popLetter = pop @lettersThatFit;
-        &SetXY($x,$y,$popLetter); #lay letter so we can test masks below
-        if ($debug) {print "laying $popLetter at $x,$y\n"}
-
-        #see if horizontal and vertical word is already selected. If so, fail + backtrack
-        #horiz
-        $wordNumber = $ThisSquareBelongsToWordNumber[$x][$y][0];
-        if ($wordNumber > 0) {
-             $horizMask = $allMasksOnBoard[$wordNumber][0];
-             if ( &IsWordAlreadyUsed($horizMask) ) { #this word is already used. fail
-                   &SetXY($x,$y,$unoccupied);
-                   if ($debug) {print "horiz mask exists at $x,$y\n"}
-                   next ; #choose another word ie. pop
-                   }
-             }
-        #vert
-        $wordNumber = $ThisSquareBelongsToWordNumber[$x][$y][1];
-        if ($wordNumber > 0) {
-             $vertMask = $allMasksOnBoard[$wordNumber][1];
-             if ( &IsWordAlreadyUsed($vertMask) ) { #this word is already used. fail
-                   &SetXY($x,$y,$unoccupied);
-                   if ($debug) {print "vert mask exists at $x,$y\n"}
-                   next ; #choose another word ie. pop
-                   }
-             }
-
-        #continue and mark horiz and vert words if full words
-
-        #check to see if horiz and vert mask are full words. if so then mark word as used
-        #how will we unmark?
-        #horiz
-        if ($horizMask != ()) { #is there a horiz mask?
-             if (not $horizMask =~ /$unoccupied/) {
-                 if ($wordsThatAreInserted{$horizMask} == 0) {#word not used set as used
-                      $horizInsertedWord = $horizMask; #so we can easily remove on failed recursions
-                      $wordsThatAreInserted{$horizMask} = 1;
-                      }
-                 else { #this word is already used. fail
-                         &SetXY($x,$y,$unoccupied);
-                         if ($debug) {print "horiz word exists at $x,$y\n"}
-                         next ; #choose another word ie. pop
-                         }
-                 }
-            }
-        #vert
-        if ($vertMask != ()) { #is there a vert mask?
-             if (not $vertMask =~ /$unoccupied/) {  #word not used set as used
-                 if ($wordsThatAreInserted{$vertMask} == 0) { #this word is already used. fail
-                      $vertInsertedWord = $vertMask; #so we can easily remove on failed recursions
-                      $wordsThatAreInserted{$vertMask} = 1;
-                      }
-                 else { #this word is already used. fail
-                         &SetXY($x,$y,$unoccupied);
-                         if ($debug) {print "vert word exists at $x,$y\n"}
-                         next ; #choose another word ie. pop
-                         }
-                 }
-             }
-
-        if (time() > $oldTime + 2) #print every 3 seconds
-              {
-              if ($debug) {print time()-$timeForCrossword . " sec wordNumber:$wordNumber , dir:$dir $popLetter optimalBacktrack:$optimalBacktrack naiveBacktrack:$naiveBacktrack recursive calls:$recursiveCount\n";}
-              else {print '.';} # otherwise apache timeout directive limit is reached
-              #print '.';
-              &PrintProcessing();
-              $oldTime = time();
-              }
+        //try the next letter that fit in this location
+        popped_letter = letters_that_fit.pop();
+        var masks_set = setXY(x,y,popped_letter); //lay letter and save horiz and vert masks .
+		if(! masks_set){ //see if horizontal and vertical word is already been laid/used in the puzzle. If so, fail + backtrack
+			//&SetXY($x,$y,$unoccupied);
+			continue;
+		}
+        //if ($debug) {print "laying $popLetter at $x,$y\n"}
 
         #attempt to lay next letter
         $success = &RecursiveLetters(); #lay next letter in the next position
@@ -262,8 +199,10 @@ while (success == 0)
         #returning from last letter which failed
 
          #maybe undef $wordsThatAreInserted{$horizInsertedWord} for speed
-         delete $wordsThatAreInserted{$horizInsertedWord};  #allow us to reuse word
-         delete $wordsThatAreInserted{$vertInsertedWord};  #allow us to reuse word
+        // delete $wordsThatAreInserted{$horizInsertedWord};  #allow us to reuse word
+         delete $wordsThatAreInserted{ masks_set[0] };
+         delete $wordsThatAreInserted{ masks_set[1] };
+         //delete $wordsThatAreInserted{$vertInsertedWord};  #allow us to reuse word
 
         #failed so reset letter to unoccupied
         &SetXY($x,$y,$unoccupied);
@@ -301,6 +240,77 @@ while (success == 0)
         }
 
 die('never get here'); #never get here
+}
+
+function setXY(x,y,letter){
+//only used for fill letter routines. not fill word routines
+//see if potential mask equates to a word already laid. if so return false
+//if not set cell, horiz mask , vert mask and return [horiz mask , vert mask]
+
+
+var word_number;
+var position;
+
+$puzzle[$x][$y]->{Letter} = $letter; #keep grid up to date!
+
+#set horiz mask
+$wordNumber = $ThisSquareBelongsToWordNumber[$x][$y][0];
+$position = $PositionInWord[$x][$y][0];
+if ($wordNumber != undef)
+     {
+     #print ("horiz mask x:$x y:$y wordNumber:$wordNumber horiz:$allMasksOnBoard[$wordNumber][0] vert:$allMasksOnBoard[$wordNumber][1] position:$position letter:$letter\n\n");
+     #place letter in $allMasksOnBoard
+     #this can be moved to a highr level and done directly if we ONLY lay down whole words
+     substr($allMasksOnBoard[$wordNumber][0] , $position , 1 , $letter) or die ("horiz mask x:$x y:$y wordNumber:$wordNumber horiz:$allMasksOnBoard[$wordNumber][0] vert:$allMasksOnBoard[$wordNumber][1] position:$position letter:$letter");
+     }
+
+#set vert mask
+$wordNumber = $ThisSquareBelongsToWordNumber[$x][$y][1];
+$position = $PositionInWord[$x][$y][1];
+if ($wordNumber != undef)
+     {
+     #print ("vert mask x:$x y:$y wordNumber:$wordNumber horiz:$allMasksOnBoard[$wordNumber][0] vert:$allMasksOnBoard[$wordNumber][1] position:$position letter:$letter\n\n");
+     #PrintProcessing;
+     substr($allMasksOnBoard[$wordNumber][1] , $position , 1 , $letter) or die ("vert mask x:$x y:$y wordNumber:$wordNumber horiz:$allMasksOnBoard[$wordNumber][0] vert:$allMasksOnBoard[$wordNumber][1] position:$position letter:$letter");
+     }
+
+NEW
+
+see if partial mask can equate to only one single word. if so, has it been used?
+See if a FULL horiz or vert word has already been laid. Return false if a word has already been used
+also DO NOT set the cell and masks!
+
+if it HAS NOT been used, set cell and horiz and vert masks. then RETURN [horiz_mask,vert_mask]
+
+If full word all to word used list
+
+      //see if horizontal and vertical word is already been laid/used in the puzzle. If so, fail + backtrack
+        //horiz
+        $wordNumber = $ThisSquareBelongsToWordNumber[$x][$y][0];
+        if ($wordNumber > 0) {
+             $horizMask = $allMasksOnBoard[$wordNumber][0];
+             if ( &IsWordAlreadyUsed($horizMask) ) { //this word is already used. fail
+                   &SetXY($x,$y,$unoccupied);
+                   //if ($debug) {print "horiz mask exists at $x,$y\n"}
+                   next ; //choose another word ie. pop
+                   }
+             }
+
+		 $wordsThatAreInserted{$vertMask} = 1;
+
+        //vert
+        $wordNumber = $ThisSquareBelongsToWordNumber[$x][$y][1];
+        if ($wordNumber > 0) {
+             $vertMask = $allMasksOnBoard[$wordNumber][1];
+             if ( &IsWordAlreadyUsed($vertMask) ) { #this word is already used. fail
+                   &SetXY($x,$y,$unoccupied);
+                   if ($debug) {print "vert mask exists at $x,$y\n"}
+                   next ; #choose another word ie. pop
+                   }
+             }
+
+		 $wordsThatAreInserted{$vertMask} = 1;
+
 }
 
 function shuffle(array) {
