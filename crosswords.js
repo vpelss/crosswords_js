@@ -24,7 +24,7 @@ var position_in_word = []; //position_in_word[dir][yy][xx] = position_count
 
 var this_square_belongs_to_word_number = []; //this_square_belongs_to_word_number[dir][yy][xx]
 
-var all_masks_on_board = []; //all_masks_on_board[dir][word_number] returns the mask of letters that have been laid down. eg: XoLoooo
+var all_masks_on_board = []; //all_masks_on_board[dir][word_number] returns the letters that have been laid down including unoccupied. eg: XoLoooo
 
 var walkpath = '';
 var mode = ''; //letter or word
@@ -295,47 +295,40 @@ return true;
 
 }
 
-function isWordAlreadyUsed() {
-#input of mask WORooooo
-#check to see if all possible letters 'o' are singles. If so word is unique. then see if word has been used
-#saves us from filling in a whole word on letter fills only to have to backtrack
-my $mask = $_[0];
-my @nextLetters;
-
-while ($mask =~ /o/g) { #see if we get single letters until end of word
-        @nextLetters = &getNextPossibleLetters($mask);
-        if (scalar(@nextLetters) > 1) #multiple words possible for mask.
-            {
+function isWordAlreadyUsed(mask) {
+//input of mask WORooooo
+//check to see if all possible letters 'o' are singles. If so word is unique. then see if word has been used
+//saves us from filling in a whole word on letter fills only to have to backtrack
+var next_letters;
+let pattern = `/${unoccupied}/g`;
+while ( pattern.test(mask) ) { //see if we get single letters until end of word
+        next_letters = linear_word_search[ mask ];
+		//&getNextPossibleLetters($mask);
+        if (next_letters.length > 1){ //multiple words possible for mask.
             return 0;
             }
-        #$temp = $nextLetters[0];
-        $mask =~ s/o/$nextLetters[0]/; #replace first blank with the single letter
+        //$temp = $nextLetters[0];
+		mask.replace( unoccupied , next_letters[0]); //replace first blank with the single letter
+        //$mask =~ s/o/ next_letters[0]/; //replace first blank with the single letter
         }
-#only one word is possible for mask at this point
-#but has it been used?
-if ($wordsThatAreInserted{$mask} == 1) {
-      return 1;
-      }
-else
-      {return 0;}
-};
+//only one word is possible for mask at this point
+//but has it been used?
+if (typeof words_that_are_inserted[mask] !== 'undefined') { return 1; }
+else {return 0;}
+}
 
 function shuffle(array) {
-  var m = array.length, t, i;
-
-  // While there remain elements to shuffle…
-  while (m) {
-
-    // Pick a remaining element…
-    i = Math.floor(Math.random() * m--);
-
-    // And swap it with the current element.
-	//or [array[i], array[m]] = [array[m], array[i]];
-    t = array[m];
-    array[m] = array[i];
-    array[i] = t;
-  }
-  return array;
+	var m = array.length , t , i;
+	while (m) { //while there remain elements to shuffle
+		// Pick a remaining element
+		i = Math.floor(Math.random() * m--);
+		// And swap it with the current element.
+		//or [array[i], array[m]] = [array[m], array[i]];
+		t = array[m];
+		array[m] = array[i];
+		array[i] = t;
+	}
+	return array;
 }
 
 function lettersPossibleAtCell()
@@ -806,44 +799,46 @@ function getDxDy(dir){
 return [dx,dy];
 }
 
-function loadWordList( arg_wordfile , arg_walkpath){
-    var db = arg_wordfile;
-    var wl = Object.keys(word_lengths);
-      wl.forEach(function(word_length){
-        var file_and_path = './wordlists/' + db + '/words/' + word_length + '.txt';
-        var word_list_text = readStringFromFileAtPath(file_and_path);
-        //still need to process
-								var word_list_array = word_list_text.split(/\r?\n|\r|\n/g); //split on lines into array
-								if( word_list_array[word_list_array.length-1].trim() == '' ){
-										word_list_array.pop();
-										}//remove last line if empty
+function loadWordList(arg_wordfile, arg_walkpath) {
+	var db = arg_wordfile;
+	var wl = Object.keys(word_lengths);
+	wl.forEach(function(word_length) {
+		var file_and_path = './wordlists/' + db + '/words/' + word_length + '.txt';
+		var word_list_text = readStringFromFileAtPath(file_and_path);
+		//still need to process
+		var word_list_array = word_list_text.split(/\r?\n|\r|\n/g); //split on lines into array
+		if (word_list_array[word_list_array.length - 1].trim() == '') {
+			word_list_array.pop();
+		} //remove last line if empty
 
-								words_of_length[word_length] = 	word_list_array.length;
-								//process word_list_array
-								words_of_length_string[word_length] = ''; //start blank
-								word_list_array.forEach( function(word){
-										if( mode == 'letter' ){//letter walk
-												var mask_pre = '';
-												var mask = '';
-												var letters_array = word.split('');
-												letters_array.forEach( function( letter , index ) {
-														mask_pre += letter;
-														if(index + 1 == word_length){	return; }//skip last letter
-														mask = mask_pre.padEnd(word_length , unoccupied);
-														if(typeof linear_word_search[mask] == 'undefined'){ linear_word_search[mask] = {}; } //create on first access
-														var next_letter = letters_array[index+1];
-														linear_word_search[mask][next_letter] = 1; //letter list will be accessible by object.keys()
-												});
-										}
-										else{//word walk
-												words_of_length_string[word_length] = words_of_length_string[word_length] + ',' + word.toUpperCase();
-										}
+		words_of_length[word_length] = word_list_array.length;
+		//process word_list_array
+		words_of_length_string[word_length] = ''; //start blank
+		word_list_array.forEach(function(word) {
+			if (mode == 'letter') { //letter walk
+				var mask_pre = '';
+				var mask = '';
+				var letters_array = word.split('');
+				letters_array.forEach(function(letter, index) {
+					mask_pre += letter;
+					if (index + 1 == word_length) {
+						return;
+					} //skip last letter
+					mask = mask_pre.padEnd(word_length, unoccupied);
+					if (typeof linear_word_search[mask] == 'undefined') {
+						linear_word_search[mask] = {};
+					} //create on first access
+					var next_letter = letters_array[index + 1];
+					linear_word_search[mask][next_letter] = 1; //letter list will be accessible by object.keys()
+				});
+			} else { //word walk
+				words_of_length_string[word_length] = words_of_length_string[word_length] + ',' + word.toUpperCase();
+			}
 
-									});
-      });
-				word_list_text = ''; //cleanup
+		});
+	});
+	word_list_text = ''; //cleanup
 }
-
 function printPuzzle(){
   var temp , temp3 , temp4;
   var x , y , dir;
