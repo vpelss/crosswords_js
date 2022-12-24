@@ -11,8 +11,8 @@ var unoccupied = 'o';
 var puzzle = []; // puzzle[y][x] = 'the_letter'
 var puzzle_width;
 var puzzle_height;
-var dir_across = 0;
-var dir_down = 1;
+const dir_across = 0;
+const dir_down = 1;
 var word_lengths = {}; //wordLengths[wordLength] = 1 ; so we have a list of word sizes = object.keys(wordLengths);
 var words_of_length = {}; //a count of the number of words of length x : words_of_length[x]
 var words_of_length_string = {}; // ,word1,word2, etc
@@ -45,6 +45,7 @@ var naiveBacktrack; //a counter
 var optimalBacktrack; //a counter
 //var touchingWordsForBackTrack; //global as we need to backtrack to the first  member of it we encounter. if not == () we are in a backtrack state!
 var target_cells_for_letter_backtrack = {}; //global as we need to backtrack to the first  member of it we encounter. if $targetLettersForBackTrack{x failed letter}{y failed letter} == undef there are NO targets!
+//target_cells_for_letter_backtrack[x_y][xx_yy] = 1; //x_y is this cell and target _cells are stored in keys xx_yy!
 var target_words_for_word_backtrack = {}; //global as we need to backtrack to the first  member of it we encounter. if $target_words_for_word_backtrack{# source}{dir source} == undef there are NO targets!
 //eg $target_words_for_word_backtrack{$wordNumberSource}{$dirSource}{$crossingWordNumber}{$crossingWordDir}
 
@@ -132,22 +133,24 @@ function recursiveLetters()
      //1. the upper target letter it is not part of a horizontal word
      //2. the upper target letter is the last letter in a horizontal word
      //3. the letter that failed is in a single vertical word
-
+var x , y;
 var letters_that_fit = [];
 var popped_letter;
-var word_number;
-var horiz_mask;
-var vert_mask;
-var horiz_inserted_word; //for quick removal on failed recursions
-var vert_inserted_word; //for quick removal on failed recursions
+var success;
+words_that_were_laid = [];
+//var word_number;
+//var horiz_mask;
+//var vert_mask;
+//var horiz_inserted_word; //for quick removal on failed recursions
+//var vert_inserted_word; //for quick removal on failed recursions
 
 letter_backtrack_source = undefined; //clear global indicating that we are moving forward and have cleared the backtrack state
 
 if (next_letter_positions_on_board.length == 0) {return 1;} //we have filled all the possible letter positions, we are done. This breaks us out of all recursive  success loops
 
 var cell_position =  next_letter_positions_on_board.shift(); //keep %cellPosition in subroutine unchanged as we may need to unshift on a recursive return
-var x = cell_position[0];
-var y = $cellPosition[1];
+x = cell_position[0];
+y = $cellPosition[1];
 
 if( arg_shuffle ) {
      letters_that_fit =  shuffle( lettersPossibleAtCell(x,y) ); // 0.000059 sec per call
@@ -160,7 +163,7 @@ recursive_count++; //count forward moving calls
 
 //if ($debug) {print "we are moving forward and working on pos $x $y , letters that fit: @lettersThatFit  \n"};
 
-var success = 0;
+success = 0;
 while (success == 0){
         if(letters_that_fit.length == 0){ //are there any possible words? If no backtrack
               //failed to find a list of letters going forward or we are out of letters in a recursion so go back a letter
@@ -183,8 +186,8 @@ while (success == 0){
 
         //try the next letter that fit in this location
         popped_letter = letters_that_fit.pop();
-        var masks_set = setXY(x,y,popped_letter); //lay letter and save horiz and vert masks .
-		if(! masks_set){ //see if horizontal and vertical word is already been laid/used in the puzzle. If so, fail + backtrack
+        words_that_were_laid = setXY(x,y,popped_letter); //lay letter and save horiz and vert masks .
+		if(! words_that_were_laid){ //see if horizontal and vertical word is already been laid/used in the puzzle. If so, fail + backtrack
 			//&SetXY($x,$y,$unoccupied);
 			continue;
 		}
@@ -199,8 +202,8 @@ while (success == 0){
 
         // delete $wordsThatAreInserted{$horizInsertedWord};  #allow us to reuse word
          //delete $wordsThatAreInserted{$vertInsertedWord};  #allow us to reuse word
-         words_that_are_inserted[ masks_set[0] ] = undefined;
-         words_that_are_inserted[ masks_set[1] ] = undefined;
+         words_that_are_inserted[ words_that_were_laid[0] ] = undefined;
+         words_that_are_inserted[ words_that_were_laid[1] ] = undefined;
 
         //failed so reset letter to unoccupied
         setXY(x,y,unoccupied);
@@ -212,22 +215,26 @@ while (success == 0){
 
         //if ($debug) {print "letterbacktrack source: x:$letterBackTrackSource{x} y:$letterBackTrackSource{y}\n"};
         //optimal backtrack check and processing
-        if(typeof letter_backtrack_source === 'undefined'){
-              //we are doing an optimal backtrack
+        if(typeof letter_backtrack_source !== 'undefined'){//we are doing an optimal backtrack
               //if ($targetLettersForBackTrack{$x}{$y} == 1) {
               //if ($debug) {print "\$targetLettersForBackTrack{$letterBackTrackSource{x}}{$letterBackTrackSource{y}}{$x}{$y} = $targetLettersForBackTrack{$letterBackTrackSource{x}}{$letterBackTrackSource{y}}{$x}{$y}\n"}
               //note that set to > 0 (no shadows as british style (odd not even) does not work with > 1 (shadows)
-              if($targetLettersForBackTrack{$letterBackTrackSource{'x'}}{$letterBackTrackSource{'y'}}{$x}{$y} > 0) { //if it is equal to one, it is in a 'shaddow' and does not affect the failed letter
-                   #we have hit the optimal target. turn off optimal backtrack
-                   #%targetLettersForBackTrack = ();
-                   if ($debug) {print "wipe \%letterBackTrackSource\n"}
-                   %letterBackTrackSource = ();
+              //if($targetLettersForBackTrack{$letterBackTrackSource{'x'}}{$letterBackTrackSource{'y'}}{$x}{$y} > 0) { //if it is equal to one, it is in a 'shaddow' and does not affect the failed letter
+              var xx_yy = `${letter_backtrack_source[0]}_${letter_backtrack_source[1]}`;
+			  var x_y = '' + x + '_' + y;
+			  //if(Object.keys( target_cells_for_letter_backtrack[xy_yy] ).length  > 0) { //?? if it is equal to one, it is in a 'shadow' and does not affect the failed letter
+			  if( target_cells_for_letter_backtrack[xx_yy][x_y] ) { //?? if it is equal to one, it is in a 'shadow' and does not affect the failed letter
+                   //we have hit the optimal target. turn off optimal backtrack
+                   //%targetLettersForBackTrack = ();
+					//if($debug) {print "wipe \%letterBackTrackSource\n"}
+                   letter_backtrack_source = undefined;
                    }
               else {
-                    #still in optimal backtrack so keep going back
-                    unshift @nextLetterPositionsOnBoard , {x => $x, y => $y}; #always unshift our current position back on to @nextLetterPositionsOnBoard when we return!
-                    $optimalBacktrack++;
-                    if ($debug) {print "optimum skip at $x,$y\n"}
+                    //still in optimal backtrack so keep going back
+                    //unshift @nextLetterPositionsOnBoard , {x => $x, y => $y}; //always unshift our current position back on to @nextLetterPositionsOnBoard when we return!
+                    next_letter_positions_on_board.unshift([x,y]); //always unshift our current position back on to @nextLetterPositionsOnBoard when we return!
+                    optimal_backtrack++;
+                    //if ($debug) {print "optimum skip at $x,$y\n"}
                     return 0;
                     }
               }
@@ -242,75 +249,76 @@ document.alert('Error: Recursive, we should never get here.');
 
 function setXY(x,y,letter){
 //only used for fill letter routines. not fill word routines
-//see if potential mask equates to a word already laid. if so return false
-//if not set cell, horiz mask , vert mask and return [horiz mask , vert mask]
+//see if potential mask equates to a word already laid. if true return false
+//set cell, horiz mask , vert mask
+//return : true if mask laid , false if mask or word already used , [full words laid]
 
-
-var word_number;
+var word_number;// = this_square_belongs_to_word_number;
 var position;
+var mask = [];
+//var horizontal_mask;
+//var vertical_mask;
+var dir;
+var words_laid; //leave undefined and any define if we need to push a mask to return
 
-$puzzle[$x][$y]->{Letter} = $letter; #keep grid up to date!
+//get masks, see if unique mask (equating to a word) or full word is already laid, if so return false
+if(letter != unoccupied){ //no need if unoccupied
+	for(dir = 0 ; dir > 2 ; dir++){
+		word_number = this_square_belongs_to_word_number[dir][x][y];
+		if(typeof this_square_belongs_to_word_number[dir][x][y] === 'undefined'){continue;}//no word here
+		position = position_in_word[x][y][dir] + 1;
+		mask[dir] = all_masks_on_board[dir][word_number];
+		//add letter to mask
+		mask[dir] = mask[dir].substring(0, position) + letter + mask[dir].substring(position + 1);
+		if(isWordAlreadyUsed(mask[dir])){ //any word already used return false
+			return false;
+		}
+	}
+}
 
-#set horiz mask
-$wordNumber = $ThisSquareBelongsToWordNumber[$x][$y][0];
-$position = $PositionInWord[$x][$y][0];
-if ($wordNumber != undef)
-     {
-     #print ("horiz mask x:$x y:$y wordNumber:$wordNumber horiz:$allMasksOnBoard[$wordNumber][0] vert:$allMasksOnBoard[$wordNumber][1] position:$position letter:$letter\n\n");
-     #place letter in $allMasksOnBoard
-     #this can be moved to a highr level and done directly if we ONLY lay down whole words
-     substr($allMasksOnBoard[$wordNumber][0] , $position , 1 , $letter) or die ("horiz mask x:$x y:$y wordNumber:$wordNumber horiz:$allMasksOnBoard[$wordNumber][0] vert:$allMasksOnBoard[$wordNumber][1] position:$position letter:$letter");
-     }
+//set cell then mask(s)
+puzzle[y][x] = letter; //keep grid up to date
+for(dir = 0 ; dir > 2 ; dir++){
+	word_number = this_square_belongs_to_word_number[dir][x][y];
+	if(typeof this_square_belongs_to_word_number[dir][x][y] === 'undefined'){continue;}//no word here
+	all_masks_on_board[dir][word_number] = mask[dir];
+	//is it a full word?
+	if( ! mask[dir].includes(unoccupied) ){ //if mask full word add to words_laid and also to $wordsThatAreInserted
+		words_that_are_inserted[ mask[dir] ] = 1;
+		if(typeof words_laid === 'undefined'){words_laid = [];}
+		words_laid.push( mask[dir] );
+	}
+}
 
-#set vert mask
-$wordNumber = $ThisSquareBelongsToWordNumber[$x][$y][1];
-$position = $PositionInWord[$x][$y][1];
-if ($wordNumber != undef)
-     {
-     #print ("vert mask x:$x y:$y wordNumber:$wordNumber horiz:$allMasksOnBoard[$wordNumber][0] vert:$allMasksOnBoard[$wordNumber][1] position:$position letter:$letter\n\n");
-     #PrintProcessing;
-     substr($allMasksOnBoard[$wordNumber][1] , $position , 1 , $letter) or die ("vert mask x:$x y:$y wordNumber:$wordNumber horiz:$allMasksOnBoard[$wordNumber][0] vert:$allMasksOnBoard[$wordNumber][1] position:$position letter:$letter");
-     }
-
-NEW
-
-see if partial mask can equate to only one single word. if so, has it been used?
-See if a FULL horiz or vert word has already been laid. Return false if a word has already been used
-also DO NOT set the cell and masks!
-
-if unocupied to lay down, just update cell and masks
-
-if it HAS NOT been used, set cell and horiz and vert masks. then RETURN [horiz_mask,vert_mask]
-If full word all to word used list
-
-      //see if horizontal and vertical word is already been laid/used in the puzzle. If so, fail + backtrack
-        //horiz
-        $wordNumber = $ThisSquareBelongsToWordNumber[$x][$y][0];
-        if ($wordNumber > 0) {
-             $horizMask = $allMasksOnBoard[$wordNumber][0];
-             if ( &IsWordAlreadyUsed($horizMask) ) { //this word is already used. fail
-                   &SetXY($x,$y,$unoccupied);
-                   //if ($debug) {print "horiz mask exists at $x,$y\n"}
-                   next ; //choose another word ie. pop
-                   }
-             }
-
-		 $wordsThatAreInserted{$vertMask} = 1;
-
-        //vert
-        $wordNumber = $ThisSquareBelongsToWordNumber[$x][$y][1];
-        if ($wordNumber > 0) {
-             $vertMask = $allMasksOnBoard[$wordNumber][1];
-             if ( &IsWordAlreadyUsed($vertMask) ) { #this word is already used. fail
-                   &SetXY($x,$y,$unoccupied);
-                   if ($debug) {print "vert mask exists at $x,$y\n"}
-                   next ; #choose another word ie. pop
-                   }
-             }
-
-		 $wordsThatAreInserted{$vertMask} = 1;
+if(typeof words_laid !== 'undefined'){ return words_laid; }
+return true;
 
 }
+
+function isWordAlreadyUsed() {
+#input of mask WORooooo
+#check to see if all possible letters 'o' are singles. If so word is unique. then see if word has been used
+#saves us from filling in a whole word on letter fills only to have to backtrack
+my $mask = $_[0];
+my @nextLetters;
+
+while ($mask =~ /o/g) { #see if we get single letters until end of word
+        @nextLetters = &getNextPossibleLetters($mask);
+        if (scalar(@nextLetters) > 1) #multiple words possible for mask.
+            {
+            return 0;
+            }
+        #$temp = $nextLetters[0];
+        $mask =~ s/o/$nextLetters[0]/; #replace first blank with the single letter
+        }
+#only one word is possible for mask at this point
+#but has it been used?
+if ($wordsThatAreInserted{$mask} == 1) {
+      return 1;
+      }
+else
+      {return 0;}
+};
 
 function shuffle(array) {
   var m = array.length, t, i;
@@ -444,7 +452,7 @@ function calculateOptimalBacktracks() {
 						if (typeof target_cells_for_letter_backtrack[x_y] === 'undefined') {
 							target_cells_for_letter_backtrack[x_y] = {};
 						}
-						target_cells_for_letter_backtrack[x_y][xx_yy] = 1;
+						target_cells_for_letter_backtrack[x_y][xx_yy] = true; //x_y is this cell and target _cells are stored in keys xx_yy!
 					}
 				});
 			}
