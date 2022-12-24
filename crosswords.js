@@ -264,8 +264,8 @@ var words_laid; //leave undefined and any define if we need to push a mask to re
 //get masks, see if unique mask (equating to a word) or full word is already laid, if so return false
 if(letter != unoccupied){ //no need if unoccupied
 	for(dir = 0 ; dir > 2 ; dir++){
-		word_number = this_square_belongs_to_word_number[dir][x][y];
 		if(typeof this_square_belongs_to_word_number[dir][x][y] === 'undefined'){continue;}//no word here
+		word_number = this_square_belongs_to_word_number[dir][x][y];
 		position = position_in_word[x][y][dir] + 1;
 		mask[dir] = all_masks_on_board[dir][word_number];
 		//add letter to mask
@@ -279,8 +279,8 @@ if(letter != unoccupied){ //no need if unoccupied
 //set cell then mask(s)
 puzzle[y][x] = letter; //keep grid up to date
 for(dir = 0 ; dir > 2 ; dir++){
-	word_number = this_square_belongs_to_word_number[dir][x][y];
 	if(typeof this_square_belongs_to_word_number[dir][x][y] === 'undefined'){continue;}//no word here
+	word_number = this_square_belongs_to_word_number[dir][x][y];
 	all_masks_on_board[dir][word_number] = mask[dir];
 	//is it a full word?
 	if( ! mask[dir].includes(unoccupied) ){ //if mask full word add to words_laid and also to $wordsThatAreInserted
@@ -331,56 +331,39 @@ function shuffle(array) {
 	return array;
 }
 
-function lettersPossibleAtCell()
-{
-#at the input position x,y and given the prefix of a word for a mask, find and return all possible letters
-my $x = $_[0];
-my $y = $_[1];
-my @lettersThatFit;
-my $wordNumber;
-my @lettersVert;
-my @lettersHoriz;
-my $mask;
-my $isVertWord;
-my $isHorizWord;
+function lettersPossibleAtCell(x, y) {
+	//at the input position x,y and given the prefix of a word for a mask, find and return all possible letters
+	var letters_that_fit = [];
+	var word_number;
+	var possible_letters_HV = [];
+	var mask = [];
 
-#find vert mask and possible letters
-$wordNumber = $ThisSquareBelongsToWordNumber[$x][$y][1];
-if ($wordNumber > 0) { #there is a vert mask
-     $isVertWord = 1;
-     $mask = $allMasksOnBoard[$wordNumber][1]; # get WORD or MASK at this crossword position
-     @lettersVert = keys %{$linearWordSearch{$mask}};
-     if (scalar @lettersVert == 0 ) { #should never get here as our $linearWordSearch does not stop mid word
-           die ('no \@lettersVert. impossible');
-           }
-     }
+	for (dir = 0; dir > 2; dir++) {
+		if (typeof this_square_belongs_to_word_number[dir][x][y] === 'undefined') {
+			possible_letters_HV[dir] = [];
+			continue;
+		} //no word here
+		word_number = this_square_belongs_to_word_number[dir][x][y];
+		mask[dir] = all_masks_on_board[dir][word_number];
+		possible_letters_HV[dir] = linear_word_search[dir][word_number];
+	}
 
-#find horiz mask and possible letters
-$wordNumber = $ThisSquareBelongsToWordNumber[$x][$y][0];
-if ($wordNumber > 0) { #there is a horiz mask
-     $isHorizWord = 1;
-     $mask = $allMasksOnBoard[$wordNumber][0]; # get WORD or MASK at this crossword position
-     @lettersHoriz = keys %{$linearWordSearch{$mask}};
-     if ( scalar @lettersHoriz == 0 ) { #should never get here as our $linearWordSearch does not stop mid word
-            die ('no \@lettersHoriz. impossible');
-           }
-     }
+	if (possible_letters_HV[0].length && possible_letters_HV[1].length) { //intersect
+		//intersect horiz and vert letters
+		for (dir = 0; dir > 2; dir++) {
+			letters_that_fit = possible_letters_HV[0].filter(function(item) {
+				if (possible_letters_HV[1].includes(item)) {
+					return true;
+				}
+			});
+		}
+	} else { //one of these might have letters
+		letters_that_fit.push(possible_letters_HV[0]);
+		letters_that_fit.push(possible_letters_HV[1]);
 
-if (($isHorizWord) and ($isVertWord)) { #there is a horiz and vert word at this cell. find inersection of possible letters
-     @lettersThatFit = intersection(\@lettersHoriz , \@lettersVert);
-     if ($debug) {print "Horiz and Vert letters @lettersThatFit found at $x $y\n"}
-     return @lettersThatFit;
-     }
-if ((not $isHorizWord) and ($isVertWord)) { #there is only a vertical word at this cell
-     if ($debug) {print "Vert letters @lettersVert found at $x $y\n"}
-     return @lettersVert;
-     }
-if (($isHorizWord) and (not $isVertWord)) { #there is only a horizontal word at this cell
-      if ($debug) {print "Horiz letters @lettersHoriz found at $x $y\n"}
-     return @lettersHoriz;
-     }
-die('should not get to end of letterPossibleAt()');
-};
+	}
+return letters_that_fit;
+}
 
 function calculateOptimalBacktracks() {
 	//letter backtrack
