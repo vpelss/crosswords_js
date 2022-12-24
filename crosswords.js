@@ -145,7 +145,7 @@ letter_backtrack_source = undefined; //clear global indicating that we are movin
 
 if (next_letter_positions_on_board.length == 0) {return 1;} //we have filled all the possible letter positions, we are done. This breaks us out of all recursive  success loops
 
-var cell_position =  next_letter_positions_on_board.shift(); //keep %cellPosition in subroutine unchaged as we may need to unshift on a recursive return
+var cell_position =  next_letter_positions_on_board.shift(); //keep %cellPosition in subroutine unchanged as we may need to unshift on a recursive return
 var x = cell_position[0];
 var y = $cellPosition[1];
 
@@ -167,13 +167,12 @@ while (success == 0){
               //&SetXY($x,$y,$unoccupied);
               next_letter_positions_on_board.unshift([x,y]); //always unshift our current position back on to @nextLetterPositionsOnBoard when we return!
 
-              //optimal backtrack option. can save hundreds of naive backtracks!
               //get/set global touchingLetters and backtrack to the first  member of it we encounter. if not == () we are in a backtrack state!
               if( arg_optimalbacktrack ) {
-                   if (typeof letter_backtrack_source === 'undefined') { //ignore setting backtrack if we are already backtracking
+                   if (typeof letter_backtrack_source === 'undefined') { //only set if we are moving forward, not backtracking
                         if (typeof target_cells_for_letter_backtrack["${x}_${y}"] === 'undefined') { //check to see if there are any backtrack targets possible for $x $y first
                               //&GetTouchingLetters($x,$y);
-                              letter_backtrack_source = [x,y]; //we were not already optimal bactracking so let's start an optimal backtrack
+                              letter_backtrack_source = [x,y]; //set source/start cell for optimal bactracking
                               //if ($debug) {print "optimum set \%letterBackTrackSource  $letterBackTrackSource{x} $letterBackTrackSource{y}\n"}
                               }
                         }
@@ -191,36 +190,34 @@ while (success == 0){
 		}
         //if ($debug) {print "laying $popLetter at $x,$y\n"}
 
-        #attempt to lay next letter
-        $success = &RecursiveLetters(); #lay next letter in the next position
-        if ($success == 1){return 1;}; #board is filled, return out of all recursive calls successfuly
-#---------------
-        #if we are here, the last recursive attempt to lay a word failed. So we are backtracking.
-        #returning from last letter which failed
+        //attempt to lay next letter
+        success = recursiveLetters(); //lay next letter in the next position
+		if(success == 1){return 1;} //board was filled, this is where we return out of all recursive calls successfully. it was triggered a few lines above.
+//------------------------------------------------------------
+        //if we are here, the last recursive attempt to lay a word failed. So we are backtracking now
+        //returning from last letter which failed so:
 
-         #maybe undef $wordsThatAreInserted{$horizInsertedWord} for speed
         // delete $wordsThatAreInserted{$horizInsertedWord};  #allow us to reuse word
-         delete $wordsThatAreInserted{ masks_set[0] };
-         delete $wordsThatAreInserted{ masks_set[1] };
          //delete $wordsThatAreInserted{$vertInsertedWord};  #allow us to reuse word
+         words_that_are_inserted[ masks_set[0] ] = undefined;
+         words_that_are_inserted[ masks_set[1] ] = undefined;
 
-        #failed so reset letter to unoccupied
-        &SetXY($x,$y,$unoccupied);
+        //failed so reset letter to unoccupied
+        setXY(x,y,unoccupied);
 
-        if ($in{optimalbacktrack} == 0)
+        if (! arg_optimalbacktrack)
              {
-             %letterBackTrackSource = (); #stop optimal recursion?
+             letter_backtrack_source = undefined; //stop optimal recursion?
              }
 
-        if ($debug) {print "letterbacktrack source: x:$letterBackTrackSource{x} y:$letterBackTrackSource{y}\n"};
-        #optimal backtrack check and processing
-        if (%letterBackTrackSource != ())
-             {
-              #we are doing an optimal backtrack
-              #if ($targetLettersForBackTrack{$x}{$y} == 1) {
-              if ($debug) {print "\$targetLettersForBackTrack{$letterBackTrackSource{x}}{$letterBackTrackSource{y}}{$x}{$y} = $targetLettersForBackTrack{$letterBackTrackSource{x}}{$letterBackTrackSource{y}}{$x}{$y}\n"}
-              #note that set to > 0 (no shadows as british style (odd not even) does not work with > 1 (shadows)
-              if ($targetLettersForBackTrack{$letterBackTrackSource{'x'}}{$letterBackTrackSource{'y'}}{$x}{$y} > 0) { #if it is equal to one, it is in a 'shaddow' and does not affect the failed letter
+        //if ($debug) {print "letterbacktrack source: x:$letterBackTrackSource{x} y:$letterBackTrackSource{y}\n"};
+        //optimal backtrack check and processing
+        if(typeof letter_backtrack_source === 'undefined'){
+              //we are doing an optimal backtrack
+              //if ($targetLettersForBackTrack{$x}{$y} == 1) {
+              //if ($debug) {print "\$targetLettersForBackTrack{$letterBackTrackSource{x}}{$letterBackTrackSource{y}}{$x}{$y} = $targetLettersForBackTrack{$letterBackTrackSource{x}}{$letterBackTrackSource{y}}{$x}{$y}\n"}
+              //note that set to > 0 (no shadows as british style (odd not even) does not work with > 1 (shadows)
+              if($targetLettersForBackTrack{$letterBackTrackSource{'x'}}{$letterBackTrackSource{'y'}}{$x}{$y} > 0) { //if it is equal to one, it is in a 'shaddow' and does not affect the failed letter
                    #we have hit the optimal target. turn off optimal backtrack
                    #%targetLettersForBackTrack = ();
                    if ($debug) {print "wipe \%letterBackTrackSource\n"}
@@ -234,12 +231,13 @@ while (success == 0){
                     return 0;
                     }
               }
-        if ($debug) {print "landed at $x,$y\n\n"}
+        //if ($debug) {print "landed at $x,$y\n\n"}
         $naiveBacktrack++;
-        next; #naive backtrack
+        continue; //naive backtrack. just try the next letter in this routine and move forward
         }
 
-die('never get here'); #never get here
+console.log('never get here'); //never get here
+document.alert('Error: Recursive, we should never get here.');
 }
 
 function setXY(x,y,letter){
@@ -280,8 +278,9 @@ see if partial mask can equate to only one single word. if so, has it been used?
 See if a FULL horiz or vert word has already been laid. Return false if a word has already been used
 also DO NOT set the cell and masks!
 
-if it HAS NOT been used, set cell and horiz and vert masks. then RETURN [horiz_mask,vert_mask]
+if unocupied to lay down, just update cell and masks
 
+if it HAS NOT been used, set cell and horiz and vert masks. then RETURN [horiz_mask,vert_mask]
 If full word all to word used list
 
       //see if horizontal and vertical word is already been laid/used in the puzzle. If so, fail + backtrack
