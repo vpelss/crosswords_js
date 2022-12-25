@@ -16,7 +16,7 @@ const dir_down = 1;
 var word_lengths = {}; //wordLengths[wordLength] = 1 ; so we have a list of word sizes = object.keys(wordLengths);
 var words_of_length = {}; //a count of the number of words of length x : words_of_length[x]
 var words_of_length_string = {}; // ,word1,word2, etc
-var linear_word_search = {}; // linear_word_search[WORo] = next letter
+var linear_word_search = {}; // linear_word_search[WORo] = next letter : next_letters = Object.keys(linear_word_search[ mask ]);
 
 //key orders should be [dir][yy][xx] for readability when troubleshooting !!!!!!!!!!!!!!!!!!!
 var letter_positions_of_word = []; //letter_positions_of_word[dir][word_number] returns [ ofLetterPositions ];
@@ -272,7 +272,7 @@ if(letter != unoccupied){ //no need if unoccupied
 	for(dir = 0 ; dir < 2 ; dir++){
 		if(typeof this_square_belongs_to_word_number[dir][x][y] === 'undefined'){continue;}//no word here
 		word_number = this_square_belongs_to_word_number[dir][x][y];
-		position = position_in_word[x][y][dir] + 1;
+		position = position_in_word[dir][x][y];
 		mask[dir] = all_masks_on_board[dir][word_number];
 		//add letter to mask
 		mask[dir] = mask[dir].substring(0, position) + letter + mask[dir].substring(position + 1);
@@ -306,9 +306,10 @@ function isWordAlreadyUsed(mask) {
 //check to see if all possible letters 'o' are singles. If so word is unique. then see if word has been used
 //saves us from filling in a whole word on letter fills only to have to backtrack
 var next_letters;
-let pattern = `/${unoccupied}/g`;
+//let pattern = /${unoccupied}/g;
+let pattern =  new RegExp(`${unoccupied}`, 'g');
 while ( pattern.test(mask) ) { //see if we get single letters until end of word
-        next_letters = linear_word_search[ mask ];
+        next_letters = Object.keys(linear_word_search[ mask ]);
 		//&getNextPossibleLetters($mask);
         if (next_letters.length > 1){ //multiple words possible for mask.
             return 0;
