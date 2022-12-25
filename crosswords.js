@@ -18,7 +18,7 @@ var words_of_length = {}; //a count of the number of words of length x : words_o
 var words_of_length_string = {}; // ,word1,word2, etc
 var linear_word_search = {}; // linear_word_search[WORo] = next letter : next_letters = Object.keys(linear_word_search[ mask ]);
 
-//key orders should be [dir][yy][xx] for readability when troubleshooting !!!!!!!!!!!!!!!!!!!
+//key orders should be [dir][yy][xx] for less typeof calls and for readability when troubleshooting !!!
 var letter_positions_of_word = []; //letter_positions_of_word[dir][word_number] returns [ ofLetterPositions ];
 var position_in_word = []; //position_in_word[dir][yy][xx] = position_count
 
@@ -41,19 +41,21 @@ var next_word_on_board = []; //next_word_on_board = [ [word_number , dir] , [] ,
 
 //optimal search variables
 var wordNumberDirUsed; //$wordNumberDirUsed{$wordNumber}{$dir} so we only backtrack or note words that have been filled
-var naiveBacktrack; //a counter
-var optimalBacktrack; //a counter
+var naive_backtrack = 0; //a counter
+var optimal_backtrack = 0; //a counter
 //var touchingWordsForBackTrack; //global as we need to backtrack to the first  member of it we encounter. if not == () we are in a backtrack state!
 var target_cells_for_letter_backtrack = {}; //global as we need to backtrack to the first  member of it we encounter. if $targetLettersForBackTrack{x failed letter}{y failed letter} == undef there are NO targets!
 //target_cells_for_letter_backtrack[x_y][xx_yy] = 1; //x_y is this cell and target _cells are stored in keys xx_yy!
 var target_words_for_word_backtrack = {}; //global as we need to backtrack to the first  member of it we encounter. if $target_words_for_word_backtrack{# source}{dir source} == undef there are NO targets!
 //eg $target_words_for_word_backtrack{$wordNumberSource}{$dirSource}{$crossingWordNumber}{$crossingWordDir}
+var words_that_are_inserted = {};
 
 var recursive_count = 0;
 var naive_count = 0;
 
 main();
 var arg_shuffle;
+var arg_optimalbacktrack;
 function main() {
 
 	//url arg processing
@@ -97,7 +99,7 @@ function main() {
 	// is simplewordmasksearch=on
 	var arg_simplewordmasksearch = urlParams.get('simplewordmasksearch');
 
-	var arg_optimalbacktrack = urlParams.get('optimalbacktrack');
+	arg_optimalbacktrack = urlParams.get('optimalbacktrack');
 	if (arg_optimalbacktrack) {
 		calculateOptimalBacktracks();
 	}
@@ -245,7 +247,7 @@ while (success == 0){
                     }
               }
         //if ($debug) {print "landed at $x,$y\n\n"}
-        $naiveBacktrack++;
+        naive_backtrack++;
         continue; //naive backtrack. just try the next letter in this routine and move forward
         }
 
@@ -253,57 +255,64 @@ console.log('never get here'); //never get here
 document.alert('Error: Recursive, we should never get here.');
 }
 
-function setXY(x,y,letter){
-//only used for fill letter routines. not fill word routines
-//see if potential mask equates to a word already laid. if true return false
-//set cell, horiz mask , vert mask
-//return : true if mask laid , false if mask or word already used , [full words laid]
+function setXY(x, y, letter) {
+	//only used for fill letter routines. not fill word routines
+	//see if potential mask equates to a word already laid. if true return false
+	//set cell, horiz mask , vert mask
+	//return : true if mask laid , false if mask or word already used , [full words laid]
 
-var word_number;// = this_square_belongs_to_word_number;
-var position;
-var mask = [];
-//var horizontal_mask;
-//var vertical_mask;
-var dir;
-var words_laid; //leave undefined and any define if we need to push a mask to return
+	var word_number; // = this_square_belongs_to_word_number;
+	var position;
+	var mask = [];
+	var dir;
+	var words_laid; //leave undefined and any define if we need to push a mask to return
 
-//get masks, see if unique mask (equating to a word) or full word is already laid, if so return false
-if(letter != unoccupied){ //no need if unoccupied
-	for(dir = 0 ; dir < 2 ; dir++){
-		if(typeof this_square_belongs_to_word_number[dir][x][y] === 'undefined'){continue;}//no word here
-		word_number = this_square_belongs_to_word_number[dir][x][y];
-		position = position_in_word[dir][x][y];
+	//get masks, see if unique mask (equating to a word) or full word is already laid, if so return false
+	for (dir = 0; dir < 2; dir++) {
+		if (typeof this_square_belongs_to_word_number[dir][y][x] === 'undefined') {
+			continue;
+		} //no word here
+		word_number = this_square_belongs_to_word_number[dir][y][x];
+		position = position_in_word[dir][y][x];
 		mask[dir] = all_masks_on_board[dir][word_number];
 		//add letter to mask
 		mask[dir] = mask[dir].substring(0, position) + letter + mask[dir].substring(position + 1);
-		if(isWordAlreadyUsed(mask[dir])){ //any word already used return false
-			return false;
+		if (letter != unoccupied) { //no need if unoccupied
+			if (isWordAlreadyUsed(mask[dir])) { //any word already used return false
+				return false;
+			}
 		}
 	}
-}
 
-//set cell then mask(s)
-puzzle[y][x] = letter; //keep grid up to date
-for(dir = 0 ; dir < 2 ; dir++){
-	if(typeof this_square_belongs_to_word_number[dir][x][y] === 'undefined'){continue;}//no word here
-	word_number = this_square_belongs_to_word_number[dir][x][y];
-	all_masks_on_board[dir][word_number] = mask[dir];
-	//is it a full word?
-	if( ! mask[dir].includes(unoccupied) ){ //if mask full word add to words_laid and also to $wordsThatAreInserted
-		words_that_are_inserted[ mask[dir] ] = 1;
-		if(typeof words_laid === 'undefined'){words_laid = [];}
-		words_laid.push( mask[dir] );
+
+	//set cell then mask(s)
+	puzzle[y][x] = letter; //keep grid up to date
+	for (dir = 0; dir < 2; dir++) {
+		if (typeof this_square_belongs_to_word_number[dir][y][x] === 'undefined') {
+			continue;
+		} //no word here
+		word_number = this_square_belongs_to_word_number[dir][y][x];
+		all_masks_on_board[dir][word_number] = mask[dir];
+		//is it a full word?
+		if (!mask[dir].includes(unoccupied)) { //if mask full word add to words_laid and also to $wordsThatAreInserted
+			words_that_are_inserted[mask[dir]] = 1;
+			if (typeof words_laid === 'undefined') {
+				words_laid = [];
+			}
+			words_laid.push(mask[dir]);
+		}
+
 	}
-}
 
-if(typeof words_laid !== 'undefined'){ return words_laid; }
-return true;
-
+	if (typeof words_laid !== 'undefined') {
+		return words_laid;
+	}
+	return true;
 }
 
 function isWordAlreadyUsed(mask) {
 //input of mask WORooooo
-//check to see if all possible letters 'o' are singles. If so word is unique. then see if word has been used
+//check to see if all possible letters 'o' have only one possible letter. If so, only one word can be created. See if this word has been used.
 //saves us from filling in a whole word on letter fills only to have to backtrack
 var next_letters;
 //let pattern = /${unoccupied}/g;
@@ -346,11 +355,11 @@ function lettersPossibleAtCell(x, y) {
 	var mask = [];
 
 	for (dir = 0; dir < 2; dir++) {
-		if (typeof this_square_belongs_to_word_number[dir][x][y] === 'undefined') {
+		if (typeof this_square_belongs_to_word_number[dir][y][x] === 'undefined') {
 			possible_letters_HV[dir] = [];
 			continue;
 		} //no word here
-		word_number = this_square_belongs_to_word_number[dir][x][y];
+		word_number = this_square_belongs_to_word_number[dir][y][x];
 		mask[dir] = all_masks_on_board[dir][word_number];
 		possible_letters_HV[dir] = Object.keys(linear_word_search[mask[dir]]);
 	}
