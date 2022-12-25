@@ -49,12 +49,18 @@ var target_cells_for_letter_backtrack = {}; //global as we need to backtrack to 
 var target_words_for_word_backtrack = {}; //global as we need to backtrack to the first  member of it we encounter. if $target_words_for_word_backtrack{# source}{dir source} == undef there are NO targets!
 //eg $target_words_for_word_backtrack{$wordNumberSource}{$dirSource}{$crossingWordNumber}{$crossingWordDir}
 
+var recursive_count = 0;
+var naive_count = 0;
+
 main();
+var arg_shuffle;
 function main() {
 
 	//url arg processing
 	const queryString = window.location.search;
 	const urlParams = new URLSearchParams(queryString);
+
+	arg_shuffle = urlParams.get('shuffle');
 
 	if (!urlParams.has('wordfile')) {
 		alert('Please call from main form.');
@@ -106,7 +112,7 @@ function main() {
 		}
 	}
 
-	var arg_shuffle = urlParams.get('shuffle');
+
 
 	var puzzle_string = printPuzzle();
 	document.getElementById('puzzle_place').innerHTML = puzzle_string;
@@ -146,11 +152,11 @@ words_that_were_laid = [];
 
 letter_backtrack_source = undefined; //clear global indicating that we are moving forward and have cleared the backtrack state
 
-if (next_letter_positions_on_board.length == 0) {return 1;} //we have filled all the possible letter positions, we are done. This breaks us out of all recursive  success loops
+if (next_letter_position_on_board.length == 0) {return 1;} //we have filled all the possible letter positions, we are done. This breaks us out of all recursive  success loops
 
-var cell_position =  next_letter_positions_on_board.shift(); //keep %cellPosition in subroutine unchanged as we may need to unshift on a recursive return
+var cell_position =  next_letter_position_on_board.shift(); //keep %cellPosition in subroutine unchanged as we may need to unshift on a recursive return
 x = cell_position[0];
-y = $cellPosition[1];
+y = cell_position[1];
 
 if( arg_shuffle ) {
      letters_that_fit =  shuffle( lettersPossibleAtCell(x,y) ); // 0.000059 sec per call
@@ -168,7 +174,7 @@ while (success == 0){
         if(letters_that_fit.length == 0){ //are there any possible words? If no backtrack
               //failed to find a list of letters going forward or we are out of letters in a recursion so go back a letter
               //&SetXY($x,$y,$unoccupied);
-              next_letter_positions_on_board.unshift([x,y]); //always unshift our current position back on to @nextLetterPositionsOnBoard when we return!
+              next_letter_position_on_board.unshift([x,y]); //always unshift our current position back on to @nextLetterPositionsOnBoard when we return!
 
               //get/set global touchingLetters and backtrack to the first  member of it we encounter. if not == () we are in a backtrack state!
               if( arg_optimalbacktrack ) {
@@ -232,7 +238,7 @@ while (success == 0){
               else {
                     //still in optimal backtrack so keep going back
                     //unshift @nextLetterPositionsOnBoard , {x => $x, y => $y}; //always unshift our current position back on to @nextLetterPositionsOnBoard when we return!
-                    next_letter_positions_on_board.unshift([x,y]); //always unshift our current position back on to @nextLetterPositionsOnBoard when we return!
+                    next_letter_position_on_board.unshift([x,y]); //always unshift our current position back on to @nextLetterPositionsOnBoard when we return!
                     optimal_backtrack++;
                     //if ($debug) {print "optimum skip at $x,$y\n"}
                     return 0;
@@ -263,7 +269,7 @@ var words_laid; //leave undefined and any define if we need to push a mask to re
 
 //get masks, see if unique mask (equating to a word) or full word is already laid, if so return false
 if(letter != unoccupied){ //no need if unoccupied
-	for(dir = 0 ; dir > 2 ; dir++){
+	for(dir = 0 ; dir < 2 ; dir++){
 		if(typeof this_square_belongs_to_word_number[dir][x][y] === 'undefined'){continue;}//no word here
 		word_number = this_square_belongs_to_word_number[dir][x][y];
 		position = position_in_word[x][y][dir] + 1;
@@ -278,7 +284,7 @@ if(letter != unoccupied){ //no need if unoccupied
 
 //set cell then mask(s)
 puzzle[y][x] = letter; //keep grid up to date
-for(dir = 0 ; dir > 2 ; dir++){
+for(dir = 0 ; dir < 2 ; dir++){
 	if(typeof this_square_belongs_to_word_number[dir][x][y] === 'undefined'){continue;}//no word here
 	word_number = this_square_belongs_to_word_number[dir][x][y];
 	all_masks_on_board[dir][word_number] = mask[dir];
@@ -338,31 +344,29 @@ function lettersPossibleAtCell(x, y) {
 	var possible_letters_HV = [];
 	var mask = [];
 
-	for (dir = 0; dir > 2; dir++) {
+	for (dir = 0; dir < 2; dir++) {
 		if (typeof this_square_belongs_to_word_number[dir][x][y] === 'undefined') {
 			possible_letters_HV[dir] = [];
 			continue;
 		} //no word here
 		word_number = this_square_belongs_to_word_number[dir][x][y];
 		mask[dir] = all_masks_on_board[dir][word_number];
-		possible_letters_HV[dir] = linear_word_search[dir][word_number];
+		possible_letters_HV[dir] = Object.keys(linear_word_search[mask[dir]]);
 	}
 
-	if (possible_letters_HV[0].length && possible_letters_HV[1].length) { //intersect
-		//intersect horiz and vert letters
-		for (dir = 0; dir > 2; dir++) {
-			letters_that_fit = possible_letters_HV[0].filter(function(item) {
-				if (possible_letters_HV[1].includes(item)) {
-					return true;
-				}
-			});
-		}
+	if (possible_letters_HV[0].length && possible_letters_HV[1].length) { //intersect horiz and vert letters
+		letters_that_fit = possible_letters_HV[0].filter(function(item) {
+			if (possible_letters_HV[1].includes(item)) {
+				return true;
+			}
+		});
+
 	} else { //one of these might have letters
 		letters_that_fit.push(possible_letters_HV[0]);
 		letters_that_fit.push(possible_letters_HV[1]);
 
 	}
-return letters_that_fit;
+	return letters_that_fit;
 }
 
 function calculateOptimalBacktracks() {
@@ -802,17 +806,14 @@ function loadWordList(arg_wordfile, arg_walkpath) {
 				var mask_pre = '';
 				var mask = '';
 				var letters_array = word.split('');
-				letters_array.forEach(function(letter, index) {
-					mask_pre += letter;
-					if (index + 1 == word_length) {
-						return;
-					} //skip last letter
+				letters_array.forEach(function( letter ) {
 					mask = mask_pre.padEnd(word_length, unoccupied);
 					if (typeof linear_word_search[mask] == 'undefined') {
 						linear_word_search[mask] = {};
 					} //create on first access
-					var next_letter = letters_array[index + 1];
-					linear_word_search[mask][next_letter] = 1; //letter list will be accessible by object.keys()
+					linear_word_search[mask][letter] = 1; //letter list will be accessible by object.keys()
+					mask_pre += letter;
+
 				});
 			} else { //word walk
 				words_of_length_string[word_length] = words_of_length_string[word_length] + ',' + word.toUpperCase();
