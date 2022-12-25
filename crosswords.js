@@ -109,6 +109,8 @@ function main() {
 			temp = 7;
 		}
 	} else {
+		setInterval(printProcessing, 1000);
+		//printProcessing();
 		if (recursiveLetters() == 0) { //failed
 			temp = 6;
 		}
@@ -118,6 +120,71 @@ function main() {
 
 	var puzzle_string = printPuzzle();
 	document.getElementById('puzzle_place').innerHTML = puzzle_string;
+}
+
+function printProcessing() {
+//my $message = $_[0];
+var x , y;
+var line;
+var string = '<pre>';
+var time;
+//$time =  time - $timeForCrossword;
+
+//open(my $processing, ">processing.txt") or die "Can't open : $!";
+
+//limit script run time!
+//if (time > timelimit){
+     //&PrintResults( qq| Time limit exceeded | );
+     //&Quit( "Time limit exceeded<br>\n\n" );
+  //   }
+
+string += "\n";
+//string += "Loops per Sec: " . $recursiveCount / (time + 1 - $timeForCrossword); #print time to create crosword
+string += "\n";
+
+for (y = 0 ; y < puzzle_height ; y++){
+	for (x = 0 ; x < puzzle_width ; x++) {
+        line = line + puzzle[y][x];
+    }
+	string +=  line;
+	string += "\n";
+	line = '';
+}
+
+for (var wordNumber = 1 ; wordNumber < 300 ; wordNumber++){
+      for (var dir = 0 ; dir < 2 ; dir++){
+            var word = all_masks_on_board[dir][wordNumber];
+            //#if (undef ne $word)
+            if (typeof word !== 'undefined'){
+                 //string += "$wordNumber $dir: $word \n"
+                 }
+            }
+      }
+
+string +=  "\n";
+//string += "Time: " . $time; #print time to create crossword
+string += "\n";
+//string += "Loops: " . $recursiveCount; #print time to create crossword
+string += "\n";
+//string += "Sec per Loop: " . (time - $timeForCrossword) / $recursiveCount; #print time to create crossword
+string += "\n";
+//string +=  "Loops per Sec: " . $recursiveCount / (time + 1 - $timeForCrossword); #print time to create crossword
+string += "\n\n";
+//string += "optimalBacktrack:$optimalBacktrack naiveBacktrack:$naiveBacktrack recursive calls:$recursiveCount\n";
+
+string += "</pre>";
+/*
+if ($message ne "") {
+     if ($string =~ /^!/)
+          {$string = "$message\n\n$string";}
+     else
+         {$string = "$message";}
+     }
+*/
+
+document.getElementById('workspace').innerHTML = string;
+//seek($processing, 0 , 0); #need to keep file open to lock it!
+//print $processing "$string";
 }
 
 var letter_backtrack_source; //set to () to stop backtrack and set for backtrack $letterBackTrackSource{x} and  $letterBackTrackSource{y}
@@ -168,6 +235,8 @@ else {
       }
 
 recursive_count++; //count forward moving calls
+
+printProcessing();
 
 //if ($debug) {print "we are moving forward and working on pos $x $y , letters that fit: @lettersThatFit  \n"};
 
