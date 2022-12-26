@@ -50,7 +50,7 @@ var target_words_for_word_backtrack = {}; //global as we need to backtrack to th
 //eg $target_words_for_word_backtrack{$wordNumberSource}{$dirSource}{$crossingWordNumber}{$crossingWordDir}
 var words_that_are_inserted = {};
 
-var recursive_count = 0;
+var forward_count = 0;
 var naive_count = 0;
 
 main();
@@ -116,7 +116,7 @@ function main() {
 		}
 	}
 
-
+printProcessing();
 
 	var puzzle_string = printPuzzle();
 	document.getElementById('puzzle_place').innerHTML = puzzle_string;
@@ -143,12 +143,13 @@ string += "\n";
 string += "\n";
 
 for (y = 0 ; y < puzzle_height ; y++){
+	line = '';
 	for (x = 0 ; x < puzzle_width ; x++) {
         line = line + puzzle[y][x];
     }
 	string +=  line;
 	string += "\n";
-	line = '';
+
 }
 
 for (var wordNumber = 1 ; wordNumber < 300 ; wordNumber++){
@@ -188,140 +189,95 @@ document.getElementById('workspace').innerHTML = string;
 }
 
 var letter_backtrack_source; //set to () to stop backtrack and set for backtrack $letterBackTrackSource{x} and  $letterBackTrackSource{y}
-function recursiveLetters()
-{
-//recursive try to lay down letters using @nextLetterPositionsOnBoard, this function will shift off, store and unshift if required
-//store locally the possible letters in  @possibleLetter
-//the next index in the list (@nextLetterPositionsOnBoard) is the next letter position we are trying to fill
+function recursiveLetters() {
+	//recursive try to lay down letters using @nextLetterPositionsOnBoard, this function will shift off, store and unshift if required
+	//store locally the possible letters in  @possibleLetter
+	//the next index in the list (@nextLetterPositionsOnBoard) is the next letter position we are trying to fill
 
-//recurse if we can't find possible letters (going forward) or run out of possible letters
-//next / loop if we can't lay a letter (word already used) and we have more possible letters to pick from
-//anytime we next / loop set to $unoccupied as we are processing (just in case)
-//anytime we recurse back (can't lay a letter or run out) a square we must unshift @nextLetterPositionsOnBoard , {x => $x, y => $y}; and return 0
-//if our recursive calls have returned from a failed letter, set $unoccupied (to try another letter) and next / loop to see if there are anymore possible letters for this square
+	//recurse if we can't find possible letters (going forward) or run out of possible letters
+	//next / loop if we can't lay a letter (word already used) and we have more possible letters to pick from
+	//anytime we next / loop set to $unoccupied as we are processing (just in case)
+	//anytime we recurse back (can't lay a letter or run out) a square we must unshift @nextLetterPositionsOnBoard , {x => $x, y => $y}; and return 0
+	//if our recursive calls have returned from a failed letter, set $unoccupied (to try another letter) and next / loop to see if there are anymore possible letters for this square
 
-//note optimal recursion will not work if upper letter is part of a horizontal word
-//the reason is that we may be backtracking due to a later letter in the upper horizontal word.
-//If we wipe that word out without trying ALL the combinations in that upper word we may be missing possible words in the horizontal word we are working on now
-//an exception is if it is the last letter of a horizontal word
-//so: only optimal up if:
-     //1. the upper target letter it is not part of a horizontal word
-     //2. the upper target letter is the last letter in a horizontal word
-     //3. the letter that failed is in a single vertical word
-var x , y;
-var letters_that_fit = [];
-var popped_letter;
-var success;
-words_that_were_laid = [];
-//var word_number;
-//var horiz_mask;
-//var vert_mask;
-//var horiz_inserted_word; //for quick removal on failed recursions
-//var vert_inserted_word; //for quick removal on failed recursions
+	//note optimal recursion will not work if upper letter is part of a horizontal word
+	//the reason is that we may be backtracking due to a later letter in the upper horizontal word.
+	//If we wipe that word out without trying ALL the combinations in that upper word we may be missing possible words in the horizontal word we are working on now
+	//an exception is if it is the last letter of a horizontal word
+	//so: only optimal up if:
+	//1. the upper target letter it is not part of a horizontal word
+	//2. the upper target letter is the last letter in a horizontal word
+	//3. the letter that failed is in a single vertical word
+	var x , y , x_y , xx_yy;
+	var cell_position;
+	var letters_that_fit = [];
+	var popped_letter;
+	var success = 0;//assume we failed to get in while loop
+	var words_that_were_laid = [];
 
-letter_backtrack_source = undefined; //clear global indicating that we are moving forward and have cleared the backtrack state
+	//moving forward
+	letter_backtrack_source = undefined; //clear global indicating that we are moving forward and have cleared the backtrack state
+	if (next_letter_position_on_board.length == 0) {return 1;} //we have filled all the possible letter positions, we are done. This breaks us out of all recursive  success loops
+	forward_count++; //count forward moving calls
+	cell_position = next_letter_position_on_board.shift(); //keep cell_position in subroutine unchanged as we may need to unshift on a recursive return
+	x = cell_position[0];
+	y = cell_position[1];
 
-if (next_letter_position_on_board.length == 0) {return 1;} //we have filled all the possible letter positions, we are done. This breaks us out of all recursive  success loops
+	//get possible letters for this cell
+	if (arg_shuffle) {
+		letters_that_fit = shuffle(lettersPossibleAtCell(x, y));
+	} else {
+		letters_that_fit = lettersPossibleAtCell(x, y).sort();
+	}
 
-var cell_position =  next_letter_position_on_board.shift(); //keep %cellPosition in subroutine unchanged as we may need to unshift on a recursive return
-x = cell_position[0];
-y = cell_position[1];
+	while (success == 0) {
+		if (letters_that_fit.length == 0) { //there are NO possible letters for this cell left. BACTRACK start
+			next_letter_position_on_board.unshift([x, y]); //always unshift our current position back on to next_letter_position_on_board before backtracking
+			if (arg_optimalbacktrack) { //optimal backtrack setup
+				if (typeof letter_backtrack_source === 'undefined') { //only set for optimal if we are not already in an optimal backtrack mode
+					x_y = '' + x + '_' + y;
+					if (typeof target_cells_for_letter_backtrack[x_y] !== 'undefined') { //check to see if there are any backtrack targets possible for $x $y first
+						letter_backtrack_source = [x , y]; //set source/start cell for optimal bactracking
+					}
+				}
+			}
+			naive_backtrack++; //really should be called all_backtracks
+			return false; //start our backtrack : naive & optimal
+		}
 
-if( arg_shuffle ) {
-     letters_that_fit =  shuffle( lettersPossibleAtCell(x,y) ); // 0.000059 sec per call
-     }
-else {
-      letters_that_fit = lettersPossibleAtCell(x,y).sort(); // 0.000059 sec per call
-      }
-
-recursive_count++; //count forward moving calls
-
-printProcessing();
-
-//if ($debug) {print "we are moving forward and working on pos $x $y , letters that fit: @lettersThatFit  \n"};
-
-success = 0;
-while (success == 0){
-        if(letters_that_fit.length == 0){ //are there any possible words? If no backtrack
-              //failed to find a list of letters going forward or we are out of letters in a recursion so go back a letter
-              //&SetXY($x,$y,$unoccupied);
-              next_letter_position_on_board.unshift([x,y]); //always unshift our current position back on to @nextLetterPositionsOnBoard when we return!
-
-              //get/set global touchingLetters and backtrack to the first  member of it we encounter. if not == () we are in a backtrack state!
-              if( arg_optimalbacktrack ) {
-                   if (typeof letter_backtrack_source === 'undefined') { //only set if we are moving forward, not backtracking
-                        if (typeof target_cells_for_letter_backtrack["${x}_${y}"] === 'undefined') { //check to see if there are any backtrack targets possible for $x $y first
-                              //&GetTouchingLetters($x,$y);
-                              letter_backtrack_source = [x,y]; //set source/start cell for optimal bactracking
-                              //if ($debug) {print "optimum set \%letterBackTrackSource  $letterBackTrackSource{x} $letterBackTrackSource{y}\n"}
-                              }
-                        }
-                  }
-              //if ($debug) {print "out of letters at $x,$y  \n"}
-              return 0; //start our backtrack naive or optimal
-              } //no letters so fail
-
-        //try the next letter that fit in this location
-        popped_letter = letters_that_fit.pop();
-        words_that_were_laid = setXY(x,y,popped_letter); //lay letter and save horiz and vert masks .
-		if(! words_that_were_laid){ //see if horizontal and vertical word is already been laid/used in the puzzle. If so, fail + backtrack
-			//&SetXY($x,$y,$unoccupied);
+		//try the next letter that fit in this location
+		popped_letter = letters_that_fit.pop();
+		words_that_were_laid = setXY(x , y , popped_letter); //lay a letter and save any horiz or vert words that were laid
+		if (! words_that_were_laid) { //if words_that_were_laid = false, a horizontal or vertical word was already been laid/used in the puzzle. so backtrack
 			continue;
 		}
-        //if ($debug) {print "laying $popLetter at $x,$y\n"}
 
-        //attempt to lay next letter
-        success = recursiveLetters(); //lay next letter in the next position
-		if(success == 1){return 1;} //board was filled, this is where we return out of all recursive calls successfully. it was triggered a few lines above.
-//------------------------------------------------------------
-        //if we are here, the last recursive attempt to lay a word failed. So we are backtracking now
-        //returning from last letter which failed so:
+		//we laid a letter in this cell so try and fill the next cell
+		success = recursiveLetters(); //lay next letter in the next position. true means puzzle is complete, false means we are backtracking
+		//after a failed (or the puzzle is completed), we will be here
+		if (success == true) {return true;} //test to see if board was filled, this is where we return out of all recursive calls successfully. it was triggered a few lines above.
 
-        // delete $wordsThatAreInserted{$horizInsertedWord};  #allow us to reuse word
-         //delete $wordsThatAreInserted{$vertInsertedWord};  #allow us to reuse word
-         words_that_are_inserted[ words_that_were_laid[0] ] = undefined;
-         words_that_are_inserted[ words_that_were_laid[1] ] = undefined;
+		//------------------------------------------------------------
 
-        //failed so reset letter to unoccupied
-        setXY(x,y,unoccupied);
-
-        if (! arg_optimalbacktrack)
-             {
-             letter_backtrack_source = undefined; //stop optimal recursion?
-             }
-
-        //if ($debug) {print "letterbacktrack source: x:$letterBackTrackSource{x} y:$letterBackTrackSource{y}\n"};
-        //optimal backtrack check and processing
-        if(typeof letter_backtrack_source !== 'undefined'){//we are doing an optimal backtrack
-              //if ($targetLettersForBackTrack{$x}{$y} == 1) {
-              //if ($debug) {print "\$targetLettersForBackTrack{$letterBackTrackSource{x}}{$letterBackTrackSource{y}}{$x}{$y} = $targetLettersForBackTrack{$letterBackTrackSource{x}}{$letterBackTrackSource{y}}{$x}{$y}\n"}
-              //note that set to > 0 (no shadows as british style (odd not even) does not work with > 1 (shadows)
-              //if($targetLettersForBackTrack{$letterBackTrackSource{'x'}}{$letterBackTrackSource{'y'}}{$x}{$y} > 0) { //if it is equal to one, it is in a 'shaddow' and does not affect the failed letter
-              var xx_yy = `${letter_backtrack_source[0]}_${letter_backtrack_source[1]}`;
-			  var x_y = '' + x + '_' + y;
-			  //if(Object.keys( target_cells_for_letter_backtrack[xy_yy] ).length  > 0) { //?? if it is equal to one, it is in a 'shadow' and does not affect the failed letter
-			  if( target_cells_for_letter_backtrack[xx_yy][x_y] ) { //?? if it is equal to one, it is in a 'shadow' and does not affect the failed letter
-                   //we have hit the optimal target. turn off optimal backtrack
-                   //%targetLettersForBackTrack = ();
-					//if($debug) {print "wipe \%letterBackTrackSource\n"}
-                   letter_backtrack_source = undefined;
-                   }
-              else {
-                    //still in optimal backtrack so keep going back
-                    //unshift @nextLetterPositionsOnBoard , {x => $x, y => $y}; //always unshift our current position back on to @nextLetterPositionsOnBoard when we return!
-                    next_letter_position_on_board.unshift([x,y]); //always unshift our current position back on to @nextLetterPositionsOnBoard when we return!
-                    optimal_backtrack++;
-                    //if ($debug) {print "optimum skip at $x,$y\n"}
-                    return 0;
-                    }
-              }
-        //if ($debug) {print "landed at $x,$y\n\n"}
-        naive_backtrack++;
-        continue; //naive backtrack. just try the next letter in this routine and move forward
-        }
-
-console.log('never get here'); //never get here
-document.alert('Error: Recursive, we should never get here.');
+		//success == false , so we have been backtracking to...
+		//if we are here, the last recursive attempt to lay a letter failed
+		words_that_are_inserted[words_that_were_laid[0]] = undefined; //if a word was laid before, reverse that
+		words_that_are_inserted[words_that_were_laid[1]] = undefined;
+		setXY(x, y, unoccupied); //failed so reset letter to unoccupied
+		//exclusively optimal backtrack check and processing
+		if (typeof letter_backtrack_source !== 'undefined') { //we are doing an optimal backtrack
+			xx_yy = '' + letter_backtrack_source[0] + '_' + letter_backtrack_source[1];
+			x_y = '' + x + '_' + y;
+			if (target_cells_for_letter_backtrack[xx_yy][x_y]) { //we have hit the first optimal backtrack target.
+				letter_backtrack_source = undefined; //turn off optimal backtrack
+			} else {//we did not find optimal backtrack target yet
+				next_letter_position_on_board.unshift([x, y]); //always unshift our current position back on to @nextLetterPositionsOnBoard when we return!
+				optimal_backtrack++;
+				return false; //go back one to see if it is optimal backtrack target
+			}
+		}
+	} //end while
+	document.alert('Error: Recursive, we should never get here.');
 }
 
 function setXY(x, y, letter) {
