@@ -53,7 +53,19 @@ var words_that_are_inserted = {};
 var forward_count = 0;
 var naive_count = 0;
 
-main();
+//nav vars
+var startx ; //based on word #1 across or down
+var starty ;
+var LetterPosArray;
+var OldLetterPosArray;
+var horiz_vert;
+var OldClue;
+var CurrentFocus;
+var CurrentClass;
+var NthPosition;
+var CurrentPos;
+
+//main();
 var arg_shuffle;
 var arg_optimalbacktrack;
 function main() {
@@ -104,22 +116,54 @@ function main() {
 		calculateOptimalBacktracks();
 	}
 
+	//setInterval( printProcessing , 1000);
+
+	printProcessing();
+	//setTimeout( printProcessing , 1000);
+
 	if (mode == 'word') {
 		if (recursiveWords() == 0) { //failed
 			temp = 7;
 		}
 	} else {
-		setInterval(printProcessing, 1000);
+		recursiveLetters();
+		//setInterval(printProcessing, 1000);
 		//printProcessing();
-		if (recursiveLetters() == 0) { //failed
-			temp = 6;
-		}
+		//setTimeout( printProcessing , 10);
+		//recursiveLetters().then(function(value){t=value;});
+		//if (recursiveLetters() == 0) { //failed
+			//temp = 6;
+			//console.log('puzzle failed');
+		//}
 	}
 
-printProcessing();
+	//clearTimeout(id);
+
+	printProcessing();
+
 
 	var puzzle_string = printPuzzle();
 	document.getElementById('puzzle_place').innerHTML = puzzle_string;
+
+//prep nav
+if(typeof letter_positions_of_word[dir_across][1]){
+	starty = letter_positions_of_word[dir_across][1][0][0][0];
+	startx = letter_positions_of_word[dir_across][1][0][0][1];
+}
+else{
+	starty = letter_positions_of_word[dir_down][1][0][0][0];
+	startx = letter_positions_of_word[dir_down][1][0][0][1];
+}
+
+LetterPosArray = new Array(startx,starty);
+OldLetterPosArray = new Array(startx,starty);
+horiz_vert = 0; //0 is  horiz 1 is vert
+OldClue = '';
+CurrentFocus = ''; //ID Name  where letters will be inserted
+CurrentClass = 'tdwhiteclass'; //for remembering the class to return the square too
+NthPosition = 0; //so we can find the next square to type a letter into
+CurrentPos = new Array(startx,starty); //CURRENTLY HIGLIGHTED BOX COORDINATES
+
 }
 
 function printProcessing() {
@@ -174,21 +218,14 @@ string += "\n\n";
 //string += "optimalBacktrack:$optimalBacktrack naiveBacktrack:$naiveBacktrack recursive calls:$recursiveCount\n";
 
 string += "</pre>";
-/*
-if ($message ne "") {
-     if ($string =~ /^!/)
-          {$string = "$message\n\n$string";}
-     else
-         {$string = "$message";}
-     }
-*/
 
 document.getElementById('workspace').innerHTML = string;
-//seek($processing, 0 , 0); #need to keep file open to lock it!
-//print $processing "$string";
+
+setTimeout( printProcessing , 1000);
 }
 
 var letter_backtrack_source; //set to () to stop backtrack and set for backtrack $letterBackTrackSource{x} and  $letterBackTrackSource{y}
+//async function recursiveLetters() {
 function recursiveLetters() {
 	//recursive try to lay down letters using @nextLetterPositionsOnBoard, this function will shift off, store and unshift if required
 	//store locally the possible letters in  @possibleLetter
@@ -217,7 +254,9 @@ function recursiveLetters() {
 
 	//moving forward
 	letter_backtrack_source = undefined; //clear global indicating that we are moving forward and have cleared the backtrack state
-	if (next_letter_position_on_board.length == 0) {return 1;} //we have filled all the possible letter positions, we are done. This breaks us out of all recursive  success loops
+	if (next_letter_position_on_board.length == 0) {
+		return true;
+		} //we have filled all the possible letter positions, we are done. This breaks us out of all recursive  success loops
 	forward_count++; //count forward moving calls
 	cell_position = next_letter_position_on_board.shift(); //keep cell_position in subroutine unchanged as we may need to unshift on a recursive return
 	x = cell_position[0];
@@ -253,16 +292,22 @@ function recursiveLetters() {
 		}
 
 		//we laid a letter in this cell so try and fill the next cell
-		success = recursiveLetters(); //lay next letter in the next position. true means puzzle is complete, false means we are backtracking
+		//success = recursiveLetters(); //lay next letter in the next position. true means puzzle is complete, false means we are backtracking
+		//await recursiveLetters().then(function(value){ success = value; }); //lay next letter in the next position. true means puzzle is complete, false means we are backtracking
+		success = recursiveLetters();
 		//after a failed (or the puzzle is completed), we will be here
-		if (success == true) {return true;} //test to see if board was filled, this is where we return out of all recursive calls successfully. it was triggered a few lines above.
+		if (success == true) {
+			return true;
+			} //test to see if board was filled, this is where we return out of all recursive calls successfully. it was triggered a few lines above.
 
 		//------------------------------------------------------------
 
 		//success == false , so we have been backtracking to...
 		//if we are here, the last recursive attempt to lay a letter failed
-		words_that_are_inserted[words_that_were_laid[0]] = undefined; //if a word was laid before, reverse that
-		words_that_are_inserted[words_that_were_laid[1]] = undefined;
+		//words_that_are_inserted[words_that_were_laid[0]] = undefined; //if a word was laid before, reverse that
+		//words_that_are_inserted[words_that_were_laid[1]] = undefined;
+		delete words_that_are_inserted[words_that_were_laid[0]]; //if a word was laid before, reverse that
+		delete words_that_are_inserted[words_that_were_laid[1]];
 		setXY(x, y, unoccupied); //failed so reset letter to unoccupied
 		//exclusively optimal backtrack check and processing
 		if (typeof letter_backtrack_source !== 'undefined') { //we are doing an optimal backtrack
@@ -277,6 +322,7 @@ function recursiveLetters() {
 			}
 		}
 	} //end while
+	tt = 9;
 	document.alert('Error: Recursive, we should never get here.');
 }
 
@@ -1067,26 +1113,6 @@ function doSaveAs(){
 		if (document.execCommand) {document.execCommand("SaveAs");}
 }
 
-
-var startx ; //based on word #1 across or down
-var starty ;
-if(typeof letter_positions_of_word[dir_across][1]){
-	starty = letter_positions_of_word[dir_across][1][0][0][0];
-	startx = letter_positions_of_word[dir_across][1][0][0][1];
-}
-else{
-	starty = letter_positions_of_word[dir_down][1][0][0][0];
-	startx = letter_positions_of_word[dir_down][1][0][0][1];
-}
-
-var LetterPosArray = new Array(startx,starty);
-var OldLetterPosArray = new Array(startx,starty);
-var horiz_vert = 0; //0 is  horiz 1 is vert
-var OldClue = '';
-var CurrentFocus = ''; //ID Name  where letters will be inserted
-var CurrentClass = 'tdwhiteclass'; //for remembering the class to return the square too
-var NthPosition = 0; //so we can find the next square to type a letter into
-var CurrentPos = new Array(startx,starty); //CURRENTLY HIGLIGHTED BOX COORDINATES
 
 function ToggleHV()
 {
