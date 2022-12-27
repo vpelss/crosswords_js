@@ -57,6 +57,8 @@ var words_that_are_inserted = {};
 var forward_count = 0;
 var naive_count = 0;
 
+var $clues = {};
+
 //nav vars
 var startx ; //based on word #1 across or down
 var starty ;
@@ -175,23 +177,16 @@ CurrentPos = new Array(startx,starty); //CURRENTLY HIGLIGHTED BOX COORDINATES
 function numberClueList() {
 var x = -1;
 var y = -1;
-var word_sort = [];
-var word_number;
-var position_pair;
-var word_letter_positions = [];
-//my $wordLetterPositions;
-var temp = [];
 var word;
 var hints;
-var dir;
 var clues = [];
 
-all_masks_on_board.forEach(function(dir){
+all_masks_on_board.forEach(function(item , dir){
 	hints = '';
-	all_masks_on_board[dir].forEach(function(word_number){
-		word = all_masks_on_board[dir][word_number];
+	all_masks_on_board[dir].forEach(function(word , word_number){ //for all our words on the board
+		//word = all_masks_on_board[dir][word_number];
 		//get clue(s) for this word
-		var first_2_leters = word.substring(0, 1);
+		var first_2_leters = word.substring(0, 2);
 		directory = "./wordlists/" + arg_wordfile + "/clues/";
 		var filename = directory + "_" + first_2_leters + ".clu";
 		var clue_list_text = readStringFromFileAtPath(filename);
@@ -205,79 +200,43 @@ all_masks_on_board.forEach(function(dir){
 			if(clue_temp[0] == word){
 				clues.push(clue_temp[1]);
 			}
-		//choose a random clue
-		var clue = $clues[int(rand(scalar @clues))];
-        $clues{$word} = $clue;
-
-
 		});
+		//choose a random clue
+		var clue = clues[ Math.floor(Math.random() * clues.length) ];
+		//place it is global associative array
+        $clues[word] = clue;
 
+		//build html clue list
+		word_letter_positions_json = JSON.stringify( letter_positions_of_word[dir][word_number] ) ; //clear last one
+		x = letter_positions_of_word[dir][word_number][0];
+		y = letter_positions_of_word[dir][word_number][1];
+
+		//var temp = `<font size=-1><a href='http://www.google.ca/search?q=${word}' target='_blank'>google</a></font> `;
+		//#<font><i><A ONCLICK="if (this.innerHTML=='show') {this.innerHTML='$word'} else {this.innerHTML='show'}" HREF="\#self">show</A></i></font>
+		hints += `
+			${word_number}. <a href="#self" id="${word}" class="clues" ONCLICK="choose('${word}' , ${x} , ${y} , ${word_letter_positions_json});">${$clues[word]}</a>
+			&nbsp;<font size=-2><a href="http://www.google.ca/search?q=${$clues[word]}" target="_blank">google</a></font>
+			&nbsp;&nbsp;&nbsp;&nbsp;
+
+			<font><i>
+			<span id='show${word}' ONCLICK="hide2('show${word}');show2('clue${word}');show2('google${word}');" >
+			 <a href="#" ONCLICK="return false">show</a>
+			 </span>
+			<span id='clue${word}' ONCLICK="hide2('clue${word}');hide2('google${word}');show2('show${word}');" >
+			 <a href="#" ONCLICK="return false">${word}</a>
+			 </span>
+			<span id='google${word}' >
+			 <font size=-2><a href="http://www.google.ca/search?q=${word}" target="_blank">google</a></font>
+			 </span>
+			<i></font>
+			</br>
+			<script>hide2('clue${word}');hide2('google${word}');</script>
+			`;
+		if (dir == 0) {document.getElementById('across').innerHTML = hints;}
+		if (dir == 1) {document.getElementById('down').innerHTML = hints;}
 
 	});
 });
-
-for (dir=0 ; dir < 2 ; dir++){
-     hints = '';
-     for (word_number=1 ; word_number <= biggest_word_number ; word_Number++){
-           word = $allMasksOnBoard[$wordNumber][$dir];
-		   var first_2_leters = text.substring(0, 1);
-
-           if ($word ne undef)
-                {
-                #get clue(s)
-                my $first2Leters = substr $word , 0 , 2;
-                my $directory = "./wordlists/$in{wordfile}/clues/";
-                #my $filename = "$directory"."_"."$word\.clu";
-                my $filename = "$directory"."_"."$first2Leters\.clu";
-                open (DATA, "<$filename") or die("Word file $filename does not exist");
-                my $line;
-                @clues = ();
-                foreach $line (<DATA>)
-                         {
-                         #filter for just word
-                         #my $lineWord;
-                         #my $lineClue;
-                         (my $lineWord , my $lineClue) = split /\|/ , $line;
-                         if ($lineWord eq $word)
-                              {
-                              push (@clues , $lineClue);
-                              }
-                         }
-                close DATA;
-
-                my $clue = $clues[int(rand(scalar @clues))];
-                $clues{$word} = $clue;
-
-                $wordLetterPositions = &javascriptArrayFromLetterPositions(@{$letterPositionsOfWord[$wordNumber][$dir]}); #clear last one
-                $x = $letterPositionsOfWord[$wordNumber][$dir]->[0]->[0];
-                $y = $letterPositionsOfWord[$wordNumber][$dir]->[0]->[1];
-                my $temp = qq| <font size=-1><a href='http://www.google.ca/search?q=$word' target='_blank'>google</a></font> |;
-
-                #<font><i><A ONCLICK="if (this.innerHTML=='show') {this.innerHTML='$word'} else {this.innerHTML='show'}" HREF="\#self">show</A></i></font>
-                $hints .= qq|
-                    $wordNumber\. <a href="\#self" id="$word" class="clues" ONCLICK="choose('$word' , $x , $y , [$wordLetterPositions]);">$clues{$word}</a>
-                    &nbsp;<font size=-2><a href="http://www.google.ca/search?q=$clues{$word}" target="_blank">google</a></font>
-                    &nbsp;&nbsp;&nbsp;&nbsp;
-
-                    <font><i>
-                    <span id='show$word' ONCLICK="hide2('show$word');show2('clue$word');show2('google$word');" >
-                     <a href="#" ONCLICK="return false">show</a>
-                     </span>
-                    <span id='clue$word' ONCLICK="hide2('clue$word');hide2('google$word');show2('show$word');" >
-                     <a href="#" ONCLICK="return false">$word</a>
-                     </span>
-                    <span id='google$word' >
-                     <font size=-2><a href="http://www.google.ca/search?q=$word" target="_blank">google</a></font>
-                     </span>
-                    <i></font>
-                    </br>
-                    <script>hide2('clue$word');hide2('google$word');</script>
-                    |;
-               }
-          }
-     if ($dir == 0) {$hints_across = $hints}
-     if ($dir == 1) {$hints_down = $hints}
-     }
 }
 
 function printProcessing() {
