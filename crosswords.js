@@ -1,3 +1,6 @@
+//bugs
+//letter search fails on 7 x 7 with optimum but not with naive
+
 
 var pad_char = 'x';
 var unoccupied = 'o';
@@ -23,6 +26,7 @@ var letter_positions_of_word = []; //letter_positions_of_word[dir][word_number] 
 var position_in_word = []; //position_in_word[dir][yy][xx] = position_count
 
 var this_square_belongs_to_word_number = []; //this_square_belongs_to_word_number[dir][yy][xx]
+//var biggest_word_number;
 
 var all_masks_on_board = []; //all_masks_on_board[dir][word_number] returns the letters that have been laid down including unoccupied. eg: XoLoooo
 
@@ -68,6 +72,7 @@ var CurrentPos;
 //main();
 var arg_shuffle;
 var arg_optimalbacktrack;
+var arg_wordfile;
 function main() {
 
 	//url arg processing
@@ -86,7 +91,7 @@ function main() {
 
 	numberBlankSquares();
 
-	var arg_wordfile = urlParams.get('wordfile');
+	arg_wordfile = urlParams.get('wordfile');
 	var arg_walkpath = urlParams.get('walkpath');
 	if (arg_walkpath.includes('Letter')) {
 		mode = 'letter';
@@ -138,6 +143,7 @@ function main() {
 	}
 
 	//clearTimeout(id);
+	numberClueList();
 
 	printProcessing();
 
@@ -164,6 +170,114 @@ CurrentClass = 'tdwhiteclass'; //for remembering the class to return the square 
 NthPosition = 0; //so we can find the next square to type a letter into
 CurrentPos = new Array(startx,starty); //CURRENTLY HIGLIGHTED BOX COORDINATES
 
+}
+
+function numberClueList() {
+var x = -1;
+var y = -1;
+var word_sort = [];
+var word_number;
+var position_pair;
+var word_letter_positions = [];
+//my $wordLetterPositions;
+var temp = [];
+var word;
+var hints;
+var dir;
+var clues = [];
+
+all_masks_on_board.forEach(function(dir){
+	hints = '';
+	all_masks_on_board[dir].forEach(function(word_number){
+		word = all_masks_on_board[dir][word_number];
+		//get clue(s) for this word
+		var first_2_leters = word.substring(0, 1);
+		directory = "./wordlists/" + arg_wordfile + "/clues/";
+		var filename = directory + "_" + first_2_leters + ".clu";
+		var clue_list_text = readStringFromFileAtPath(filename);
+		var clue_list_array = clue_list_text.split(/\r?\n|\r|\n/g); //split on lines into array
+		if (clue_list_array[clue_list_array.length - 1].trim() == '') {
+			clue_list_array.pop();
+		} //remove last line if empty
+		clues = [];//
+		clue_list_array.forEach(function(line){
+			var clue_temp = line.split('|');
+			if(clue_temp[0] == word){
+				clues.push(clue_temp[1]);
+			}
+		//choose a random clue
+		var clue = $clues[int(rand(scalar @clues))];
+        $clues{$word} = $clue;
+
+
+		});
+
+
+	});
+});
+
+for (dir=0 ; dir < 2 ; dir++){
+     hints = '';
+     for (word_number=1 ; word_number <= biggest_word_number ; word_Number++){
+           word = $allMasksOnBoard[$wordNumber][$dir];
+		   var first_2_leters = text.substring(0, 1);
+
+           if ($word ne undef)
+                {
+                #get clue(s)
+                my $first2Leters = substr $word , 0 , 2;
+                my $directory = "./wordlists/$in{wordfile}/clues/";
+                #my $filename = "$directory"."_"."$word\.clu";
+                my $filename = "$directory"."_"."$first2Leters\.clu";
+                open (DATA, "<$filename") or die("Word file $filename does not exist");
+                my $line;
+                @clues = ();
+                foreach $line (<DATA>)
+                         {
+                         #filter for just word
+                         #my $lineWord;
+                         #my $lineClue;
+                         (my $lineWord , my $lineClue) = split /\|/ , $line;
+                         if ($lineWord eq $word)
+                              {
+                              push (@clues , $lineClue);
+                              }
+                         }
+                close DATA;
+
+                my $clue = $clues[int(rand(scalar @clues))];
+                $clues{$word} = $clue;
+
+                $wordLetterPositions = &javascriptArrayFromLetterPositions(@{$letterPositionsOfWord[$wordNumber][$dir]}); #clear last one
+                $x = $letterPositionsOfWord[$wordNumber][$dir]->[0]->[0];
+                $y = $letterPositionsOfWord[$wordNumber][$dir]->[0]->[1];
+                my $temp = qq| <font size=-1><a href='http://www.google.ca/search?q=$word' target='_blank'>google</a></font> |;
+
+                #<font><i><A ONCLICK="if (this.innerHTML=='show') {this.innerHTML='$word'} else {this.innerHTML='show'}" HREF="\#self">show</A></i></font>
+                $hints .= qq|
+                    $wordNumber\. <a href="\#self" id="$word" class="clues" ONCLICK="choose('$word' , $x , $y , [$wordLetterPositions]);">$clues{$word}</a>
+                    &nbsp;<font size=-2><a href="http://www.google.ca/search?q=$clues{$word}" target="_blank">google</a></font>
+                    &nbsp;&nbsp;&nbsp;&nbsp;
+
+                    <font><i>
+                    <span id='show$word' ONCLICK="hide2('show$word');show2('clue$word');show2('google$word');" >
+                     <a href="#" ONCLICK="return false">show</a>
+                     </span>
+                    <span id='clue$word' ONCLICK="hide2('clue$word');hide2('google$word');show2('show$word');" >
+                     <a href="#" ONCLICK="return false">$word</a>
+                     </span>
+                    <span id='google$word' >
+                     <font size=-2><a href="http://www.google.ca/search?q=$word" target="_blank">google</a></font>
+                     </span>
+                    <i></font>
+                    </br>
+                    <script>hide2('clue$word');hide2('google$word');</script>
+                    |;
+               }
+          }
+     if ($dir == 0) {$hints_across = $hints}
+     if ($dir == 1) {$hints_down = $hints}
+     }
 }
 
 function printProcessing() {
@@ -276,7 +390,8 @@ function recursiveLetters() {
 				if (typeof letter_backtrack_source === 'undefined') { //only set for optimal if we are not already in an optimal backtrack mode
 					x_y = '' + x + '_' + y;
 					if (typeof target_cells_for_letter_backtrack[x_y] !== 'undefined') { //check to see if there are any backtrack targets possible for $x $y first
-						letter_backtrack_source = [x , y]; //set source/start cell for optimal bactracking
+						//letter_backtrack_source = [x , y]; //set source/start cell for optimal bactracking
+						letter_backtrack_source = '' + x + '_' + y; //set source/start cell for optimal bactracking
 					}
 				}
 			}
@@ -292,9 +407,8 @@ function recursiveLetters() {
 		}
 
 		//we laid a letter in this cell so try and fill the next cell
-		//success = recursiveLetters(); //lay next letter in the next position. true means puzzle is complete, false means we are backtracking
+		success = recursiveLetters(); //lay next letter in the next position. true means puzzle is complete, false means we are backtracking
 		//await recursiveLetters().then(function(value){ success = value; }); //lay next letter in the next position. true means puzzle is complete, false means we are backtracking
-		success = recursiveLetters();
 		//after a failed (or the puzzle is completed), we will be here
 		if (success == true) {
 			return true;
@@ -304,16 +418,15 @@ function recursiveLetters() {
 
 		//success == false , so we have been backtracking to...
 		//if we are here, the last recursive attempt to lay a letter failed
-		//words_that_are_inserted[words_that_were_laid[0]] = undefined; //if a word was laid before, reverse that
-		//words_that_are_inserted[words_that_were_laid[1]] = undefined;
+
 		delete words_that_are_inserted[words_that_were_laid[0]]; //if a word was laid before, reverse that
 		delete words_that_are_inserted[words_that_were_laid[1]];
 		setXY(x, y, unoccupied); //failed so reset letter to unoccupied
 		//exclusively optimal backtrack check and processing
 		if (typeof letter_backtrack_source !== 'undefined') { //we are doing an optimal backtrack
-			xx_yy = '' + letter_backtrack_source[0] + '_' + letter_backtrack_source[1];
+			//xx_yy = '' + letter_backtrack_source[0] + '_' + letter_backtrack_source[1];
 			x_y = '' + x + '_' + y;
-			if (target_cells_for_letter_backtrack[xx_yy][x_y]) { //we have hit the first optimal backtrack target.
+			if (target_cells_for_letter_backtrack[letter_backtrack_source][x_y]) { //we have hit the first optimal backtrack target.
 				letter_backtrack_source = undefined; //turn off optimal backtrack
 			} else {//we did not find optimal backtrack target yet
 				next_letter_position_on_board.unshift([x, y]); //always unshift our current position back on to @nextLetterPositionsOnBoard when we return!
@@ -798,6 +911,8 @@ var word_letter_positions_array = [];
     }
   }
 
+ // biggest_word_number = word_number;
+
 var crossing_cells = 0;
 var total_cells = 0;
 var white_cells = 0;
@@ -1151,6 +1266,7 @@ function HighlightClue(theword)
 {
 if (OldClue != "")
         {document.getElementById(OldClue).className = 'cluesCleared';} //clear old clue
+		yyt = document.getElementById(theword);
 document.getElementById(theword).className = 'cluesSelected'; //select/focus the clue
 OldClue = theword;
 }
