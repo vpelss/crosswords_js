@@ -84,6 +84,8 @@ function main() {
 	arg_shuffle = urlParams.get('shuffle');
 
 	if (!urlParams.has('wordfile')) {
+		setCellsFromCookies();
+		return;
 		alert('Please call from main form.');
 		throw new Error('done');
 	}
@@ -149,9 +151,8 @@ function main() {
 
 	printProcessing();
 
-
-	var puzzle_string = printPuzzle();
-	document.getElementById('puzzle_place').innerHTML = puzzle_string;
+	document.getElementById('puzzle_place').innerHTML = printPuzzle();
+	document.getElementById('Answers').innerHTML = printSolvedPuzzle();
 
 //prep nav
 if(typeof letter_positions_of_word[dir_across][1]){
@@ -172,6 +173,33 @@ CurrentClass = 'tdwhiteclass'; //for remembering the class to return the square 
 NthPosition = 0; //so we can find the next square to type a letter into
 CurrentPos = new Array(startx,starty); //CURRENTLY HIGLIGHTED BOX COORDINATES
 
+}
+
+function printSolvedPuzzle(){
+var temp;
+var y;
+var x;
+
+temp = "<table cellspacing='0' CLASS='tableclass'>";
+for (y = 0; y < puzzle_height; y++){
+    temp += "<tr>";
+	for (x = 0; x < puzzle_width; x++){
+		if(puzzle[y][x] == pad_char){
+			temp += "<td CLASS='tdblackclass'></td>";
+			continue;
+			}
+        if (puzzle[y][x] == unoccupied){
+			temp += "<td CLASS='tdwhiteclass'>&nbsp</td>";
+			}
+		zz = puzzle[y][x].search(/[A-Z]/);
+        if( puzzle[y][x].search(/[A-Z1-9]/) >= 0){
+			temp += `<td CLASS='tdwhiteclass'>${puzzle[y][x]}</td>`;
+			}
+    }
+    temp += "</tr>\n";
+        }
+temp += "</table>\n";
+return temp;
 }
 
 function numberClueList() {
@@ -227,10 +255,10 @@ all_masks_on_board.forEach(function(item , dir){
 			<span id='show${word}' ONCLICK="hide2('show${word}');show2('clue${word}');show2('google${word}');" >
 			 <a href="#" ONCLICK="return false">show</a>
 			 </span>
-			<span id='clue${word}' ONCLICK="hide2('clue${word}');hide2('google${word}');show2('show${word}');" >
+			<span id='clue${word}' ONCLICK="hide2('clue${word}');hide2('google${word}');show2('show${word}');" style="display:none;">
 			 <a href="#" ONCLICK="return false">${word}</a>
 			 </span>
-			<span id='google${word}' >
+			<span id='google${word}'  style="display:none;">
 			 <font size=-2><a href="http://www.google.ca/search?q=${word}" target="_blank">google</a></font>
 			 </span>
 			<i></font>
@@ -430,8 +458,7 @@ function setXY(x, y, letter) {
 			}
 		}
 	}
-
-
+	
 	//set cell then mask(s)
 	puzzle[y][x] = letter; //keep grid up to date
 	for (dir = 0; dir < 2; dir++) {
@@ -1129,8 +1156,7 @@ var forever = new Date('October 17, 2030 03:24:00'); //use in cookies
 //isAClickableClass['tdwhiteclass'] = 1;
 var isAClickableClass = {tdwordselectedclass:1 , tdwhiteclass:1 , tdselectedclass:1};
 
-function SetCellsFromCookies()
-{
+function setCellsFromCookies(){
 	var theCookies = document.cookie.split(';');
     var aString = '';
     for (var i = 0 ; i < theCookies.length ; i++) {
@@ -1178,17 +1204,16 @@ document.getElementById(cell).className = 'tdselectedclass'; //select/focus the 
 CurrentFocus = document.getElementById(cell).getAttribute('ID');
 }
 
-function HighlightNextBox()
-{
+function HighlightNextBox(){
 var xpos = CurrentPos[0];
 var ypos = CurrentPos[1];
 var cell = "[" + xpos + "," + ypos + "]";
 
 ClearBox(cell);
-NthPosition = NthPosition + 2;
+NthPosition++;
 if (NthPosition >= LetterPosArray.length) {NthPosition = 0;}
-xpos = LetterPosArray[NthPosition];
-ypos = LetterPosArray[NthPosition+1];
+xpos = LetterPosArray[NthPosition][0];
+ypos = LetterPosArray[NthPosition][1];
 cell = "[" + xpos + "," + ypos + "]";
 HighlightBox(cell);
 }
@@ -1232,7 +1257,7 @@ function choose_clue( id ){//id is [dir,word_number]
 	var dir = id_array[0];
 	var word_number =   id_array[1];
 	HighlightClue(id);
-	var LetterPosArray = letter_positions_of_word[dir][word_number];
+	LetterPosArray = letter_positions_of_word[dir][word_number];
 	HighlightWord(LetterPosArray);
 	//1st cell
 	NthPosition = 0;
@@ -1251,17 +1276,17 @@ function choose_cell(id){ //id is '[x,y]'
 	//var word = all_masks_on_board[dir][word_number];
 	id_str = '[' + dir + ',' + word_number + ',"cell"]';
 	HighlightClue(id_str);
-	var LetterPosArray = letter_positions_of_word[dir][word_number];
+	LetterPosArray = letter_positions_of_word[dir][word_number];
 	HighlightWord(LetterPosArray);
 	HighlightBox(id);
 	NthPosition = position_in_word[dir][y][x];
 	ToggleHV();
+	CurrentPos = [x,y];
 }
 
 //---------------------------------------
 
-	function send_cell_update(k)
-	{
+function send_cell_update(k){
 //first see if it is an arrow key
 var xpos = CurrentPos[0];
 var ypos = CurrentPos[1];
@@ -1274,6 +1299,7 @@ if (k == 191) {  } // forward slash. just change horiz and vert
 if ( (k == 37) || (k == 38) || (k == 39) || (k == 40) || (k == 191) ) { //arrow keys
 	 cell = "[" + xpos + "," + ypos + "]";
 	 if (isAClickableClass[document.getElementById(cell).className] == 1) {
+		ToggleHV(); //double toggle so it doesn't change
 	 	document.getElementById(cell).onclick();
 		return false;
 		}
