@@ -64,7 +64,7 @@ var startx ; //based on word #1 across or down
 var starty ;
 var LetterPosArray;
 var OldLetterPosArray;
-var horiz_vert;
+var horizvert = 0;
 var OldClue;
 var CurrentFocus;
 var CurrentClass;
@@ -155,12 +155,12 @@ function main() {
 
 //prep nav
 if(typeof letter_positions_of_word[dir_across][1]){
-	starty = letter_positions_of_word[dir_across][1][0][0][0];
-	startx = letter_positions_of_word[dir_across][1][0][0][1];
+	starty = letter_positions_of_word[dir_across][1][0][0];
+	startx = letter_positions_of_word[dir_across][1][0][1];
 }
 else{
-	starty = letter_positions_of_word[dir_down][1][0][0][0];
-	startx = letter_positions_of_word[dir_down][1][0][0][1];
+	starty = letter_positions_of_word[dir_down][1][0][0];
+	startx = letter_positions_of_word[dir_down][1][0][1];
 }
 
 LetterPosArray = new Array(startx,starty);
@@ -207,14 +207,19 @@ all_masks_on_board.forEach(function(item , dir){
         $clues[word] = clue;
 
 		//build html clue list
-		word_letter_positions_json = JSON.stringify( letter_positions_of_word[dir][word_number] ) ; //clear last one
-		x = letter_positions_of_word[dir][word_number][0];
-		y = letter_positions_of_word[dir][word_number][1];
+		var word_letter_positions_json = '[';
+		letter_positions_of_word[dir][word_number].forEach(function(cell){
+			word_letter_positions_json += cell[0] + ',' + cell[1];
+			});
+		word_letter_positions_json += ']';
+
+		x = letter_positions_of_word[dir][word_number][0][0];
+		y = letter_positions_of_word[dir][word_number][0][1];
 
 		//var temp = `<font size=-1><a href='http://www.google.ca/search?q=${word}' target='_blank'>google</a></font> `;
 		//#<font><i><A ONCLICK="if (this.innerHTML=='show') {this.innerHTML='$word'} else {this.innerHTML='show'}" HREF="\#self">show</A></i></font>
 		hints += `
-			${word_number}. <a href="#self" id="${word}" class="clues" ONCLICK="choose('${word}' , ${x} , ${y} , ${word_letter_positions_json});">${$clues[word]}</a>
+			${word_number}. <a href="#self" id="[${dir},${word_number}]" class="clues" ONCLICK="choose_clue(this.id);">${$clues[word]}</a>
 			&nbsp;<font size=-2><a href="http://www.google.ca/search?q=${$clues[word]}" target="_blank">google</a></font>
 			&nbsp;&nbsp;&nbsp;&nbsp;
 
@@ -234,7 +239,6 @@ all_masks_on_board.forEach(function(item , dir){
 			`;
 		if (dir == 0) {document.getElementById('across').innerHTML = hints;}
 		if (dir == 1) {document.getElementById('down').innerHTML = hints;}
-
 	});
 });
 }
@@ -984,7 +988,7 @@ function printPuzzle(){
   var temp_puzzle = [];
   var word;
   var direction;
-		var word_count = 0;
+	var word_count = 0;
   var pre_text = '';
   var post_text = '';
 
@@ -1010,42 +1014,36 @@ function printPuzzle(){
                   //temp3 =~ s/[\'\"]//g; //remove quotes from title s it is in a tag
                 }
             }
-
-          temp4 = ""; //clear the soon to be choose() routine variable
+/*
+          temp4 = ''; //clear the soon to be choose() routine variable
           //var word_count = 0;
           if (typeof this_square_belongs_to_word_number[dir_across][y][x] !== 'undefined') {word_count++;} //horiz word here
           if (typeof this_square_belongs_to_word_number[dir_down][y][x] !== 'undefined') {word_count++;} //vert word here
 
-          //if (word_count == 2){
-											//pre_text = 'if (horiz_vert == 0) {';
-											//post_text='};';
-											//}
           //new
-										for (dir = 0 ; dir < 2 ; dir++){
-											/*	if (typeof this_square_belongs_to_word_number[dir][y][x] !== 'undefined'){
-                word_number = this_square_belongs_to_word_number[dir][y][x];
-                word = all_masks_on_board[dir][word_number];
-                temp4 += `${pre_text}choose("${word}" , ${x} , ${y} , ${ letter_positions_of_word[dir_across][word_number] } ); ${post_text}`;
-												}*/
-												if (word_count == 2){
-														pre_text = `if (horiz_vert == ${dir}) {`;
-														post_text='};';
-														}
-												if (typeof this_square_belongs_to_word_number[dir][y][x] !== 'undefined'){
+		for (dir = 0 ; dir < 2 ; dir++){
+			if (word_count == 2){
+				pre_text = `if (horiz_vert == ${dir}) {`;
+				post_text='};';
+				}
+			if (typeof this_square_belongs_to_word_number[dir][y][x] !== 'undefined'){
                 word_number = this_square_belongs_to_word_number[dir][y][x];
                  word = all_masks_on_board[dir][word_number];
-																var letter_positions_of_word_json =  JSON.stringify( letter_positions_of_word[dir][word_number] );
+				var letter_positions_of_word_json =  JSON.stringify( letter_positions_of_word[dir][word_number] );
                 temp4 += `${pre_text}choose("${word}" , ${x} , ${y} , ${letter_positions_of_word_json}); ${post_text}`;
-												}
-										}
-          temp4 += "ToggleHV();";
+			}
+		}
+        temp4 += "ToggleHV();";
+*/
 
-          //lay down table stuff here
+		temp4 = 'choose_cell(this.id);'; //new
 
-          //black square
-          if(puzzle[y][x] == pad_char){ //make sure our page width is fixed
+        //lay down table stuff here
+
+        //black square
+        if(puzzle[y][x] == pad_char){ //make sure our page width is fixed
             temp += "<td CLASS='tdblackclass'><spacer width='20 pt'></td>";
-          }
+        }
 
           //number square
           if(typeof temp_puzzle[y][x] === 'number'){
@@ -1054,7 +1052,7 @@ function printPuzzle(){
             <TABLE CELLPADDING="0" CELLSPACING="0">
               <TBODY>
                 <TR>
-                <TD title='${temp3}' CLASS='tdwhiteclass' ID='cell_${x}_${y}'
+                <TD title='${temp3}' CLASS='tdwhiteclass' ID='[${x},${y}]'
                 ONCLICK='${temp4}' VALIGN='middle' WIDTH='20' ALIGN='center'
                 HEIGHT='25'>&nbsp;</TD>
                 </TR>
@@ -1194,7 +1192,7 @@ if (horiz_vert == 0) {horiz_vert=1;}
 else {horiz_vert=0;}
 }
 
-function ClearBox(cell)
+function ClearBox()
 {
 if (CurrentFocus != "") {document.getElementById(CurrentFocus).className = CurrentClass;} //restore the class name to white
 }
@@ -1249,7 +1247,7 @@ for (i = 0; i < LetterPosArrayArg.length; i = i + 2)
         }
 }
 
-function FindNthPosition(xpos,ypos,LetterPosArrayArg)
+function NOTUSEDFindNthPosition(xpos,ypos,LetterPosArrayArg)
 {
 for (i = 0; i < LetterPosArrayArg.length; i = i + 2)
         {
@@ -1257,17 +1255,34 @@ for (i = 0; i < LetterPosArrayArg.length; i = i + 2)
         }
 }
 
-function choose(word , xpos , ypos , LetterPosArrayArg)
-{
-CurrentPos = [xpos,ypos];
-//CurrentPos = [LetterPosArrayArg[0],LetterPosArrayArg[1]];
-var cell = "cell_" + xpos + "_" + ypos; //generate text class ID for the chosen square
-ClearBox(cell);//clear old box
-LetterPosArray = LetterPosArrayArg.slice();
-HighlightClue(word);
-HighlightWord(LetterPosArray);
-HighlightBox(cell);
-NthPosition = FindNthPosition(xpos,ypos,LetterPosArray);
+function choose_clue( id ){//id is [dir,word_number]
+	var id_array = JSON.parse(id);
+	var dir = id_array[0];
+	var word_number =   id_array[1];
+	HighlightClue(id);
+	var LetterPosArray = letter_positions_of_word[dir][word_number];
+	HighlightWord(LetterPosArray);
+	//1st cell
+	NthPosition = 0;
+	cell_id = '[' + LetterPosArray[0][0] + ',' + LetterPosArray[0][1] + ']';
+	HighlightBox(cell_id);
+}
+
+function choose_cell(id){ //id is '[x,y]'
+	var id_array = JSON.parse(id);
+	var x = id_array[0];
+	var y = id_array[1];
+	var dir = horizvert;
+
+	ClearBox();//clear old box
+	var word_number = this_square_belongs_to_word_number[dir][y][x];
+	//var word = all_masks_on_board[dir][word_number];
+	HighlightClue('['+dir+','+word_number+']');
+	var LetterPosArray = letter_positions_of_word[dir][word_number];
+	HighlightWord(LetterPosArray);
+	HighlightBox(id);
+	NthPosition = position_in_word[dir][y][x];
+	ToggleHV();
 }
 
 //---------------------------------------
