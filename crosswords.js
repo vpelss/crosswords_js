@@ -65,7 +65,7 @@ var starty ;
 var LetterPosArray;
 var OldLetterPosArray;
 var horizvert = 0;
-var OldClue;
+var OldClue = [1,1,'cell'];
 var CurrentFocus;
 var CurrentClass;
 var NthPosition;
@@ -163,8 +163,8 @@ else{
 	startx = letter_positions_of_word[dir_down][1][0][1];
 }
 
-LetterPosArray = new Array(startx,starty);
-OldLetterPosArray = new Array(startx,starty);
+LetterPosArray = [[startx,starty]];
+OldLetterPosArray = [[startx,starty]];
 horiz_vert = 0; //0 is  horiz 1 is vert
 OldClue = '';
 CurrentFocus = ''; //ID Name  where letters will be inserted
@@ -219,7 +219,7 @@ all_masks_on_board.forEach(function(item , dir){
 		//var temp = `<font size=-1><a href='http://www.google.ca/search?q=${word}' target='_blank'>google</a></font> `;
 		//#<font><i><A ONCLICK="if (this.innerHTML=='show') {this.innerHTML='$word'} else {this.innerHTML='show'}" HREF="\#self">show</A></i></font>
 		hints += `
-			${word_number}. <a href="#self" id="[${dir},${word_number}]" class="clues" ONCLICK="choose_clue(this.id);">${$clues[word]}</a>
+			${word_number}. <a href="#self" id='[${dir},${word_number},"cell"]' class="clues" ONCLICK="choose_clue(this.id);">${$clues[word]}</a>
 			&nbsp;<font size=-2><a href="http://www.google.ca/search?q=${$clues[word]}" target="_blank">google</a></font>
 			&nbsp;&nbsp;&nbsp;&nbsp;
 
@@ -988,9 +988,6 @@ function printPuzzle(){
   var temp_puzzle = [];
   var word;
   var direction;
-	var word_count = 0;
-  var pre_text = '';
-  var post_text = '';
 
   temp = "<table cellspacing='0' cellpadding='0' CLASS='tableclass'>";
     for(y = 0; y < puzzle_height; y++){
@@ -1014,27 +1011,6 @@ function printPuzzle(){
                   //temp3 =~ s/[\'\"]//g; //remove quotes from title s it is in a tag
                 }
             }
-/*
-          temp4 = ''; //clear the soon to be choose() routine variable
-          //var word_count = 0;
-          if (typeof this_square_belongs_to_word_number[dir_across][y][x] !== 'undefined') {word_count++;} //horiz word here
-          if (typeof this_square_belongs_to_word_number[dir_down][y][x] !== 'undefined') {word_count++;} //vert word here
-
-          //new
-		for (dir = 0 ; dir < 2 ; dir++){
-			if (word_count == 2){
-				pre_text = `if (horiz_vert == ${dir}) {`;
-				post_text='};';
-				}
-			if (typeof this_square_belongs_to_word_number[dir][y][x] !== 'undefined'){
-                word_number = this_square_belongs_to_word_number[dir][y][x];
-                 word = all_masks_on_board[dir][word_number];
-				var letter_positions_of_word_json =  JSON.stringify( letter_positions_of_word[dir][word_number] );
-                temp4 += `${pre_text}choose("${word}" , ${x} , ${y} , ${letter_positions_of_word_json}); ${post_text}`;
-			}
-		}
-        temp4 += "ToggleHV();";
-*/
 
 		temp4 = 'choose_cell(this.id);'; //new
 
@@ -1063,7 +1039,7 @@ function printPuzzle(){
 
           //unoccupied square, but not a pad_char
           if( (typeof temp_puzzle[y][x] === 'string') && (temp_puzzle[y][x] != pad_char) ){
-            temp += ` <td title='${temp3}' ID='cell_${x}_${y}' CLASS='tdwhiteclass' ONCLICK='${temp4}'>&nbsp;</td> `;
+            temp += ` <td title='${temp3}' ID='[${x},${y}]' CLASS='tdwhiteclass' ONCLICK='${temp4}'>&nbsp;</td> `;
             }
         }
     temp += "</tr>\n";
@@ -1186,10 +1162,8 @@ function doSaveAs(){
 }
 
 
-function ToggleHV()
-{
-if (horiz_vert == 0) {horiz_vert=1;}
-else {horiz_vert=0;}
+function ToggleHV(){
+	horizvert = 1 - horizvert;
 }
 
 function ClearBox()
@@ -1208,43 +1182,41 @@ function HighlightNextBox()
 {
 var xpos = CurrentPos[0];
 var ypos = CurrentPos[1];
-var cell = "cell_" + xpos + "_" + ypos;
+var cell = "[" + xpos + "," + ypos + "]";
 
 ClearBox(cell);
 NthPosition = NthPosition + 2;
 if (NthPosition >= LetterPosArray.length) {NthPosition = 0;}
 xpos = LetterPosArray[NthPosition];
 ypos = LetterPosArray[NthPosition+1];
-cell = "cell_" + xpos + "_" + ypos;
+cell = "[" + xpos + "," + ypos + "]";
 HighlightBox(cell);
 }
 
-function HighlightClue(theword)
-{
-if (OldClue != "")
-        {document.getElementById(OldClue).className = 'cluesCleared';} //clear old clue
-		yyt = document.getElementById(theword);
-document.getElementById(theword).className = 'cluesSelected'; //select/focus the clue
-OldClue = theword;
+function HighlightClue(id){
+if (OldClue != ""){
+	document.getElementById(OldClue).className = 'cluesCleared';
+	} //clear old clue
+
+document.getElementById(id).className = 'cluesSelected'; //select/focus the clue
+OldClue = id;
 }
 
-function HighlightWord(LetterPosArrayArg)
-{
-	var t;
-//white out old word
-for (i = 0; i < OldLetterPosArray.length; i = i + 2)
-        {
-        t = "cell_" + OldLetterPosArray[i] + "_" + OldLetterPosArray[i+1];
-        document.getElementById(t).className = 'tdwhiteclass';
-        }
-//set current word to old word so we can white it out later
-OldLetterPosArray = LetterPosArrayArg.slice();
-//highlight the current word
-for (i = 0; i < LetterPosArrayArg.length; i = i + 2)
-        {
-        t = "cell_" + LetterPosArrayArg[i] + "_" + LetterPosArrayArg[i+1];
-        document.getElementById(t).className = 'tdwordselectedclass';
-        }
+function HighlightWord(LetterPosArrayArg){
+	OldLetterPosArray.forEach(function(cell_pos){
+		var x = cell_pos[0];
+		var y = cell_pos[1];
+		var id = '[' + x + ',' + y + ']';
+		document.getElementById(id).className = 'tdwhiteclass';
+		});
+
+	LetterPosArrayArg.forEach(function(cell_pos){
+		var x = cell_pos[0];
+		var y = cell_pos[1];
+		var id = '[' + x + ',' + y + ']';
+		document.getElementById(id).className = 'tdwordselectedclass';
+		});
+	OldLetterPosArray = JSON.parse(JSON.stringify(LetterPosArrayArg)); //copy array
 }
 
 function NOTUSEDFindNthPosition(xpos,ypos,LetterPosArrayArg)
@@ -1277,7 +1249,8 @@ function choose_cell(id){ //id is '[x,y]'
 	ClearBox();//clear old box
 	var word_number = this_square_belongs_to_word_number[dir][y][x];
 	//var word = all_masks_on_board[dir][word_number];
-	HighlightClue('['+dir+','+word_number+']');
+	id_str = '[' + dir + ',' + word_number + ',"cell"]';
+	HighlightClue(id_str);
 	var LetterPosArray = letter_positions_of_word[dir][word_number];
 	HighlightWord(LetterPosArray);
 	HighlightBox(id);
@@ -1299,7 +1272,7 @@ if (k == 39) { xpos++ ;} //right
 if (k == 40) { ypos++ ;} //down
 if (k == 191) {  } // forward slash. just change horiz and vert
 if ( (k == 37) || (k == 38) || (k == 39) || (k == 40) || (k == 191) ) { //arrow keys
-	 cell = "cell_" + xpos + "_" + ypos;
+	 cell = "[" + xpos + "," + ypos + "]";
 	 if (isAClickableClass[document.getElementById(cell).className] == 1) {
 	 	document.getElementById(cell).onclick();
 		return false;
