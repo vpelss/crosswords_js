@@ -452,13 +452,13 @@ function setXY(x, y, letter) {
 		mask[dir] = all_masks_on_board[dir][word_number];
 		//add letter to mask
 		mask[dir] = mask[dir].substring(0, position) + letter + mask[dir].substring(position + 1);
-		if (letter != unoccupied) { //no need if unoccupied
+		if (letter != unoccupied) { //no need if we are setting unoccupied
 			if (isWordAlreadyUsed(mask[dir])) { //any word already used return false
 				return false;
 			}
 		}
 	}
-	
+
 	//set cell then mask(s)
 	puzzle[y][x] = letter; //keep grid up to date
 	for (dir = 0; dir < 2; dir++) {
@@ -489,17 +489,13 @@ function isWordAlreadyUsed(mask) {
 //check to see if all possible letters 'o' have only one possible letter. If so, only one word can be created. See if this word has been used.
 //saves us from filling in a whole word on letter fills only to have to backtrack
 var next_letters;
-//let pattern = /${unoccupied}/g;
-let pattern =  new RegExp(`${unoccupied}`, 'g');
+let pattern =  new RegExp(`${unoccupied}`, 'g'); // /${unoccupied}/g;
 while ( pattern.test(mask) ) { //see if we get single letters until end of word
         next_letters = Object.keys(linear_word_search[ mask ]);
-		//&getNextPossibleLetters($mask);
         if (next_letters.length > 1){ //multiple words possible for mask.
             return 0;
             }
-        //$temp = $nextLetters[0];
-		mask.replace( unoccupied , next_letters[0]); //replace first blank with the single letter
-        //$mask =~ s/o/ next_letters[0]/; //replace first blank with the single letter
+		mask = mask.replace( unoccupied , next_letters[0]); //replace first blank with the single letter
         }
 //only one word is possible for mask at this point
 //but has it been used?
@@ -879,6 +875,7 @@ var word_letter_positions_array = [];
              if(typeof letter_positions_of_word[dir] === 'undefined' ){letter_positions_of_word[dir] = [];}
              letter_positions_of_word[dir][word_number] = JSON.parse(JSON.stringify(word_letter_positions_array)); //deep copy multi dim array
              //set all_masks_on_board[dir][word_number] = 'ooooooooo';
+			 blank_word = ''; // must do to ensure we get the right word/mask length
              blank_word = blank_word.padEnd(word_length , unoccupied);
              if(typeof all_masks_on_board[dir] === 'undefined' ){all_masks_on_board[dir] = [];}
              all_masks_on_board[dir][word_number] = blank_word;
