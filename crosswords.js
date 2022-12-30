@@ -1,11 +1,15 @@
 //bugs
-//letter search fails on 7 x 7 with optimum but not with naive
+//letter search fails on 7 x 7 with optimum but not with naive 6 x 6
+//save to file and save cookies? will we need to revert html js to function without crossword.js?
+//webworker for just recursive. feed words and puzzle , etc
 
+//is promise async?
+
+var start_time;
+var recursive_count = 0;
 
 var pad_char = 'x';
 var unoccupied = 'o';
-//var grid_string = '';
-//var word_list_strings;
 
 //puzzle will be accessed a lot if using letter searches! but js arrays and associative arrays are comparable ONLY if the key is a simple integer
 //{} object will be easier to read in code puzzle[x][y] but is really hard to decipher when looking at the object itself
@@ -26,7 +30,6 @@ var letter_positions_of_word = []; //letter_positions_of_word[dir][word_number] 
 var position_in_word = []; //position_in_word[dir][yy][xx] = position_count
 
 var this_square_belongs_to_word_number = []; //this_square_belongs_to_word_number[dir][yy][xx]
-//var biggest_word_number;
 
 var all_masks_on_board = []; //all_masks_on_board[dir][word_number] returns the letters that have been laid down including unoccupied. eg: XoLoooo
 
@@ -76,6 +79,7 @@ var arg_shuffle;
 var arg_optimalbacktrack;
 var arg_wordfile;
 function main() {
+	start_time = Date.now();
 
 	//url arg processing
 	const queryString = window.location.search;
@@ -276,8 +280,7 @@ function printProcessing() {
 var x , y;
 var line;
 var string = '<pre>';
-var time;
-//$time =  time - $timeForCrossword;
+var time = ( Date.now() - start_time ) / 1000;
 
 //open(my $processing, ">processing.txt") or die "Can't open : $!";
 
@@ -312,21 +315,24 @@ for (var wordNumber = 1 ; wordNumber < 300 ; wordNumber++){
       }
 
 string +=  "\n";
-//string += "Time: " . $time; #print time to create crossword
+string += "Time: " + time; //#print time to create crossword
 string += "\n";
-//string += "Loops: " . $recursiveCount; #print time to create crossword
+string += "Recursive calls: " + recursive_count; //print time to create crossword
 string += "\n";
-//string += "Sec per Loop: " . (time - $timeForCrossword) / $recursiveCount; #print time to create crossword
+string += "Sec per Recursive call: " + (time / recursive_count); //print time to create crossword
 string += "\n";
-//string +=  "Loops per Sec: " . $recursiveCount / (time + 1 - $timeForCrossword); #print time to create crossword
-string += "\n\n";
-//string += "optimalBacktrack:$optimalBacktrack naiveBacktrack:$naiveBacktrack recursive calls:$recursiveCount\n";
-
+string +=  "Recursive calls per Sec: " + (recursive_count / time); //print time to create crossword
+string += "\n";
+string += "optimalBacktrack:" + optimal_backtrack ;
+string += "\n";
+string += "naive_backtrack:" + naive_backtrack;
+string += "\n";
 string += "</pre>";
 
 document.getElementById('workspace').innerHTML = string;
+console.log(string);
 
-setTimeout( printProcessing , 1000);
+//setTimeout( printProcessing , 1000);
 }
 
 var letter_backtrack_source; //set to () to stop backtrack and set for backtrack $letterBackTrackSource{x} and  $letterBackTrackSource{y}
@@ -356,6 +362,9 @@ function recursiveLetters() {
 	var popped_letter;
 	var success = 0;//assume we failed to get in while loop
 	var words_that_were_laid = [];
+
+	recursive_count++;
+	printProcessing();
 
 	//moving forward
 	letter_backtrack_source = undefined; //clear global indicating that we are moving forward and have cleared the backtrack state
@@ -1179,12 +1188,6 @@ function show2(szDivID)
 document.getElementById(szDivID).style.display = "inline";
 }
 
-function doSaveAs(){
-		if (browserType != "ie") {alert("Not IE. You must right click and select 'Save page as...'");}
-		if (document.execCommand) {document.execCommand("SaveAs");}
-}
-
-
 function ToggleHV(){
 	horizvert = 1 - horizvert;
 }
@@ -1239,14 +1242,6 @@ function HighlightWord(LetterPosArrayArg){
 		document.getElementById(id).className = 'tdwordselectedclass';
 		});
 	OldLetterPosArray = JSON.parse(JSON.stringify(LetterPosArrayArg)); //copy array
-}
-
-function NOTUSEDFindNthPosition(xpos,ypos,LetterPosArrayArg)
-{
-for (i = 0; i < LetterPosArrayArg.length; i = i + 2)
-        {
-        if ( (xpos == LetterPosArrayArg[i]) && (ypos == LetterPosArrayArg[i+1]) ) {return(i);}
-        }
 }
 
 function choose_clue( id ){//id is [dir,word_number]
@@ -1310,27 +1305,7 @@ setCookie(CurrentFocus , letter , forever , '' , '' , ''); //CurrentFocus = cell
 HighlightNextBox();//go to next box
 }
 
-function CreateBookmarkLink()
-	{
-	var title = "Crossword game %game%";
-	var url = "%archiveurl%/%uid%/%game%";
-	if (window.sidebar)
- 		{ // Mozilla Firefox Bookmark
-		window.sidebar.addPanel(title, url,"");
-		}
-	else if( window.external )
-		{ // IE Favorite
-		window.external.AddFavorite( url, title);
-		}
-	else if(window.opera && window.print)
-		{ // Opera Hotlist
-		return true;
-		}
- 	}
-
-
-		//-------------------------------------
-
+//-------------------------------------
 
 hide2('Answers');
 //SetCellsFromCookies();
