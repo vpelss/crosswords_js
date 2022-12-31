@@ -335,6 +335,132 @@ console.log(string);
 //setTimeout( printProcessing , 1000);
 }
 
+var word_backtrack_source; //set to () to stop backtrack and set for backtrack $letterBackTrackSource{x} and  $letterBackTrackSource{y}
+function RecursiveWords()
+{
+#recursive try to lay down words using @nextWordOnBoard, will shift off, store and unshift if required
+#store locally the possible words in  @possibleLetterLists
+#in just the next index in a list (@NextWordPositionsOnBoard) of word position we are trying to fill
+
+var words_that_fit;
+var pop_word;
+
+word_backtrack_source = undefined; //clear global indicating that we are moving forward and have cleared the backtrack state
+
+if (next_letter_position_on_board.length == 0){
+	return true
+	}; //if we have filled all the possible words, we are done. This breaks us out of all recursive  success loops
+var word_position =  next_word_on_board.shift(); //keep in subroutine unchanged as we may need to unshift on a recursive return
+var dir = word_position[0];
+var word_number = word_position[1];
+
+//get all possible words for mask
+var mask = all_masks_on_board[dir][word_mumber]; // get WORD or MASK at this crossword position
+if ($in{simplewordmasksearch}) {
+     #simple one. 0.0002 sec a call.  better for less crosslinks?
+     #ignore crossing words as future mask checks will find the failures/errors. not true for some walks as there msay be no crossword checking!
+     #it will only work well with alternating across and down checks
+      if ($in{shuffle}) {
+           @wordsThatFit = shuffle &WordsFromMask($mask);
+           }
+      else {
+           @wordsThatFit = sort {$b cmp $a} &WordsFromMask($mask);
+            }
+     }
+else {
+      #complex one 0.05 sec a call. better for more crosslinks?
+      my @possibleLetterLists = &LetterListsFor($wordNumber , $dir);
+      if ($in{shuffle}) {
+           @wordsThatFit = shuffle &WordsFromLetterLists(@possibleLetterLists);
+           }
+      else {
+            @wordsThatFit = sort {$b cmp $a} &WordsFromLetterLists(@possibleLetterLists);
+            }
+      }
+
+$recursiveCount++; #count forward moving calls
+
+my $success = 0;
+while ($success == 0)
+        {
+        if (scalar @wordsThatFit == 0) #are there any possible words? If no backtrack
+              {
+              #fail to find a list of words going forward
+              #or we are out of pop words in a recursion (while loop) so go back a word
+              unshift @nextWordOnBoard , {wordNumber => $wordNumber, dir => $dir};
+              #get/set global touchingWords and backtrack to the first  member of it we encounter. if not == () we are in a backtrack state!
+              if ($in{optimalbacktrack} == 1) {
+                   $wordBackTrackSource{wordNumber} = $wordNumber;
+                   $wordBackTrackSource{dir} = $dir;
+                    }
+              $wordNumberDirUsed{$wordNumber}{$dir} = undef;
+              return 0;
+              }; #no words so fail
+
+        #try the next word that fit in this location
+        $popWord = pop @wordsThatFit;
+        if ($wordsThatAreInserted{$popWord} == 1) #this word is already used. fail
+                  {
+                 #&placeMaskOnBoard($wordNumber , $dir , $mask);  #is this required? we have not layed pop word
+                 next; #choose another word ie. pop
+                  }
+        else #place word
+                 {
+                 &placeMaskOnBoard($wordNumber , $dir , $popWord);
+                 $wordsThatAreInserted{$popWord} = 1;
+                 $wordNumberDirUsed{$wordNumber}{$dir} = 1;
+                 }
+
+        if (time() > $oldTime + 2) #print every 3 seconds
+              {
+              if ($debug ) {print time()-$timeForCrossword . " sec wordNumber:$wordNumber , dir:$dir $popWord optimalBacktrack:$optimalBacktrack naiveBacktrack:$naiveBacktrack recursive calls:$recursiveCount\n";}
+              else {print '.';} # otherwise apache timeout directive limit is reached
+              &PrintProcessing();
+              $oldTime = time();
+              }
+
+        if ( $in{SlowDown} > 0 ) {sleep ($in{SlowDown})}
+
+        #attempt to lay next word
+        $success = &RecursiveWords(); #lay next word in the next position
+        if ($success == 1){return 1;}; #board is filled, return out of all recursive calls successfuly
+#---------------
+        #if we are here, the last recursive attempt to lay a word failed. So we are backtracking.
+        #returning from last word which failed
+
+        delete $wordsThatAreInserted{$popWord}; #allow us to reuse word
+        #failed so reset word to previous mask
+        &placeMaskOnBoard($wordNumber , $dir , $mask);
+
+        if ($in{optimalbacktrack} == 0)
+             {
+             %wordBackTrackSource = (); #stop optimal recursion?
+             }
+
+        #optimal backtrack check and processing
+        if (%wordBackTrackSource != ())
+             {
+              #we are doing an optimal backtrack
+              if ($targetWordsForBackTrack{$wordBackTrackSource{wordNumber}}{$wordBackTrackSource{dir}}{$wordNumber}{$dir} > 0) { #if it is equal to one, it is in a 'shaddow' and does not affect the failed letter
+                   #we have hit the optimal target. turn off optimal backtrack
+                   %wordBackTrackSource = ();
+                   }
+              else {
+                    #still in optimal backtrack so keep going back
+                    unshift @nextWordOnBoard , {wordNumber => $wordNumber, dir => $dir};
+                    $optimalBacktrack++;
+                    $wordNumberDirUsed{$wordNumber}{$dir} = undef;
+                    return 0;
+                    }
+              }
+
+        $naiveBacktrack++;
+        next; #naive backtrack
+        }
+
+die('never get here'); #never get here
+}
+
 var letter_backtrack_source; //set to () to stop backtrack and set for backtrack $letterBackTrackSource{x} and  $letterBackTrackSource{y}
 //async function recursiveLetters() {
 function recursiveLetters() {
@@ -640,7 +766,7 @@ function calculateOptimalBacktracks() {
 			//let tsbtwn = this_square_belongs_to_word_number[dir][y][x];
 			word_letter_positions = letter_positions_of_word[dir][word_number];
 			//what words are crossing this word?
-			word_positions = getCrossingWords(word_number, dir);
+			word_positions = getCrossingWords(dir , word_number);
 			word_positions.forEach(function(word_position) {
 				word_number_temp = word_position[0];
 				dir_temp = word_position[1];
@@ -677,30 +803,30 @@ function generateNextWordPositionsOnBoardCrossing(){
 		var word_number = 1;
 		var dir = 0;
 
-		if (typeof all_masks_on_board[dir][word_number] === 'undefined' ) {$dir = 1;}// no horizontal #1 word. go vertical
+		if (typeof all_masks_on_board[dir][word_number] === 'undefined' ) {dir = dir_vert;}// no horizontal #1 word. go vertical
 		var to_do_list = []; //list of words and directions to process. ((1,0) , (2,0) , .... ) shift off and push on so we do in an orderly fasion!
-		to_do_list.push( [word_number , dir] );
+		to_do_list.push( [dir , word_number] );
 		//if(typeof already_in_list[dir] === 'undefined'){already_in_list[dir] = {};}
 		already_in_list[dir][word_number] = 1;
-		next_word_on_board.push( [word_number , dir] );
+		next_word_on_board.push( [dir, word_number] );
 		while ( to_do_list.length > 0 ){
-				[word_number , dir] = to_do_list.shift();
-					var crossing_words = getCrossingWords( word_number , dir );
+				[dir , word_number] = to_do_list.shift();
+					var crossing_words = getCrossingWords(dir , word_number);
 					while ( crossing_words.length > 0 ){
-							[word_number , dir] =crossing_words.shift();
+							[dir , word_number] =crossing_words.shift();
 							//if(typeof already_in_list[dir] === 'undefined'){already_in_list[dir] = {};}
 							if (typeof already_in_list[dir][word_number] !== 'undefined'){
 												continue;
 							}//already added. skip
-							to_do_list.push( [word_number , dir] );
-							next_word_on_board.push( [word_number , dir] );
+							to_do_list.push( [dir , word_number] );
+							next_word_on_board.push( [dir , word_number] );
 							if(typeof already_in_list[dir] === 'undefined'){already_in_list[dir] = {};}
 							already_in_list[dir][word_number] = 1;
 					}
 		}
 }
 
-function getCrossingWords(word_number, dir) {
+function getCrossingWords(dir , word_number) {
 	//input: word number and direction
 	//output: [[crossing_word_number,crossing_word_number],[crossing_word_number,crossing_word_number], ...]
 	var crossing_words = [];
@@ -717,7 +843,7 @@ function getCrossingWords(word_number, dir) {
 		//find and mark crossing words
 		crossing_word_number = this_square_belongs_to_word_number[crossing_word_dir][y][x];
 		if (crossing_word_number > 0) {
-			crossing_words.push([crossing_word_number, crossing_word_dir]);
+			crossing_words.push([crossing_word_dir , crossing_word_number]);
 		}
 	});
 	return crossing_words;
