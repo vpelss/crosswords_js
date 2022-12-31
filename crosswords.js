@@ -78,6 +78,7 @@ var CurrentPos;
 var arg_shuffle;
 var arg_optimalbacktrack;
 var arg_wordfile;
+var arg_simplewordmasksearch;
 function main() {
 	start_time = Date.now();
 
@@ -122,7 +123,7 @@ function main() {
 	}
 
 	// is simplewordmasksearch=on
-	var arg_simplewordmasksearch = urlParams.get('simplewordmasksearch');
+	 arg_simplewordmasksearch = urlParams.get('simplewordmasksearch');
 
 	arg_optimalbacktrack = urlParams.get('optimalbacktrack');
 	if (arg_optimalbacktrack) {
@@ -335,15 +336,127 @@ console.log(string);
 //setTimeout( printProcessing , 1000);
 }
 
-var word_backtrack_source; //set to () to stop backtrack and set for backtrack $letterBackTrackSource{x} and  $letterBackTrackSource{y}
-function RecursiveWords()
+function wordsFromLetterLists(){
+//input list of referenced lists containing possible letters for each position in a word
+//(['C','D','F','T','Z'] , ['E','R','T','Y','O', 'A'] , ['T','R','E','W','Q','Z'])
+//(['C','D','F','T','Z'] , [$padsEitherSide] , ['T','R','E','W','Q','Z'])
+//if input is () no letters were available from LetterListFor so return ()
+//if a letter position has no potential letters (it == ()) return () unless it has a pad on either side!
+//$padsEitherSide note in this case, there will be no letters returned, BUT words still can be made as there is no crossing word to block it. So we assume all letters are possible here [A-Z]
+//output list of words that can be made with said letters
+
+my @letterLists = @_;
+my $wordLength = scalar @letterLists;
+my $adjustableWordLength = $wordLength; #used to compare our hash containing how many times a word was found and how many letters were used to find them
+my $letterPosition = -1; #start at -1 as we increment at top of loop!
+my @nThLetterWordList;
+my @possibleWords;
+my @runningWordList;
+my @wordsFromLetters;
+my @letterList;
+my %possibleWordsCount;
+my $localWord;
+
+if (scalar @letterLists == 0) {return()}; #required as LetterListsFor will return () if there are no possible letters!
+
+#regex version fronm 2x  up to 20x faster! long lists are fast
+my $regexpstring = '';
+foreach my $referenceLetterList (@letterLists) #for each letter's position
+        {
+        @letterList = @{$referenceLetterList};
+        #if (scalar @letterList == 0) { return (); } #no possible letters here, return an empty list of words
+        if ($letterList[0] eq $padsEitherSide) {@letterList = ('A'..'Z')} #replace $padsEitherSide with (A..Z)
+        else { if (scalar @letterList == 0) { return (); } }#no possible letters here, return an empty list of words
+        $regexpstring = $regexpstring . '[' . join('' , @letterList) . ']';
+        }
+
+# ($wordsOfLengthString[$wordLength] =~ /$regexpstring/g) returns all possible words
+#look for words already used and ignore using map!
+#@possibleWords = map( { if ( $wordsThatAreInserted{$_} == 0 ) {$_} else {()} }   ($wordsOfLengthString[$wordLength] =~ /$regexpstring/g) );
+#return @possibleWords; # speed up by direct output!
+return map( { if ( $wordsThatAreInserted{$_} == 0 ) {$_} else {()} }   ($wordsOfLengthString[$wordLength] =~ /$regexpstring/g) );
+}
+
+function letterListsFor()
 {
-#recursive try to lay down words using @nextWordOnBoard, will shift off, store and unshift if required
-#store locally the possible words in  @possibleLetterLists
-#in just the next index in a list (@NextWordPositionsOnBoard) of word position we are trying to fill
+#input: word number and direcction
+#output: list of possible letters for each position in word based on crossing word masks
+#if a letter position has no members so what. keep going but make sure that the list for that letter = ()
+
+my $wordNumber = $_[0];
+my $dir = $_[1];
+
+my $wordLength = length($allMasksOnBoard[$wordNumber][$dir]);
+my @wordLetterPositions = @{$letterPositionsOfWord[$wordNumber][$dir]};
+my @letterLists;
+my @nThLetters;
+
+foreach my $letterPosition (@wordLetterPositions)
+  {
+  my $x = $letterPosition->[0];
+  my $y = $letterPosition->[1];
+  my $crossingWordDir =  $OppositeDirection[$dir];
+
+  my $crossingWordNumber = $ThisSquareBelongsToWordNumber[$x][$y][$crossingWordDir];
+  my $crossingWordMask = $allMasksOnBoard[$crossingWordNumber][$crossingWordDir];
+
+  my $nThLetterPosition = $PositionInWord[$x][$y][$crossingWordDir];
+  my $crossingLetter = substr($crossingWordMask , $nThLetterPosition , 1);
+
+  @nThLetters = ();
+  if ($crossingLetter =~ /[A-Z]/ ) { #if a letter is already in the crossing spot, use it.
+       @nThLetters = ($crossingLetter)
+       }
+  if ($crossingLetter =~ /$unoccupied/ )
+       {
+       my @wordsFromMask = &WordsFromMask($crossingWordMask);
+       @nThLetters = &NthLettersFromListOfWords($nThLetterPosition , [@wordsFromMask]);
+       }
+  if ($crossingWordNumber == undef) { #there is no crossing word at this letter location so return a single $unoccupied 'o' to indicate that a word can still be made as any letter can go here!
+       #@nThLetters = ($unoccupied);
+       @nThLetters = ($padsEitherSide);
+       }
+  if ( scalar @nThLetters == 0) #used to break out earier for small speed increase. If a letter position has no letters, WordsFromLetterList will fail anyway. Just return empty list
+        {
+        @letterLists = ( () );
+        last;
+        }
+  push @letterLists , [@nThLetters];
+  }
+return @letterLists;
+}
+
+function wordsFromMask{
+
+//mask letters should be capatalized
+#input: A_PL_ where _ will be whatever $unoccupied is
+#output list of words that match the input mask
+
+my $mask = $_[0];
+
+my @word_list;
+my $wordLength = length($mask);
+
+$mask =~ s/$unoccupied/\./g; #make a mask of 'GO$unoccupiedT' into 'GO.T' for the regexp
+
+#need to fileter out $wordsThatAreInserted{$popWord} == 1 below if ( $wordsThatAreInserted{$popWord} == 1 )
+#note that we need to return an empty list if the word is already inserted see:  else {()} If we do not, the map will return an empty word in the middle of the list which will pooch our code later.
+return map( { if ( $wordsThatAreInserted{$_} == 0 ) {$_} else {()} }  ($wordsOfLengthString[$wordLength] =~ /($mask),/g) ); #returns a list of found words in the string!
+#@word_list = map( { if ( $wordsThatAreInserted{$_} == 0 ) {$_} else {()} }  ($wordsOfLengthString[$wordLength] =~ /($mask),/g) ); #returns a list of found words in the string!
+#return @word_list;
+}
+
+var word_backtrack_source; //set to () to stop backtrack and set for backtrack $letterBackTrackSource{x} and  $letterBackTrackSource{y}
+function recursiveWords()
+{
+//recursive try to lay down words using @nextWordOnBoard, will shift off, store and unshift if required
+//store locally the possible words in  @possibleLetterLists
+//in just the next index in a list (@NextWordPositionsOnBoard) of word position we are trying to fill
 
 var words_that_fit;
 var pop_word;
+
+recursive_count++;
 
 word_backtrack_source = undefined; //clear global indicating that we are moving forward and have cleared the backtrack state
 
@@ -356,46 +469,68 @@ var word_number = word_position[1];
 
 //get all possible words for mask
 var mask = all_masks_on_board[dir][word_mumber]; // get WORD or MASK at this crossword position
-if ($in{simplewordmasksearch}) {
-     #simple one. 0.0002 sec a call.  better for less crosslinks?
-     #ignore crossing words as future mask checks will find the failures/errors. not true for some walks as there msay be no crossword checking!
-     #it will only work well with alternating across and down checks
-      if ($in{shuffle}) {
-           @wordsThatFit = shuffle &WordsFromMask($mask);
+if (arg_simplewordmasksearch}) {
+     //simple one. 0.0002 sec a call.  better for less crosslinks?
+     //ignore crossing words as future mask checks will find the failures/errors. not true for some walks as there msay be no crossword checking!
+     //it will only work well with alternating across and down checks
+      if (arg_shuffle) {
+           words_that_fit = shuffle( wordsFromMask(mask) );
            }
       else {
-           @wordsThatFit = sort {$b cmp $a} &WordsFromMask($mask);
+           words_that_fit = shuffle( wordsFromMask(mask) ).sort();
             }
      }
 else {
-      #complex one 0.05 sec a call. better for more crosslinks?
-      my @possibleLetterLists = &LetterListsFor($wordNumber , $dir);
-      if ($in{shuffle}) {
-           @wordsThatFit = shuffle &WordsFromLetterLists(@possibleLetterLists);
+      //complex one 0.05 sec a call. better for more crosslinks?
+       var possibleLetterLists = letterListsFor(dir , word_number);
+      if (arg_shuffle) {
+           words_that_fit = shuffle( wordsFromLetterLists( possibleLetterLists ) );
            }
       else {
-            @wordsThatFit = sort {$b cmp $a} &WordsFromLetterLists(@possibleLetterLists);
+            words_that_fit = shuffle( wordsFromLetterLists( possibleLetterLists ) ).sort();
             }
       }
 
-$recursiveCount++; #count forward moving calls
-
 my $success = 0;
-while ($success == 0)
+while (success == 0)
         {
-        if (scalar @wordsThatFit == 0) #are there any possible words? If no backtrack
-              {
-              #fail to find a list of words going forward
-              #or we are out of pop words in a recursion (while loop) so go back a word
-              unshift @nextWordOnBoard , {wordNumber => $wordNumber, dir => $dir};
-              #get/set global touchingWords and backtrack to the first  member of it we encounter. if not == () we are in a backtrack state!
-              if ($in{optimalbacktrack} == 1) {
-                   $wordBackTrackSource{wordNumber} = $wordNumber;
+		if (words_that_fit.length == 0) {//are there any possible words? If no backtrack
+              next_word_on_board.unshift( word_position );
+              if(arg_optimalbacktrack){
+					if (typeof word_backtrack_source === 'undefined') { //only set for optimal if we are not already in an optimal backtrack mode
+						d_w = '' + dir + '_' + word_number;
+						if (typeof target_cells_for_letter_backtrack[d_w] !== 'undefined') { //check to see if there are any backtrack targets possible for dir word_number first
+						//letter_backtrack_source = [x , y]; //set source/start cell for optimal bactracking
+						word_backtrack_source = d_w; //set source/start cell for optimal bactracking
+						}
+					}
+
+
+                   word_backtrack_source[wordNumber] = $wordNumber;
                    $wordBackTrackSource{dir} = $dir;
-                    }
+
+				    }
+
+
               $wordNumberDirUsed{$wordNumber}{$dir} = undef;
+			  naive_backtrack++; //really should be called all_backtracks
               return 0;
-              }; #no words so fail
+        }; //no words so fail
+
+		if (letters_that_fit.length == 0) { //there are NO possible letters for this cell left. BACTRACK start
+			next_letter_position_on_board.unshift([x, y]); //always unshift our current position back on to next_letter_position_on_board before backtracking
+			if (arg_optimalbacktrack) { //optimal backtrack setup
+				if (typeof letter_backtrack_source === 'undefined') { //only set for optimal if we are not already in an optimal backtrack mode
+					x_y = '' + x + '_' + y;
+					if (typeof target_cells_for_letter_backtrack[x_y] !== 'undefined') { //check to see if there are any backtrack targets possible for $x $y first
+						//letter_backtrack_source = [x , y]; //set source/start cell for optimal bactracking
+						letter_backtrack_source = '' + x + '_' + y; //set source/start cell for optimal bactracking
+					}
+				}
+			}
+			naive_backtrack++; //really should be called all_backtracks
+			return false; //start our backtrack : naive & optimal
+		}
 
         #try the next word that fit in this location
         $popWord = pop @wordsThatFit;
@@ -411,17 +546,7 @@ while ($success == 0)
                  $wordNumberDirUsed{$wordNumber}{$dir} = 1;
                  }
 
-        if (time() > $oldTime + 2) #print every 3 seconds
-              {
-              if ($debug ) {print time()-$timeForCrossword . " sec wordNumber:$wordNumber , dir:$dir $popWord optimalBacktrack:$optimalBacktrack naiveBacktrack:$naiveBacktrack recursive calls:$recursiveCount\n";}
-              else {print '.';} # otherwise apache timeout directive limit is reached
-              &PrintProcessing();
-              $oldTime = time();
-              }
-
-        if ( $in{SlowDown} > 0 ) {sleep ($in{SlowDown})}
-
-        #attempt to lay next word
+      #attempt to lay next word
         $success = &RecursiveWords(); #lay next word in the next position
         if ($success == 1){return 1;}; #board is filled, return out of all recursive calls successfuly
 #---------------
@@ -441,7 +566,7 @@ while ($success == 0)
         if (%wordBackTrackSource != ())
              {
               #we are doing an optimal backtrack
-              if ($targetWordsForBackTrack{$wordBackTrackSource{wordNumber}}{$wordBackTrackSource{dir}}{$wordNumber}{$dir} > 0) { #if it is equal to one, it is in a 'shaddow' and does not affect the failed letter
+              if (target_words_for_word_backtrack{$wordBackTrackSource{wordNumber}}{$wordBackTrackSource{dir}}{$wordNumber}{$dir} > 0) { #if it is equal to one, it is in a 'shaddow' and does not affect the failed letter
                    #we have hit the optimal target. turn off optimal backtrack
                    %wordBackTrackSource = ();
                    }
@@ -517,7 +642,7 @@ function recursiveLetters() {
 					x_y = '' + x + '_' + y;
 					if (typeof target_cells_for_letter_backtrack[x_y] !== 'undefined') { //check to see if there are any backtrack targets possible for $x $y first
 						//letter_backtrack_source = [x , y]; //set source/start cell for optimal bactracking
-						letter_backtrack_source = '' + x + '_' + y; //set source/start cell for optimal bactracking
+						letter_backtrack_source = x_y; //set source/start cell for optimal bactracking
 					}
 				}
 			}
@@ -770,17 +895,17 @@ function calculateOptimalBacktracks() {
 			word_positions.forEach(function(word_position) {
 				word_number_temp = word_position[0];
 				dir_temp = word_position[1];
-				var w_d = '' + word_number + '_' + dir;
-				var w_d_temp = '' + word_number_temp + '_' + dir_temp;
-				if (w_d == w_d_temp) {
+				var d_w = '' + dir + '_' + word_number;
+				var d_w_temp = '' + dir_temp + '_' + word_number_temp;
+				if (d_w == d_w_temp) {
 					return;
 				} //skip current word as it should not be a backtrack destination
 				let val = JSON.stringify(word_position);
 				if (walk_words_up_to_current_word.includes(val)) { //add to target_words_for_word_backtrack
-					if (typeof target_words_for_word_backtrack[w_d] === 'undefined') {
-						target_words_for_word_backtrack[w_d] = {};
+					if (typeof target_words_for_word_backtrack[d_w] === 'undefined') {
+						target_words_for_word_backtrack[d_w] = {};
 					}
-					target_words_for_word_backtrack[w_d][w_d_temp] = 1;
+					target_words_for_word_backtrack[d_w][d_w_temp] = 1;
 				}
 			});
 			walk_words_up_to_current_word.push(JSON.stringify(word_position)); //put it on @upToCurrentWord
