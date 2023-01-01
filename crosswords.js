@@ -399,28 +399,24 @@ foreach my $referenceLetterList (@letterLists) #for each letter's position
 return map( { if ( $wordsThatAreInserted{$_} == 0 ) {$_} else {()} }   ($wordsOfLengthString[$wordLength] =~ /$regexpstring/g) );
 }
 
-function letterListsFor()
+function letterListsFor(dir , word_number)
 {
-#input: word number and direcction
-#output: list of possible letters for each position in word based on crossing word masks
-#if a letter position has no members so what. keep going but make sure that the list for that letter = ()
+//input: word number and direction
+//output: list of possible letters for each position in word based on crossing word masks
+//if a letter position has no members, so what. keep going but make sure that the list for that letter = ()
+var word_length = all_masks_on_board[dir][word_number].length;
+var word_letter_positions = letter_positions_of_word[dir][word_number];
+var letter_lists = [];
+var nTh_letters;
 
-my $wordNumber = $_[0];
-my $dir = $_[1];
+word_letter_positions.forEach(function(letter_position){
 
-my $wordLength = length($allMasksOnBoard[$wordNumber][$dir]);
-my @wordLetterPositions = @{$letterPositionsOfWord[$wordNumber][$dir]};
-my @letterLists;
-my @nThLetters;
+  var x = letter_position[0];
+  var y = letter_position[1];
+	var crossing_word_dir =  1 - dir;
 
-foreach my $letterPosition (@wordLetterPositions)
-  {
-  my $x = $letterPosition->[0];
-  my $y = $letterPosition->[1];
-  my $crossingWordDir =  $OppositeDirection[$dir];
-
-  my $crossingWordNumber = $ThisSquareBelongsToWordNumber[$x][$y][$crossingWordDir];
-  my $crossingWordMask = $allMasksOnBoard[$crossingWordNumber][$crossingWordDir];
+  var crossing_word_number = this_square_belongs_to_word_number[crossing_word_dir][y][x];
+  var crossingWordMask = $allMasksOnBoard[$crossingWordNumber][$crossingWordDir];
 
   my $nThLetterPosition = $PositionInWord[$x][$y][$crossingWordDir];
   my $crossingLetter = substr($crossingWordMask , $nThLetterPosition , 1);
@@ -444,8 +440,11 @@ foreach my $letterPosition (@wordLetterPositions)
         last;
         }
   push @letterLists , [@nThLetters];
-  }
-return @letterLists;
+
+
+	});
+
+return letter_lists;
 }
 
 function wordsFromMask(mask){
