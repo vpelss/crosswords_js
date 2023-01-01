@@ -10,6 +10,7 @@ var recursive_count = 0;
 
 var pad_char = 'x';
 var unoccupied = 'o';
+var pads_either_side = 'padsEitherSide';
 
 //puzzle will be accessed a lot if using letter searches! but js arrays and associative arrays are comparable ONLY if the key is a simple integer
 //{} object will be easier to read in code puzzle[x][y] but is really hard to decipher when looking at the object itself
@@ -196,7 +197,7 @@ for (y = 0; y < puzzle_height; y++){
         if (puzzle[y][x] == unoccupied){
 			temp += "<td CLASS='tdwhiteclass'>&nbsp</td>";
 			}
-		zz = puzzle[y][x].search(/[A-Z]/);
+		//zz = puzzle[y][x].search(/[A-Z]/);
         if( puzzle[y][x].search(/[A-Z1-9]/) >= 0){
 			temp += `<td CLASS='tdwhiteclass'>${puzzle[y][x]}</td>`;
 			}
@@ -205,6 +206,28 @@ for (y = 0; y < puzzle_height; y++){
         }
 temp += "</table>\n";
 return temp;
+}
+
+function nThLettersFromListOfWords(){ //tested
+#input:
+# number representing position in words
+# reference to list of words all the same length
+#output a list of all letters at the requested position from each word (no duplicates!)
+
+my $nth = $_[0];
+my @words = @{$_[1]};
+my $word;
+my %letters = ();
+my $letter;
+my $count;
+
+foreach $word (@words)
+         {
+         if (length($word) <= $nth ) {die("@words $count word $word of length  too short nth $nth")}
+         $letter = substr($word , $nth , 1); #substr is 0 based
+         $letters{$letter} = 1;
+         }
+return keys %letters;
 }
 
 function numberClueList() {
@@ -366,7 +389,6 @@ function wordsFromLetterLists(){
 //$padsEitherSide note in this case, there will be no letters returned, BUT words still can be made as there is no crossing word to block it. So we assume all letters are possible here [A-Z]
 //output list of words that can be made with said letters
 
-
 my @letterLists = @_;
 my $wordLength = scalar @letterLists;
 my $adjustableWordLength = $wordLength; #used to compare our hash containing how many times a word was found and how many letters were used to find them
@@ -410,40 +432,35 @@ var letter_lists = [];
 var nTh_letters;
 
 word_letter_positions.forEach(function(letter_position){
-
-  var x = letter_position[0];
-  var y = letter_position[1];
+	var x = letter_position[0];
+	var y = letter_position[1];
 	var crossing_word_dir =  1 - dir;
 
-  var crossing_word_number = this_square_belongs_to_word_number[crossing_word_dir][y][x];
-  var crossingWordMask = $allMasksOnBoard[$crossingWordNumber][$crossingWordDir];
+	var crossing_word_number = this_square_belongs_to_word_number[crossing_word_dir][y][x];
+	var crossing_word_mask = all_masks_on_board[crossing_word_dir][crossing_word_number];
 
-  my $nThLetterPosition = $PositionInWord[$x][$y][$crossingWordDir];
-  my $crossingLetter = substr($crossingWordMask , $nThLetterPosition , 1);
+	var  nTh_letter_position = position_in_word[crossing_word_dir][y][x];
+	var crossing_letter = crossing_word_mask.charAt(nTh_letter_position);
 
-  @nThLetters = ();
-  if ($crossingLetter =~ /[A-Z]/ ) { #if a letter is already in the crossing spot, use it.
-       @nThLetters = ($crossingLetter)
-       }
-  if ($crossingLetter =~ /$unoccupied/ )
-       {
-       my @wordsFromMask = &WordsFromMask($crossingWordMask);
-       @nThLetters = &NthLettersFromListOfWords($nThLetterPosition , [@wordsFromMask]);
-       }
-  if ($crossingWordNumber == undef) { #there is no crossing word at this letter location so return a single $unoccupied 'o' to indicate that a word can still be made as any letter can go here!
+	nTh_letters = [];
+	if ( crossing_letter.search(/[A-Z]/) ) { //if a letter is already in the crossing spot, use it.
+       nTh_letters = [crossing_letter];
+    }
+	if (crossing_letter == unoccupied){
+       var words_from_mask = words_from_mask(crossing_word_mask);
+       nTh_letters = nThLettersFromListOfWords(nTh_letter_position , words_from_mask);
+	}
+	if (crossing_word_number === 'undefined') { //there is no crossing word at this letter location so return a single $unoccupied 'o' to indicate that a word can still be made as any letter can go here!
        #@nThLetters = ($unoccupied);
-       @nThLetters = ($padsEitherSide);
-       }
-  if ( scalar @nThLetters == 0) #used to break out earier for small speed increase. If a letter position has no letters, WordsFromLetterList will fail anyway. Just return empty list
+       nTh_letters = [pads_either_side];
+    }
+	if( nTh_letters.length() == 0) //used to break out earlier for small speed increase. If a letter position has no letters, WordsFromLetterList will fail anyway. Just return empty list
         {
-        @letterLists = ( () );
-        last;
-        }
-  push @letterLists , [@nThLetters];
-
-
+        letter_lists = [];
+        return;
+    }
+	letter_lists.push(nTh_letters);
 	});
-
 return letter_lists;
 }
 
