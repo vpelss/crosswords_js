@@ -380,7 +380,7 @@ foreach my $letterPosition (@{$letterPositionsOfWord[$wordNumber][$wordDir]})
 return;
 }
 
-function wordsFromLetterLists(){
+function wordsFromLetterLists(letter_lists){
 //input list of referenced lists containing possible letters for each position in a word
 //(['C','D','F','T','Z'] , ['E','R','T','Y','O', 'A'] , ['T','R','E','W','Q','Z'])
 //(['C','D','F','T','Z'] , [$padsEitherSide] , ['T','R','E','W','Q','Z'])
@@ -389,40 +389,49 @@ function wordsFromLetterLists(){
 //$padsEitherSide note in this case, there will be no letters returned, BUT words still can be made as there is no crossing word to block it. So we assume all letters are possible here [A-Z]
 //output list of words that can be made with said letters
 
-my @letterLists = @_;
-my $wordLength = scalar @letterLists;
-my $adjustableWordLength = $wordLength; #used to compare our hash containing how many times a word was found and how many letters were used to find them
-my $letterPosition = -1; #start at -1 as we increment at top of loop!
-my @nThLetterWordList;
-my @possibleWords;
-my @runningWordList;
-my @wordsFromLetters;
-my @letterList;
-my %possibleWordsCount;
-my $localWord;
+var word_length = letter_lists.length();
+var adjustable_word_length = $wordLength; //used to compare our hash containing how many times a word was found and how many letters were used to find them
+var letter_position = -1; //start at -1 as we increment at top of loop!
+var nTh_letter_word_list;
+var possible_words;
+var running_word_list;
+var words_from_letters;
+var possible_words_count;
+var local_word;
 
-if (scalar @letterLists == 0) {return()}; #required as LetterListsFor will return () if there are no possible letters!
+if (letter_lists.length() == 0) {return [];} //required as LetterListsFor will return [] if there are no possible letters!
 
-#regex version fronm 2x  up to 20x faster! long lists are fast
-my $regexpstring = '';
-foreach my $referenceLetterList (@letterLists) #for each letter's position
-        {
-        @letterList = @{$referenceLetterList};
-        #if (scalar @letterList == 0) { return (); } #no possible letters here, return an empty list of words
-        if ($letterList[0] eq $padsEitherSide) {@letterList = ('A'..'Z')} #replace $padsEitherSide with (A..Z)
-        else { if (scalar @letterList == 0) { return (); } }#no possible letters here, return an empty list of words
-        $regexpstring = $regexpstring . '[' . join('' , @letterList) . ']';
-        }
-
-# ($wordsOfLengthString[$wordLength] =~ /$regexpstring/g) returns all possible words
-#look for words already used and ignore using map!
-#@possibleWords = map( { if ( $wordsThatAreInserted{$_} == 0 ) {$_} else {()} }   ($wordsOfLengthString[$wordLength] =~ /$regexpstring/g) );
-#return @possibleWords; # speed up by direct output!
-return map( { if ( $wordsThatAreInserted{$_} == 0 ) {$_} else {()} }   ($wordsOfLengthString[$wordLength] =~ /$regexpstring/g) );
+//regexp version from 2x  up to 20x faster! long lists are fast
+var regexp_string = '';
+var impossible_word = false; //assume
+for(var i = 0 ; i < letter_lists.length ; i++){ //for each letter's position
+	letter_list = letter_lists[i];
+        if(letter_list[0] == pads_either_side) {
+			letter_list = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+		} //it can be ANY letter (no crossing word) [A..Z]
+        else{
+			if (letter_list.length() == 0) {
+				return [];
+			}//no possible letters here, return an empty list of words
+		}
+        regexp_string = regexp_string + '[' + letter_list.join('') + ']'; //regexp_string will be /[ABC][HGR][OHR]..../
 }
 
-function letterListsFor(dir , word_number)
-{
+
+// ($wordsOfLengthString[$wordLength] =~ /$regexpstring/g) returns all possible words
+//look for words already used and ignore using map!
+//@possibleWords = map( { if ( $wordsThatAreInserted{$_} == 0 ) {$_} else {()} }   ($wordsOfLengthString[$wordLength] =~ /$regexpstring/g) );
+//return @possibleWords; # speed up by direct output!
+var pattern =  new RegExp(`regexp_string`, 'g');
+var possible_words_array = words_of_length_string[word_length].match(pattern);
+return possible_words_array.filter(function(word){
+//return words_of_length_string[word_length].match(pattern).filter(function(word){
+	return words_that_are_inserted[word] != 1; //ignore words already used
+	});
+//return map( { if ( $wordsThatAreInserted{$_} == 0 ) {$_} else {()} }   ($wordsOfLengthString[$wordLength] =~ /$regexpstring/g) );
+}
+
+function letterListsFor(dir , word_number){
 //input: word number and direction
 //output: list of possible letters for each position in word based on crossing word masks
 //if a letter position has no members, so what. keep going but make sure that the list for that letter = ()
@@ -477,8 +486,8 @@ mask = mask.replace(unoccupied , '.'); //make a mask of 'GO$unoccupiedT' into 'G
 //note that we need to return an empty list if the word is already inserted see:  else {()} If we do not, the map will return an empty word in the middle of the list which will pooch our code later.
 
 var pattern =  new RegExp(`${mask}`, 'g'); // /${mask}/g;
-var possible_words_array = words_of_length_string[word_length].match(pattern)
-possible_words_array.filter(function(word){
+var possible_words_array = words_of_length_string[word_length].match(pattern);
+return possible_words_array.filter(function(word){
 //return words_of_length_string[word_length].match(pattern).filter(function(word){
 	return words_that_are_inserted[word] != 1; //ignore words already used
 	});
