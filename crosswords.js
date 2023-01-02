@@ -208,28 +208,6 @@ temp += "</table>\n";
 return temp;
 }
 
-function nThLettersFromListOfWords(){ //tested
-#input:
-# number representing position in words
-# reference to list of words all the same length
-#output a list of all letters at the requested position from each word (no duplicates!)
-
-my $nth = $_[0];
-my @words = @{$_[1]};
-my $word;
-my %letters = ();
-my $letter;
-my $count;
-
-foreach $word (@words)
-         {
-         if (length($word) <= $nth ) {die("@words $count word $word of length  too short nth $nth")}
-         $letter = substr($word , $nth , 1); #substr is 0 based
-         $letters{$letter} = 1;
-         }
-return keys %letters;
-}
-
 function numberClueList() {
 var x = -1;
 var y = -1;
@@ -359,24 +337,30 @@ console.log(string);
 //setTimeout( printProcessing , 1000);
 }
 
-function placeMaskOnBoard(dir , word_number , popped_word){
-//#place word AND add letters to all the associated crossing words!
-my $wordNumber = $_[0];
-my $wordDir = $_[1];
-my $word = $_[2];
+function nThLettersFromListOfWords(nTh , words){ //tested
+//input:
+//a number representing a letter position in words
+//reference to an array of words all the same length
+//output an array of all letters at the requested position from each word (no duplicates!)
 
-if ($word eq '') {die("no word. wordnumber:$wordNumber worddir:$wordDir ")};
-#print "$word\n\n";
-my $wordLetterPosition = -1;
-foreach my $letterPosition (@{$letterPositionsOfWord[$wordNumber][$wordDir]})
-        {
-        my $x = $letterPosition->[0];
-        my $y = $letterPosition->[1];
-        $wordLetterPosition++;
+var letters = {};
+var letter;
 
-        my $letter = substr($word , $wordLetterPosition , 1); #letter from word
-        SetXY($x,$y,$letter);
-        }
+words.forEach(function(word){
+	//if(word.length <= nth ) {die("@words $count word $word of length  too short nth $nth")}
+	letter = word.charAt(nTh);
+	letters[letter] = 1; //no duplicates so associative array
+	});
+return Object.keys(letters);
+}
+
+function placeMaskOnBoard(dir , word_number , word){ //place word AND add letters to all the associated crossing words!
+letter_positions_of_word[dir][word_number].forEach(function(letter_position , index){
+        x = letter_position[0];
+        y = letter_position[1];
+        var letter = word.charAt(index); //letter from word
+        setXY(x,y,letter); //does puzzle letter placement and adds to all_masks_on_board
+	});
 return;
 }
 
@@ -390,20 +374,20 @@ function wordsFromLetterLists(letter_lists){
 //output list of words that can be made with said letters
 
 var word_length = letter_lists.length();
-var adjustable_word_length = $wordLength; //used to compare our hash containing how many times a word was found and how many letters were used to find them
-var letter_position = -1; //start at -1 as we increment at top of loop!
-var nTh_letter_word_list;
-var possible_words;
-var running_word_list;
-var words_from_letters;
-var possible_words_count;
-var local_word;
+//var adjustable_word_length = $wordLength; //used to compare our hash containing how many times a word was found and how many letters were used to find them
+//var letter_position = -1; //start at -1 as we increment at top of loop!
+//var nTh_letter_word_list;
+//var possible_words;
+//var running_word_list;
+//var words_from_letters;
+//var possible_words_count;
+//var local_word;
 
 if (letter_lists.length() == 0) {return [];} //required as LetterListsFor will return [] if there are no possible letters!
 
 //regexp version from 2x  up to 20x faster! long lists are fast
 var regexp_string = '';
-var impossible_word = false; //assume
+//var impossible_word = false; //assume
 for(var i = 0 ; i < letter_lists.length ; i++){ //for each letter's position
 	letter_list = letter_lists[i];
         if(letter_list[0] == pads_either_side) {
@@ -435,7 +419,7 @@ function letterListsFor(dir , word_number){
 //input: word number and direction
 //output: list of possible letters for each position in word based on crossing word masks
 //if a letter position has no members, so what. keep going but make sure that the list for that letter = ()
-var word_length = all_masks_on_board[dir][word_number].length;
+//var word_length = all_masks_on_board[dir][word_number].length;
 var word_letter_positions = letter_positions_of_word[dir][word_number];
 var letter_lists = [];
 var nTh_letters;
@@ -460,7 +444,7 @@ word_letter_positions.forEach(function(letter_position){
        nTh_letters = nThLettersFromListOfWords(nTh_letter_position , words_from_mask);
 	}
 	if (crossing_word_number === 'undefined') { //there is no crossing word at this letter location so return a single $unoccupied 'o' to indicate that a word can still be made as any letter can go here!
-       #@nThLetters = ($unoccupied);
+       //@nThLetters = ($unoccupied);
        nTh_letters = [pads_either_side];
     }
 	if( nTh_letters.length() == 0) //used to break out earlier for small speed increase. If a letter position has no letters, WordsFromLetterList will fail anyway. Just return empty list
@@ -477,7 +461,7 @@ function wordsFromMask(mask){
 //mask letters should be capitalized
 //input: A_PL_ where _ will be whatever $unoccupied is
 //output list of words that match the input mask
-var word_list;
+//var word_list;
 var word_length = mask.length;
 
 mask = mask.replace(unoccupied , '.'); //make a mask of 'GO$unoccupiedT' into 'GO.T' for the regexp
@@ -502,7 +486,7 @@ function recursiveWords() {
 	//in just the next index in a list (@NextWordPositionsOnBoard) of word position we are trying to fill
 
 	var words_that_fit;
-	var pop_word;
+	var popped_word;
 	words_that_must_be_laid = []; //global!
 
 	recursive_count++;
@@ -510,8 +494,8 @@ function recursiveWords() {
 	word_backtrack_source = undefined; //clear global indicating that we are moving forward and have cleared the backtrack state
 
 	if (next_letter_position_on_board.length == 0) {
-		return true
-	}; //if we have filled all the possible words, we are done. This breaks us out of all recursive  success loops
+		return true;
+	} //if we have filled all the possible words, we are done. This breaks us out of all recursive  success loops
 	var word_position = next_word_on_board.shift(); //keep in subroutine unchanged as we may need to unshift on a recursive return
 	var dir = word_position[0];
 	var word_number = word_position[1];
@@ -519,7 +503,7 @@ function recursiveWords() {
 	//get all possible words for mask
 	var mask = all_masks_on_board[dir][word_mumber]; // get WORD or MASK at this crossword position
 	if (arg_simplewordmasksearch) {
-		//simple one. 0.0002 sec a call.  better for less crosslinks?
+		//simple one. 0.0002 sec a call.  better for less cross links?
 		//ignore crossing words as future mask checks will find the failures/errors. not true for some walks as there msay be no crossword checking!
 		//it will only work well with alternating across and down checks
 		if (arg_shuffle) {
@@ -537,7 +521,7 @@ function recursiveWords() {
 		}
 	}
 
-	var $success = 0;
+	var success = 0;
 	while (success == 0) {
 		if (words_that_fit.length == 0) { //are there any possible words? If no backtrack
 			next_word_on_board.unshift(word_position);
