@@ -211,7 +211,7 @@ return temp;
 function numberClueList() {
 var x = -1;
 var y = -1;
-var word;
+//var word;
 var hints;
 var clues = [];
 
@@ -238,7 +238,7 @@ all_masks_on_board.forEach(function(item , dir){
 		//choose a random clue
 		var clue = clues[ Math.floor(Math.random() * clues.length) ];
 		//place it is global associative array
-        $clues[word] = clue;
+        clues[word] = clue;
 
 		//build html clue list
 		var word_letter_positions_json = '[';
@@ -440,7 +440,7 @@ word_letter_positions.forEach(function(letter_position){
        nTh_letters = [crossing_letter];
     }
 	if (crossing_letter == unoccupied){
-       var words_from_mask = words_from_mask(crossing_word_mask);
+       var words_from_mask = wordsFromMask(crossing_word_mask);
        nTh_letters = nThLettersFromListOfWords(nTh_letter_position , words_from_mask);
 	}
 	if (crossing_word_number === 'undefined') { //there is no crossing word at this letter location so return a single $unoccupied 'o' to indicate that a word can still be made as any letter can go here!
@@ -493,7 +493,7 @@ function recursiveWords() {
 
 	word_backtrack_source = undefined; //clear global indicating that we are moving forward and have cleared the backtrack state
 
-	if (next_letter_position_on_board.length == 0) {
+	if (next_word_on_board.length == 0) {
 		return true;
 	} //if we have filled all the possible words, we are done. This breaks us out of all recursive  success loops
 	var word_position = next_word_on_board.shift(); //keep in subroutine unchanged as we may need to unshift on a recursive return
@@ -501,7 +501,7 @@ function recursiveWords() {
 	var word_number = word_position[1];
 
 	//get all possible words for mask
-	var mask = all_masks_on_board[dir][word_mumber]; // get WORD or MASK at this crossword position
+	var mask = all_masks_on_board[dir][word_number]; // get WORD or MASK at this crossword position
 	if (arg_simplewordmasksearch) {
 		//simple one. 0.0002 sec a call.  better for less cross links?
 		//ignore crossing words as future mask checks will find the failures/errors. not true for some walks as there msay be no crossword checking!
@@ -872,8 +872,8 @@ function calculateOptimalBacktracks() {
 	if (mode == 'word') {
 		while (next_word_on_board_temp.length != 0) {
 			word_position = next_word_on_board_temp.shift(); //keep in subroutine unchaged as we may need to unshift on a recursive return
-			word_number = word_position[0];
-			dir = word_position[1];
+			dir = word_position[0];
+			word_number = word_position[1];
 			//let tsbtwn = this_square_belongs_to_word_number[dir][y][x];
 			word_letter_positions = letter_positions_of_word[dir][word_number];
 			//what words are crossing this word?
@@ -1144,8 +1144,7 @@ var word_letter_positions_array = [];
     }
   }
 
- // biggest_word_number = word_number;
-
+// biggest_word_number = word_number;
 var crossing_cells = 0;
 var total_cells = 0;
 var white_cells = 0;
