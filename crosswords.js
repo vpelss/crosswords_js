@@ -36,7 +36,7 @@ var this_square_belongs_to_word_number = []; //this_square_belongs_to_word_numbe
 
 var all_masks_on_board = []; //all_masks_on_board[dir][word_number] returns the letters that have been laid down including unoccupied. eg: XoLoooo
 
-var walkpath = '';
+//var walkpath = '';
 var mode = ''; //letter or word
 
 var next_letter_position_on_board = [];
@@ -61,9 +61,12 @@ var target_words_for_word_backtrack = {}; //global as we need to backtrack to th
 var words_that_are_inserted = {};
 
 var forward_count = 0;
-var naive_count = 0;
+//var naive_count = 0;
 
-var $clues = {};
+var number_of_HV_words = []; //used in to test completion of recursiveWords()
+number_of_HV_words[0] = 0;
+number_of_HV_words[1] = 0;
+//var clues = {};
 
 //nav vars
 var startx ; //based on word #1 across or down
@@ -110,7 +113,7 @@ function main() {
 	} else {
 		mode = 'word';
 	}
-	loadWordList(arg_wordfile, arg_walkpath);
+	loadWordList(arg_wordfile);
 
 	//word walks
 	if (arg_walkpath == 'crossingwords') {
@@ -140,10 +143,9 @@ function main() {
 
 	if (mode == 'word') {
 		if (recursiveWords() == 0) { //failed
-			temp = 7;
 		}
 	} else {
-		tt = recursiveLetters();
+		recursiveLetters();
 		//setInterval(printProcessing, 1000);
 		//printProcessing();
 		//setTimeout( printProcessing , 10);
@@ -223,7 +225,7 @@ all_masks_on_board.forEach(function(item , dir){
 		//word = all_masks_on_board[dir][word_number];
 		//get clue(s) for this word
 		var first_2_leters = word.substring(0, 2);
-		directory = "./wordlists/" + arg_wordfile + "/clues/";
+		var directory = "./wordlists/" + arg_wordfile + "/clues/";
 		var filename = directory + "_" + first_2_leters + ".clu";
 		var clue_list_text = readStringFromFileAtPath(filename);
 		var clue_list_array = clue_list_text.split(/\r?\n|\r|\n/g); //split on lines into array
@@ -250,7 +252,7 @@ all_masks_on_board.forEach(function(item , dir){
 			});
 		word_letter_positions_json += ']';
 		*/
-		
+
 		x = letter_positions_of_word[dir][word_number][0][0];
 		y = letter_positions_of_word[dir][word_number][0][1];
 
@@ -379,7 +381,9 @@ function wordsFromLetterLists(letter_lists){
 
 var word_length = letter_lists.length;
 
-if (letter_lists.length== 0) {return [];} //required as LetterListsFor will return [] if there are no possible letters!
+if (letter_lists.length == 0) {
+	return [];
+	} //required as LetterListsFor will return [] if there are no possible letters!
 
 //regexp version from 2x  up to 20x faster! long lists are fast
 var regexp_string = '';
@@ -406,11 +410,14 @@ var possible_words_array = words_of_length_string[word_length].match(pattern);
 if(possible_words_array === null){
 	possible_words_array = [];
 }
+return possible_words_array; //just return full array, we check if words are layed in recursive routine
+/*
 return possible_words_array.filter(function(word){
 //return words_of_length_string[word_length].match(pattern).filter(function(word){
-	return words_that_are_inserted[word] != 1; //ignore words already used
+	//return words_that_are_inserted[word] != 1; //ignore words already used
+	return true;
 	});
-//return map( { if ( $wordsThatAreInserted{$_} == 0 ) {$_} else {()} }   ($wordsOfLengthString[$wordLength] =~ /$regexpstring/g) );
+*/
 }
 
 function letterListsFor(dir , word_number){
@@ -422,7 +429,9 @@ var word_letter_positions = letter_positions_of_word[dir][word_number];
 var letter_lists = [];
 var nTh_letters;
 
-word_letter_positions.forEach(function(letter_position){
+for(var i = 0 ; i < word_letter_positions.length ; i++){
+//word_letter_positions.forEach(function(letter_position){
+	letter_position = word_letter_positions[i];
 	var x = letter_position[0];
 	var y = letter_position[1];
 	var crossing_word_dir =  1 - dir;
@@ -449,10 +458,11 @@ word_letter_positions.forEach(function(letter_position){
 	if( nTh_letters.length == 0) //used to break out earlier for small speed increase. If a letter position has no letters, WordsFromLetterList will fail anyway. Just return empty list
         {
         letter_lists = [];
-        return;
+        return letter_lists;
     }
 	letter_lists.push(nTh_letters);
-	});
+	//});
+	}
 return letter_lists;
 }
 
@@ -497,7 +507,7 @@ function recursiveWords() {
 
 	word_backtrack_source = undefined; //clear global indicating that we are moving forward and have cleared the backtrack state
 
-	if (next_word_on_board.length == 0) {
+	if (Object.keys(words_that_are_inserted).length == (number_of_HV_words[dir_across] + number_of_HV_words[dir_down]) ) {
 		return true;
 	} //if we have filled all the possible words, we are done. This breaks us out of all recursive  success loops
 	var word_position = next_word_on_board.shift(); //keep in subroutine unchanged as we may need to unshift on a recursive return
@@ -556,7 +566,7 @@ function recursiveWords() {
 		} //board is filled, return out of all recursive calls successfuly
 		//-------------------------------------------------------------------------------
 		//if we are here, the last recursive attempt to lay a word failed.So we are backtracking.#returning from last word which failed
-		delete words_that_are_inserted[popped_word]; //allow us to reuse word
+		//delete words_that_are_inserted[popped_word]; //allow us to reuse word
 		//failed so reset word to previous mask
 		placeMaskOnBoard(dir, word_number, mask);
 
@@ -660,8 +670,8 @@ function recursiveLetters() {
 		//success == false , so we have been backtracking to...
 		//if we are here, the last recursive attempt to lay a letter failed
 
-		delete words_that_are_inserted[words_that_were_laid[0]]; //if a word was laid before, reverse that
-		delete words_that_are_inserted[words_that_were_laid[1]];
+		//delete words_that_are_inserted[words_that_were_laid[0]]; //if a word was laid before, reverse that
+		//delete words_that_are_inserted[words_that_were_laid[1]];
 		setXY(x, y, unoccupied); //failed so reset letter to unoccupied
 		//exclusively optimal backtrack check and processing
 		if (typeof letter_backtrack_source !== 'undefined') { //we are doing an optimal backtrack
@@ -700,6 +710,11 @@ function setXY(x, y, letter) {
 		word_number = this_square_belongs_to_word_number[dir][y][x];
 		position = position_in_word[dir][y][x];
 		mask[dir] = all_masks_on_board[dir][word_number];
+
+		//if( (mode == 'word') && (letter == unoccupied) ) { //remove mask from words_that_are_inserted. It may be full.
+			delete words_that_are_inserted[mask[dir]]; //remove mask from words_that_are_inserted. It may be full.
+		//}
+
 		//add letter to mask
 		mask[dir] = mask[dir].substring(0, position) + letter + mask[dir].substring(position + 1);
 
@@ -710,6 +725,11 @@ function setXY(x, y, letter) {
 				}
 			}
 		}
+		//if(mode == 'word'){
+			if( ! mask[dir].includes(unoccupied) ){//full mask add to words_that_are_inserted
+			words_that_are_inserted[mask[dir]] = 1;
+			}
+		//}
 	}
 
 	//set cell then mask(s)
@@ -721,13 +741,15 @@ function setXY(x, y, letter) {
 		word_number = this_square_belongs_to_word_number[dir][y][x];
 		all_masks_on_board[dir][word_number] = mask[dir];
 		//is it a full word?
+		/*
 		if (!mask[dir].includes(unoccupied)) { //if mask full word add to words_laid and also to $wordsThatAreInserted
-			words_that_are_inserted[mask[dir]] = 1;
+			//words_that_are_inserted[mask[dir]] = 1;
 			if (typeof words_laid === 'undefined') {
 				words_laid = [];
 			}
 			words_laid.push(mask[dir]);
 		}
+		*/
 	}
 
 	if (typeof words_laid !== 'undefined') {
@@ -926,7 +948,7 @@ function calculateOptimalBacktracks() {
 function generateNextWordPositionsOnBoardCrossing(){
 		//start with 1 horiz.
 		//find all crossing words
-	//find all their crossing words.
+		//find all their crossing words.
 		//only add # and direction once!
 		//FIFO
 
@@ -948,10 +970,10 @@ function generateNextWordPositionsOnBoardCrossing(){
 				[dir , word_number] = to_do_list.shift();
 					var crossing_words = getCrossingWords(dir , word_number);
 					while ( crossing_words.length > 0 ){
-							[dir , word_number] =crossing_words.shift();
+							[dir , word_number] = crossing_words.shift();
 							//if(typeof already_in_list[dir] === 'undefined'){already_in_list[dir] = {};}
 							if (typeof already_in_list[dir][word_number] !== 'undefined'){
-												continue;
+								continue;
 							}//already added. skip
 							to_do_list.push( [dir , word_number] );
 							next_word_on_board.push( [dir , word_number] );
@@ -1133,8 +1155,11 @@ var word_letter_positions_array = [];
           if( (word_letter_positions_array[0][0] == x) && (word_letter_positions_array[0][1] == y) ){//first letter in word?
              word_length = word_letter_positions_array.length;
              word_lengths[word_length] = 1; //mark globally that there is a word of this length
-             if(! was_there_an_across_word ) word_number++; //allows us to not increase count if across and down share first letter pos
+             if(! was_there_an_across_word ){//allows us to not increase count if across and down share first letter pos
+				word_number++;
+			 }
              was_there_an_across_word = 1;
+			 number_of_HV_words[dir]++; //used in recursiveWords()
              //set letter_positions_of_word[$numberCount][$dir] = [TempLetterPositions];
              if(typeof letter_positions_of_word[dir] === 'undefined' ){letter_positions_of_word[dir] = [];}
              letter_positions_of_word[dir][word_number] = JSON.parse(JSON.stringify(word_letter_positions_array)); //deep copy multi dim array
@@ -1232,7 +1257,8 @@ function getDxDy(dir){
 return [dx,dy];
 }
 
-function loadWordList(arg_wordfile, arg_walkpath) {
+function loadWordList(arg_wordfile) {
+	//load word lists and set word and letter search variables
 	var db = arg_wordfile;
 	var wl = Object.keys(word_lengths);
 	wl.forEach(function(word_length) {
@@ -1270,6 +1296,7 @@ function loadWordList(arg_wordfile, arg_walkpath) {
 	});
 	word_list_text = ''; //cleanup
 }
+
 function printPuzzle(){
   var temp , temp3 , temp4;
   var x , y , dir;
@@ -1419,7 +1446,7 @@ var isAClickableClass = {tdwordselectedclass:1 , tdwhiteclass:1 , tdselectedclas
 
 function setCellsFromCookies(){
 	var theCookies = document.cookie.split(';');
-    var aString = '';
+    //var aString = '';
     for (var i = 0 ; i < theCookies.length ; i++) {
 		var mycookie = theCookies[i].split('=');
 		var theletter = mycookie[1];
