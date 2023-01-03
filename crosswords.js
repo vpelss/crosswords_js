@@ -5,6 +5,8 @@
 
 //is promise async?
 
+//"use strict";
+
 var start_time;
 var recursive_count = 0;
 
@@ -92,8 +94,8 @@ function main() {
 	if (!urlParams.has('wordfile')) {
 		setCellsFromCookies();
 		return;
-		alert('Please call from main form.');
-		throw new Error('done');
+		//alert('Please call from main form.');
+		//throw new Error('done');
 	}
 
 	var arg_grid = urlParams.get('grid');
@@ -241,20 +243,22 @@ all_masks_on_board.forEach(function(item , dir){
         clues[word] = clue;
 
 		//build html clue list
+		/*
 		var word_letter_positions_json = '[';
 		letter_positions_of_word[dir][word_number].forEach(function(cell){
 			word_letter_positions_json += cell[0] + ',' + cell[1];
 			});
 		word_letter_positions_json += ']';
-
+		*/
+		
 		x = letter_positions_of_word[dir][word_number][0][0];
 		y = letter_positions_of_word[dir][word_number][0][1];
 
 		//var temp = `<font size=-1><a href='http://www.google.ca/search?q=${word}' target='_blank'>google</a></font> `;
 		//#<font><i><A ONCLICK="if (this.innerHTML=='show') {this.innerHTML='$word'} else {this.innerHTML='show'}" HREF="\#self">show</A></i></font>
 		hints += `
-			${word_number}. <a href="#self" id='[${dir},${word_number},"cell"]' class="clues" ONCLICK="choose_clue(this.id);">${$clues[word]}</a>
-			&nbsp;<font size=-2><a href="http://www.google.ca/search?q=${$clues[word]}" target="_blank">google</a></font>
+			${word_number}. <a href="#self" id='[${dir},${word_number},"cell"]' class="clues" ONCLICK="choose_clue(this.id);">${clues[word]}</a>
+			&nbsp;<font size=-2><a href="http://www.google.ca/search?q=${clues[word]}" target="_blank">google</a></font>
 			&nbsp;&nbsp;&nbsp;&nbsp;
 
 			<font><i>
@@ -466,7 +470,7 @@ mask = mask.replace(pattern , '\\w'); //make a mask of 'GO$unoccupiedT' into 'GO
 //need to filter out $wordsThatAreInserted{$popWord} == 1 below if ( $wordsThatAreInserted{$popWord} == 1 )
 //note that we need to return an empty list if the word is already inserted see:  else {()} If we do not, the map will return an empty word in the middle of the list which will pooch our code later.
 
-var pattern =  new RegExp(`${mask}`, 'g'); // /${mask}/g;
+pattern =  new RegExp(`${mask}`, 'g'); // /${mask}/g;
 var possible_words_array = words_of_length_string[word_length].match(pattern);
 if(possible_words_array === null){
 	possible_words_array = [];
@@ -591,7 +595,7 @@ function recursiveLetters() {
 	//1. the upper target letter it is not part of a horizontal word
 	//2. the upper target letter is the last letter in a horizontal word
 	//3. the letter that failed is in a single vertical word
-	//var x , y , x_y , xx_yy;
+	var x , y , x_y;
 	var cell_position;
 	var letters_that_fit = [];
 	var popped_letter;
@@ -798,12 +802,7 @@ function lettersPossibleAtCell(x, y) {
 		} //no word here
 		word_number = this_square_belongs_to_word_number[dir][y][x];
 		mask[dir] = all_masks_on_board[dir][word_number];
-		if(typeof linear_word_search[mask] === 'undefined'){
-
-			hh = 9;
-
-		}
-		possible_letters_HV[dir] = Object.keys(linear_word_search[mask]);
+		possible_letters_HV[dir] = Object.keys(linear_word_search[ mask[dir] ]);
 	}
 
 	if (possible_letters_HV[0].length && possible_letters_HV[1].length) { //intersect horiz and vert letters
@@ -1080,7 +1079,7 @@ function grid_change( file_name ){
   }//remove last line if empty
 
   puzzle_height = lines.length;
-  lines.forEach( getLetters ); //process lines array
+  lines.forEach( grid_getLetters ); //process lines array
 
   //square_grid(); //make the grid a square filling with pad_char on the right
   puzzle.forEach( function(currentValue){
@@ -1093,23 +1092,17 @@ function grid_change( file_name ){
 
 }
 
-function getLetters(currentValue , index) {
- var line = currentValue.trim(); //remove whitespace
- if( line.length > puzzle_width ) {
-  puzzle_width = line.length;
-  }//keep seeing if we have a larger line width
- var letters = line.split(''); //split line into letters array
- //var t = letters.valueOf();
- letters.forEach( addToPuzzle , index ); //process letters array : index is passed to the function as its this value
+function grid_getLetters(currentValue , y) {
+	var line = currentValue.trim(); //remove whitespace
+	if( line.length > puzzle_width ) {
+	 puzzle_width = line.length;
+	 }//keep seeing if we have a larger line width
+	var letters = line.split(''); //split line into letters array
+	for(var x = 0; x < line.length ; x++){
+	   if (typeof puzzle[y] === 'undefined') { puzzle[y] = []; }//add second dimension
+	   puzzle[y][x] = letters[x];
+	}
  }
-
-function addToPuzzle(currentValue , index) {
- var x = index;// index of letters array
- var y = this.valueOf(); //!! this is the index from/used in getLetters  !!
-
- if (typeof puzzle[y] === 'undefined') { puzzle[y] = []; }//add second dimension
- puzzle[y][x] = currentValue;
-}
 
 function numberBlankSquares(){
  //gridToGlobalVars()
