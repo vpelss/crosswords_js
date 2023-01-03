@@ -141,7 +141,7 @@ function main() {
 			temp = 7;
 		}
 	} else {
-		recursiveLetters();
+		tt = recursiveLetters();
 		//setInterval(printProcessing, 1000);
 		//printProcessing();
 		//setTimeout( printProcessing , 10);
@@ -354,7 +354,7 @@ words.forEach(function(word){
 return Object.keys(letters);
 }
 
-function placeMaskOnBoard(dir , word_number , word){ //place word AND add letters to all the associated crossing words!
+function placeMaskOnBoard(dir , word_number , word){ //place mask, add letters and update crossing masks
 letter_positions_of_word[dir][word_number].forEach(function(letter_position , index){
         x = letter_position[0];
         y = letter_position[1];
@@ -373,17 +373,9 @@ function wordsFromLetterLists(letter_lists){
 //$padsEitherSide note in this case, there will be no letters returned, BUT words still can be made as there is no crossing word to block it. So we assume all letters are possible here [A-Z]
 //output list of words that can be made with said letters
 
-var word_length = letter_lists.length();
-//var adjustable_word_length = $wordLength; //used to compare our hash containing how many times a word was found and how many letters were used to find them
-//var letter_position = -1; //start at -1 as we increment at top of loop!
-//var nTh_letter_word_list;
-//var possible_words;
-//var running_word_list;
-//var words_from_letters;
-//var possible_words_count;
-//var local_word;
+var word_length = letter_lists.length;
 
-if (letter_lists.length() == 0) {return [];} //required as LetterListsFor will return [] if there are no possible letters!
+if (letter_lists.length== 0) {return [];} //required as LetterListsFor will return [] if there are no possible letters!
 
 //regexp version from 2x  up to 20x faster! long lists are fast
 var regexp_string = '';
@@ -394,20 +386,22 @@ for(var i = 0 ; i < letter_lists.length ; i++){ //for each letter's position
 			letter_list = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
 		} //it can be ANY letter (no crossing word) [A..Z]
         else{
-			if (letter_list.length() == 0) {
+			if (letter_list.length == 0) {
 				return [];
 			}//no possible letters here, return an empty list of words
 		}
         regexp_string = regexp_string + '[' + letter_list.join('') + ']'; //regexp_string will be /[ABC][HGR][OHR]..../
 }
 
-
 // ($wordsOfLengthString[$wordLength] =~ /$regexpstring/g) returns all possible words
 //look for words already used and ignore using map!
 //@possibleWords = map( { if ( $wordsThatAreInserted{$_} == 0 ) {$_} else {()} }   ($wordsOfLengthString[$wordLength] =~ /$regexpstring/g) );
 //return @possibleWords; # speed up by direct output!
-var pattern =  new RegExp(`regexp_string`, 'g');
+var pattern =  new RegExp(`${regexp_string}`, 'g');
 var possible_words_array = words_of_length_string[word_length].match(pattern);
+if(possible_words_array === null){
+	possible_words_array = [];
+}
 return possible_words_array.filter(function(word){
 //return words_of_length_string[word_length].match(pattern).filter(function(word){
 	return words_that_are_inserted[word] != 1; //ignore words already used
@@ -433,13 +427,14 @@ word_letter_positions.forEach(function(letter_position){
 	var crossing_word_mask = all_masks_on_board[crossing_word_dir][crossing_word_number];
 
 	var  nTh_letter_position = position_in_word[crossing_word_dir][y][x];
-	var crossing_letter = crossing_word_mask.charAt(nTh_letter_position);
+	var current_letter = crossing_word_mask.charAt(nTh_letter_position);
 
 	nTh_letters = [];
-	if ( crossing_letter.search(/[A-Z]/) ) { //if a letter is already in the crossing spot, use it.
-       nTh_letters = [crossing_letter];
+	var pattern =  new RegExp('[A-Z]' , 'g');
+	if ( current_letter.search(pattern) == 0 ) { //if a letter is already in the crossing spot, use it.
+       nTh_letters = [current_letter];
     }
-	if (crossing_letter == unoccupied){
+	if (current_letter == unoccupied){
        var words_from_mask = wordsFromMask(crossing_word_mask);
        nTh_letters = nThLettersFromListOfWords(nTh_letter_position , words_from_mask);
 	}
@@ -447,7 +442,7 @@ word_letter_positions.forEach(function(letter_position){
        //@nThLetters = ($unoccupied);
        nTh_letters = [pads_either_side];
     }
-	if( nTh_letters.length() == 0) //used to break out earlier for small speed increase. If a letter position has no letters, WordsFromLetterList will fail anyway. Just return empty list
+	if( nTh_letters.length == 0) //used to break out earlier for small speed increase. If a letter position has no letters, WordsFromLetterList will fail anyway. Just return empty list
         {
         letter_lists = [];
         return;
@@ -464,13 +459,18 @@ function wordsFromMask(mask){
 //var word_list;
 var word_length = mask.length;
 
-mask = mask.replace(unoccupied , '.'); //make a mask of 'GO$unoccupiedT' into 'GO.T' for the regexp
+var pattern =  new RegExp( unoccupied , 'g');
+//mask = mask.replace(pattern , '.'); //make a mask of 'GO$unoccupiedT' into 'GO.T' for the regexp
+mask = mask.replace(pattern , '\\w'); //make a mask of 'GO$unoccupiedT' into 'GO.T' for the regexp
 
 //need to filter out $wordsThatAreInserted{$popWord} == 1 below if ( $wordsThatAreInserted{$popWord} == 1 )
 //note that we need to return an empty list if the word is already inserted see:  else {()} If we do not, the map will return an empty word in the middle of the list which will pooch our code later.
 
 var pattern =  new RegExp(`${mask}`, 'g'); // /${mask}/g;
 var possible_words_array = words_of_length_string[word_length].match(pattern);
+if(possible_words_array === null){
+	possible_words_array = [];
+}
 return possible_words_array.filter(function(word){
 //return words_of_length_string[word_length].match(pattern).filter(function(word){
 	return words_that_are_inserted[word] != 1; //ignore words already used
@@ -637,6 +637,7 @@ function recursiveLetters() {
 
 		//try the next letter that fit in this location
 		popped_letter = letters_that_fit.pop();
+
 		words_that_were_laid = setXY(x , y , popped_letter); //lay a letter and save any horiz or vert words that were laid
 		if (! words_that_were_laid) { //if words_that_were_laid = false, a horizontal or vertical word was already been laid/used in the puzzle. so backtrack
 			continue;
@@ -677,7 +678,6 @@ function recursiveLetters() {
 }
 
 function setXY(x, y, letter) {
-	//only used for fill letter routines. not fill word routines
 	//see if potential mask equates to a word already laid. if true return false
 	//set cell, horiz mask , vert mask
 	//return : true if mask laid , false if mask or word already used , [full words laid]
@@ -698,9 +698,12 @@ function setXY(x, y, letter) {
 		mask[dir] = all_masks_on_board[dir][word_number];
 		//add letter to mask
 		mask[dir] = mask[dir].substring(0, position) + letter + mask[dir].substring(position + 1);
-		if (letter != unoccupied) { //no need if we are setting unoccupied
-			if (isWordAlreadyUsed(mask[dir])) { //any word already used return false
-				return false;
+
+		if (mode == 'letter') {//only do isWordAlreadyUsed if we are in letter mode! Word mode is checked in recursive routine
+			if (letter != unoccupied) { //no need if we are setting unoccupied
+				if (isWordAlreadyUsed(mask[dir])) { //any word already used return false
+					return false;
+				}
 			}
 		}
 	}
@@ -721,7 +724,6 @@ function setXY(x, y, letter) {
 			}
 			words_laid.push(mask[dir]);
 		}
-
 	}
 
 	if (typeof words_laid !== 'undefined') {
@@ -734,19 +736,38 @@ function isWordAlreadyUsed(mask) {
 //input of mask WORooooo
 //check to see if all possible letters 'o' have only one possible letter. If so, only one word can be created. See if this word has been used.
 //saves us from filling in a whole word on letter fills only to have to backtrack
-var next_letters;
-let pattern =  new RegExp(`${unoccupied}`, 'g'); // /${unoccupied}/g;
-while ( pattern.test(mask) ) { //see if we get single letters until end of word
-        next_letters = Object.keys(linear_word_search[ mask ]);
-        if (next_letters.length > 1){ //multiple words possible for mask.
-            return 0;
-            }
-		mask = mask.replace( unoccupied , next_letters[0]); //replace first blank with the single letter
-        }
-//only one word is possible for mask at this point
-//but has it been used?
-if (typeof words_that_are_inserted[mask] !== 'undefined') { return 1; }
-else {return 0;}
+
+//WHICH IS FASTER
+/*
+	var next_letters;
+	let pattern =  new RegExp(`${unoccupied}`, 'g'); // /${unoccupied}/g;
+	while ( pattern.test(mask) ) { //see if we get single letters until end of word
+			next_letters = Object.keys(linear_word_search[ mask ]);
+			if (next_letters.length > 1){ //multiple words possible for mask.
+				return 0;
+				}
+			mask = mask.replace( unoccupied , next_letters[0]); //replace first blank with the single letter
+			}
+	//only one word is possible for mask at this point
+	//but has it been used?
+	if (typeof words_that_are_inserted[mask] !== 'undefined') { return 1; }
+	else {return 0;}
+*/
+
+	var list_of_words = wordsFromMask(mask);
+	if(list_of_words.length == 1){//only one word is possible
+		var the_word = list_of_words.pop();
+		if (typeof words_that_are_inserted[the_word] !== 'undefined') { //it was used
+			return true;
+		}
+		else {
+			return false;
+		}
+	}
+	else{
+		return false;
+	}
+
 }
 
 function shuffle(array) {
@@ -777,7 +798,12 @@ function lettersPossibleAtCell(x, y) {
 		} //no word here
 		word_number = this_square_belongs_to_word_number[dir][y][x];
 		mask[dir] = all_masks_on_board[dir][word_number];
-		possible_letters_HV[dir] = Object.keys(linear_word_search[mask[dir]]);
+		if(typeof linear_word_search[mask] === 'undefined'){
+
+			hh = 9;
+
+		}
+		possible_letters_HV[dir] = Object.keys(linear_word_search[mask]);
 	}
 
 	if (possible_letters_HV[0].length && possible_letters_HV[1].length) { //intersect horiz and vert letters
@@ -786,7 +812,6 @@ function lettersPossibleAtCell(x, y) {
 				return true;
 			}
 		});
-
 	} else { //one of these might have letters
 		letters_that_fit.push(possible_letters_HV[0]);
 		letters_that_fit.push(possible_letters_HV[1]);
@@ -1230,7 +1255,8 @@ function loadWordList(arg_wordfile, arg_walkpath) {
 		//process word_list_array
 		words_of_length_string[word_length] = ''; //start blank
 		word_list_array.forEach(function(word) {
-			if (mode == 'letter') { //letter walk
+
+			//if (mode == 'letter') { //letter walk
 				var mask_pre = '';
 				var mask = '';
 				var letters_array = word.split('');
@@ -1243,9 +1269,9 @@ function loadWordList(arg_wordfile, arg_walkpath) {
 					mask_pre += letter;
 
 				});
-			} else { //word walk
+			//} else { //word walk
 				words_of_length_string[word_length] = words_of_length_string[word_length] + ',' + word.toUpperCase();
-			}
+			//}
 
 		});
 	});
