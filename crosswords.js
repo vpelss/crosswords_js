@@ -360,16 +360,6 @@ words.forEach(function(word){
 return Object.keys(letters);
 }
 
-function placeMaskOnBoard(dir , word_number , word){ //place mask, add letters and update crossing masks
-letter_positions_of_word[dir][word_number].forEach(function(letter_position , index){
-        x = letter_position[0];
-        y = letter_position[1];
-        var letter = word.charAt(index); //letter from word
-        setXY(x,y,letter); //does puzzle letter placement and adds to all_masks_on_board
-	});
-return;
-}
-
 function wordsFromLetterLists(letter_lists){
 //input list of referenced lists containing possible letters for each position in a word
 //(['C','D','F','T','Z'] , ['E','R','T','Y','O', 'A'] , ['T','R','E','W','Q','Z'])
@@ -466,33 +456,8 @@ for(var i = 0 ; i < word_letter_positions.length ; i++){
 return letter_lists;
 }
 
-function wordsFromMask(mask){
-//mask letters should be capitalized
-//input: A_PL_ where _ will be whatever $unoccupied is
-//output list of words that match the input mask
-//var word_list;
-var word_length = mask.length;
-
-var pattern =  new RegExp( unoccupied , 'g');
-//mask = mask.replace(pattern , '.'); //make a mask of 'GO$unoccupiedT' into 'GO.T' for the regexp
-mask = mask.replace(pattern , '\\w'); //make a mask of 'GO$unoccupiedT' into 'GO.T' for the regexp
-
-//need to filter out $wordsThatAreInserted{$popWord} == 1 below if ( $wordsThatAreInserted{$popWord} == 1 )
-//note that we need to return an empty list if the word is already inserted see:  else {()} If we do not, the map will return an empty word in the middle of the list which will pooch our code later.
-
-pattern =  new RegExp(`${mask}`, 'g'); // /${mask}/g;
-var possible_words_array = words_of_length_string[word_length].match(pattern);
-if(possible_words_array === null){
-	possible_words_array = [];
-}
-return possible_words_array.filter(function(word){
-//return words_of_length_string[word_length].match(pattern).filter(function(word){
-	return words_that_are_inserted[word] != 1; //ignore words already used
-	});
-}
-
 var word_backtrack_source; //set to () to stop backtrack and set for backtrack $letterBackTrackSource{x} and  $letterBackTrackSource{y}
-var words_that_must_be_laid; // true, false , or list of words that MUST be laid if we continue.
+//var words_that_must_be_laid; // true, false , or list of words that MUST be laid if we continue.
 //it be added to by wordsFromLetterLists for unique words used in and placeMaskOnBoard to see if word(s) have already been used
 function recursiveWords() {
 	//recursive try to lay down words using @nextWordOnBoard, will shift off, store and unshift if required
@@ -501,15 +466,23 @@ function recursiveWords() {
 
 	var words_that_fit;
 	var popped_word;
-	words_that_must_be_laid = []; //global!
+	//words_that_must_be_laid = []; //global!
 
 	recursive_count++;
+	printProcessing();
 
 	word_backtrack_source = undefined; //clear global indicating that we are moving forward and have cleared the backtrack state
 
+	if(next_word_on_board.length == 0){
+		return true;
+	}
+
+	/*
 	if (Object.keys(words_that_are_inserted).length == (number_of_HV_words[dir_across] + number_of_HV_words[dir_down]) ) {
 		return true;
 	} //if we have filled all the possible words, we are done. This breaks us out of all recursive  success loops
+	*/
+
 	var word_position = next_word_on_board.shift(); //keep in subroutine unchanged as we may need to unshift on a recursive return
 	var dir = word_position[0];
 	var word_number = word_position[1];
@@ -553,11 +526,17 @@ function recursiveWords() {
 
 		//try the next word that fit in this location
 		popped_word = words_that_fit.pop();
+
 		if (words_that_are_inserted[popped_word]) { //this word is already used. fail
 			continue; //choose another word
-		} else { //#place word
-			placeMaskOnBoard(dir, word_number, popped_word);
-			words_that_are_inserted[popped_word] = 1;
+		}
+		else { //not in words_that_are_inserted
+			if(mask == popped_word){// it is the mask but not in words_that_are_inserted
+				words_that_are_inserted[popped_word] = 1;
+			}
+			else{ // it is not the mask and not in words_that_are_inserted
+				placeMaskOnBoard(dir, word_number, popped_word);
+			}
 		}
 
 		success = recursiveWords(); //lay next word in the next position
@@ -582,6 +561,49 @@ function recursiveWords() {
 		}
 	}
 document.alert('Error: Recursive, we should never get here.');
+}
+
+function wordsFromMask(mask){
+//mask letters should be capitalized
+//input: A_PL_ where _ will be whatever $unoccupied is
+//output list of words that match the input mask
+//var word_list;
+var word_length = mask.length;
+
+var pattern =  new RegExp( unoccupied , 'g');
+//mask = mask.replace(pattern , '.'); //make a mask of 'GO$unoccupiedT' into 'GO.T' for the regexp
+mask = mask.replace(pattern , '\\w'); //make a mask of 'GO$unoccupiedT' into 'GO.T' for the regexp
+
+//need to filter out $wordsThatAreInserted{$popWord} == 1 below if ( $wordsThatAreInserted{$popWord} == 1 )
+//note that we need to return an empty list if the word is already inserted see:  else {()} If we do not, the map will return an empty word in the middle of the list which will pooch our code later.
+
+pattern =  new RegExp(`${mask}`, 'g'); // /${mask}/g;
+var possible_words_array = words_of_length_string[word_length].match(pattern);
+if(possible_words_array === null){
+	possible_words_array = [];
+}
+return possible_words_array;
+/*
+ return possible_words_array.filter(function(word){
+//return words_of_length_string[word_length].match(pattern).filter(function(word){
+	return words_that_are_inserted[word] != 1; //ignore words already used
+	});
+*/
+}
+
+function placeMaskOnBoard(dir , word_number , mask){ //place mask, add letters and update crossing masks
+letter_positions_of_word[dir][word_number].forEach(function(letter_position , index){
+        x = letter_position[0];
+        y = letter_position[1];
+        var letter = mask.charAt(index); //letter from word
+        setXY(x,y,letter); //does puzzle letter placement and adds to all_masks_on_board
+		if(arg_simplewordmasksearch){ //if using simple word mode then we only add this MASKS as crossing words have not been tested
+			if( ! mask.includes(unoccupied) ){//full mask add to words_that_are_inserted
+			words_that_are_inserted[mask] = 1;
+			}
+		}
+	});
+return;
 }
 
 var letter_backtrack_source; //set to () to stop backtrack and set for backtrack $letterBackTrackSource{x} and  $letterBackTrackSource{y}
@@ -711,9 +733,9 @@ function setXY(x, y, letter) {
 		position = position_in_word[dir][y][x];
 		mask[dir] = all_masks_on_board[dir][word_number];
 
-		//if( (mode == 'word') && (letter == unoccupied) ) { //remove mask from words_that_are_inserted. It may be full.
+		if( (mode == 'word') && (letter == unoccupied) ) { //remove mask from words_that_are_inserted. It may be full.
 			delete words_that_are_inserted[mask[dir]]; //remove mask from words_that_are_inserted. It may be full.
-		//}
+		}
 
 		//add letter to mask
 		mask[dir] = mask[dir].substring(0, position) + letter + mask[dir].substring(position + 1);
@@ -725,11 +747,11 @@ function setXY(x, y, letter) {
 				}
 			}
 		}
-		//if(mode == 'word'){
+		if( (mode == 'word') && (! arg_simplewordmasksearch) ){ //if not using simple word mode then we can add all MASKS as all full crossing words have been tested
 			if( ! mask[dir].includes(unoccupied) ){//full mask add to words_that_are_inserted
 			words_that_are_inserted[mask[dir]] = 1;
 			}
-		//}
+		}
 	}
 
 	//set cell then mask(s)
