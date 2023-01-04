@@ -477,11 +477,9 @@ function recursiveWords() {
 		return true;
 	}
 
-	/*
 	if (Object.keys(words_that_are_inserted).length == (number_of_HV_words[dir_across] + number_of_HV_words[dir_down]) ) {
-		return true;
+		k=9;//return true;
 	} //if we have filled all the possible words, we are done. This breaks us out of all recursive  success loops
-	*/
 
 	var word_position = next_word_on_board.shift(); //keep in subroutine unchanged as we may need to unshift on a recursive return
 	var dir = word_position[0];
@@ -510,55 +508,78 @@ function recursiveWords() {
 
 	var success = 0;
 	while (success == 0) {
-		if (words_that_fit.length == 0) { //are there any possible words? If no backtrack
-			next_word_on_board.unshift(word_position);
-			if (arg_optimalbacktrack) {
-				if (typeof word_backtrack_source === 'undefined') { //only set for optimal if we are not already in an optimal backtrack mode
-					d_w = '' + dir + '_' + word_number;
-					if (typeof target_cells_for_letter_backtrack[d_w] !== 'undefined') { //check to see if there are any backtrack targets possible for dir word_number first
-						word_backtrack_source = d_w; //set source/start cell for optimal bactracking
+		//if(mask != popped_word){//go forward to recursiveWord as this word was laid and is ok mask == popped_word
+			if (words_that_fit.length == 0) { //are there any possible words? If no backtrack
+				next_word_on_board.unshift(word_position);
+				if (arg_optimalbacktrack) {
+					if (typeof word_backtrack_source === 'undefined') { //only set for optimal if we are not already in an optimal backtrack mode
+						d_w = '' + dir + '_' + word_number;
+						if (typeof target_words_for_word_backtrack[d_w] !== 'undefined') { //check to see if there are any backtrack targets possible for dir word_number first
+							word_backtrack_source = d_w; //set source/start cell for optimal bactracking
+						}
 					}
 				}
-			}
-			naive_backtrack++; //really should be called all_backtracks
-			return false;
-		} //no words so fail
+				naive_backtrack++; //really should be called all_backtracks
+				return false;
+			} //no words so fail
 
-		//try the next word that fit in this location
-		popped_word = words_that_fit.pop();
+			//try the next word that fit in this location
+			popped_word = words_that_fit.pop();
 
-		if (words_that_are_inserted[popped_word]) { //this word is already used. fail
-			continue; //choose another word
-		}
-		else { //not in words_that_are_inserted
-			if(mask == popped_word){// it is the mask but not in words_that_are_inserted
-				words_that_are_inserted[popped_word] = 1;
+			/*
+			if (words_that_are_inserted[popped_word]) { //this word is already used. fail
+				if(mask != popped_word){// if mask == popped_word it is the SAME word. so do not fail/continue. only continue if the inserted word is in another word.
+					continue; //choose another word
+				}
 			}
-			else{ // it is not the mask and not in words_that_are_inserted
+			else { //not in words_that_are_inserted
+				if(mask == popped_word){// it is the mask but not in words_that_are_inserted
+					words_that_are_inserted[popped_word] = 1;
+				}
+				else{ // it is not the mask and not in words_that_are_inserted
+					placeMaskOnBoard(dir, word_number, popped_word);
+				}
+			}
+			*/
+
+
+		if (arg_simplewordmasksearch) {//simple
+			var xwords_ok = letterListsFor(dir , word_number); //if xwords are ok, then we should not get []
+			if(xwords_ok.length != 0){ //all crosswords are ok, so try next recursive word.
 				placeMaskOnBoard(dir, word_number, popped_word);
+				success = recursiveWords(); //lay next word in the next position
 			}
+			else{}//just loop to try next_possible_word
+		}
+		else{//complex
+			placeMaskOnBoard(dir, word_number, popped_word);
+			success = recursiveWords(); //lay next word in the next position
 		}
 
-		success = recursiveWords(); //lay next word in the next position
+		//success = recursiveWords(); //lay next word in the next position
 		if (success == true) {
 			return true;
 		} //board is filled, return out of all recursive calls successfuly
 		//-------------------------------------------------------------------------------
 		//if we are here, the last recursive attempt to lay a word failed.So we are backtracking.#returning from last word which failed
 		//delete words_that_are_inserted[popped_word]; //allow us to reuse word
+
 		//failed so reset word to previous mask
 		placeMaskOnBoard(dir, word_number, mask);
 
 		//exclusively optimal backtrack check and processing
-		if (typeof wordBackTrackSource !== 'undefined') { //we are doing an optimal backtrack
+		if (typeof word_backtrack_source !== 'undefined') { //we are doing an optimal backtrack
+			d_w = '' + dir + '_' + word_number;
 			if (target_words_for_word_backtrack[word_backtrack_source][d_w]) { //we have hit the first optimal backtrack target.
 				word_backtrack_source = undefined; //turn off optimal backtrack
-			} else { //we did not find optimal backtrack target yet
+			}
+			else { //we did not find optimal backtrack target yet
 				next_word_on_board.unshift(word_position); //always unshift our current position back on to @nextLetterPositionsOnBoard when we return!
 				optimal_backtrack++;
 				return false; //go back one to see if it is optimal backtrack target
 			}
 		}
+
 	}
 document.alert('Error: Recursive, we should never get here.');
 }
@@ -722,7 +743,7 @@ function setXY(x, y, letter) {
 	var position;
 	var mask = [];
 	var dir;
-	var words_laid; //leave undefined and any define if we need to push a mask to return
+	//var words_laid; //leave undefined and any define if we need to push a mask to return
 
 	//get masks, see if unique mask (equating to a word) or full word is already laid, if so return false
 	for (dir = 0; dir < 2; dir++) {
@@ -774,9 +795,9 @@ function setXY(x, y, letter) {
 		*/
 	}
 
-	if (typeof words_laid !== 'undefined') {
-		return words_laid;
-	}
+	//if (typeof words_laid !== 'undefined') {
+		//return words_laid;
+	//}
 	return true;
 }
 
@@ -904,9 +925,9 @@ function calculateOptimalBacktracks() {
 			y = cell_position[1];
 
 			for (dir = 0; dir < 2; dir++) {
-				if (typeof walk_cells_up_to_xy === 'undefined') {
-					continue;
-				} //code will not work if walk_cells_up_to_xy is empty
+				//if (typeof walk_cells_up_to_xy === 'undefined') {
+					//continue;
+				//} //code will not work if walk_cells_up_to_xy is empty
 				if (typeof this_square_belongs_to_word_number[dir][y][x] === 'undefined') {
 					continue;
 				} //no word
@@ -921,13 +942,14 @@ function calculateOptimalBacktracks() {
 					if (x_y == xx_yy) {
 						return;
 					} //skip current cell as it should not be a backtrack destination
-					let val = JSON.stringify(word_position);
-					if (walk_cells_up_to_xy.includes(val)) { //add to target_cells_for_letter_backtrack
+					//let val = JSON.stringify(word_position);
+					//if (walk_cells_up_to_xy.includes(val)) {//only do previous walk cells
+						//add to target_cells_for_letter_backtrack
 						if (typeof target_cells_for_letter_backtrack[x_y] === 'undefined') {
 							target_cells_for_letter_backtrack[x_y] = {};
 						}
 						target_cells_for_letter_backtrack[x_y][xx_yy] = true; //x_y is this cell and target _cells are stored in keys xx_yy!
-					}
+					//}
 				});
 			}
 			walk_cells_up_to_xy.push(JSON.stringify(cell_position));
@@ -947,20 +969,20 @@ function calculateOptimalBacktracks() {
 			//what words are crossing this word?
 			word_positions = getCrossingWords(dir , word_number);
 			word_positions.forEach(function(word_position) {
-				word_number_temp = word_position[0];
-				dir_temp = word_position[1];
+				dir_temp = word_position[0];
+				word_number_temp = word_position[1];
 				var d_w = '' + dir + '_' + word_number;
 				var d_w_temp = '' + dir_temp + '_' + word_number_temp;
 				if (d_w == d_w_temp) {
 					return;
 				} //skip current word as it should not be a backtrack destination
-				let val = JSON.stringify(word_position);
-				if (walk_words_up_to_current_word.includes(val)) { //add to target_words_for_word_backtrack
+				//let val = JSON.stringify(word_position);
+				//if (walk_words_up_to_current_word.includes(val)) { //add to target_words_for_word_backtrack
 					if (typeof target_words_for_word_backtrack[d_w] === 'undefined') {
 						target_words_for_word_backtrack[d_w] = {};
 					}
 					target_words_for_word_backtrack[d_w][d_w_temp] = 1;
-				}
+				//}
 			});
 			walk_words_up_to_current_word.push(JSON.stringify(word_position)); //put it on @upToCurrentWord
 		}
@@ -1384,78 +1406,6 @@ function printPuzzle(){
 temp += "</table>\n";
 return temp;
 }
-
-
-/*
-sub LoadWordList {
-my $filename = $_[0];
-my $line;
-my $word;
-my $clue;
-my $wordLength;
-my $mask;
-my $lineCount;
-my $t = time();
-my %wordsOfLength;
-my $wordCount;
-
-my $directory = "./wordlists/$in{wordfile}/words/";
-#read word and clue file
-if (not -d $directory) {die "directory $directory does not exist"};
-
-#new routine just loads word files of requested word lengths
-#work files were separated earlier
-foreach $wordLength ( keys %wordLengths)
-         {
-         $message = $message . "Loading words of length $wordLength...\n";
-         &PrintProcessing($message);
-
-         $filename = "$directory$wordLength\.txt";
-         #$filename = "$directory/all.txt";
-         open (DATA, "<$filename") or &Quit( "Word file $filename does not exist" );
-         print '.'; #help keep alive on big loads
-
-         foreach $word (<DATA>)
-                  {
-                  $word =~ s/\n//g; #remove line return
-                  $word =~ s/\r//g; #remove line return
-                  if ($word eq '') {next} #blank line. toss
-                  $lineCount++;
-                  $word = uc($word); #all words must be uppercase for standard, display and search reasons.
-                  $wordsOfLength{$wordLength}++; #global var for statistics
-
-                  #build $wordsOfLengthString[$wordLength] string
-                  if ($wordsOfLengthString[$wordLength] eq '') {$wordsOfLengthString[$wordLength] = ','} #start string of words with a coma
-                  $wordsOfLengthString[$wordLength] = "$wordsOfLengthString[$wordLength]$word,"; #build a comma delimited string of each possible word length
-
-                  #letter by letter build here
-                  my @lettersInWord =  split('' , $word);
-                  my $letterPosition = 0;
-                  #prep for new fast linear word search : $linearWordSearch{mask}
-                  $mask = $word;
-                  $mask =~ s/\S/o/g; #build a mask with ooooooooo of wordlength
-                  foreach my $letter (@lettersInWord)
-                           {
-                           #build new fast linear word search : $linearWordSearch{mask}
-                           $linearWordSearch{$mask}{ substr($word,$letterPosition,1) } = 1 ; #add letter for $letterPosition to set of hash keys for this $mask
-                           substr ( $mask , $letterPosition , 1 , $letter); #change mask with next letter added to it Cooo to COoo
-                           $letterPosition++;
-                           }
-                  }
-         close (DATA);
-         }
-
-#done loading words. Let's calculate some statistics
-foreach my $length (sort keys %wordsOfLength)
-     {
-     if ($debug ) {print "$length : $wordsOfLength{$length}\n";}
-     $wordCount = $wordCount + $wordsOfLength{$length};
-     }
-
-my $tt = time() - $t;
-if ($debug ) {print "$lineCount lines and $wordCount words loaded in $tt sec \n\n";}
-}
-*/
 
 //--------------------------------------
 
