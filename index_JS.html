@@ -1,4 +1,3 @@
-<!DOCTYPE HTML PUBLIC "-//SoftQuad Software//DTD HoTMetaL PRO 6.0::19990601::extensions to HTML 4.0//EN" "hmpro6.dtd">
 <HTML>
   <HEAD>
 
@@ -10,10 +9,13 @@
 	<META NAME="DESCRIPTION"
 	 CONTENT="Crosswords for Friends. Infinite Crossword Puzzle Generator Script to create Crosswords for prining or saving for use in your web browser">
 
-	<TITLE>Emogic's Crosswords Puzzle Generator</TITLE> <SCRIPT SRC="./js/jquery-1.11.3.min.js"></SCRIPT>
+	<TITLE>Emogic's Javascript Crosswords Puzzle Generator</TITLE>
+
+  <SCRIPT SRC="./js/jquery-1.11.3.min.js"></SCRIPT>
+<link rel="stylesheet" href="main.css">
 
    </HEAD>
-  <BODY BACKGROUND="crossword.gif" STYLE="main.css">
+  <BODY BACKGROUND="crossword.gif">
 	<CENTER>
 	  <TABLE CELLPADDING="0" CELLSPACING="1" BGCOLOR="#000000">
 		<TR>
@@ -218,27 +220,15 @@
 						VALUE="Reset Defaults"></P> </FORM> </CENTER>
 				  <P ALIGN="CENTER"><A HREF="/crosswords/common/"><B>Crossword
 					Puzzle Archive</B></A></P></TD>
-				<TD
-				 STYLE="border-top: 1pt solid; border-right: 1pt solid; border-bottom: 1pt solid; border-left: 1pt solid"
-				 VALIGN="TOP" COLSPAN="2" ALIGN="CENTER">
-				  <P>Behind the Curtain<BR>Updates every few seconds</P>
-				  <FORM><TEXTAREA ROWS="25" COLS="60" ID="PrintProcessing" NAME="PrintProcessing"></TEXTAREA></FORM>
-				  <DIV>Crossword Result:
-					<DIV ID="PrintResults"
-					 STYLE="border-top: 1pt solid; border-right: 1pt solid; border-bottom: 1pt solid; border-left: 1pt solid">YOUR
-					  CROSSWORD LINK WILL SHOW HERE</DIV></DIV>
-				  <FORM NAME="EraseForm" ID="EraseForm" ACTION="erase.cgi"
-				   ONSUBMIT="return;" METHOD="POST">
-					<P><INPUT TYPE="SUBMIT" NAME="Submit2"
-					  VALUE="Erase stalled crossword generation"><BR>(Use if display above does not
-					  update)</P> </FORM> </TD>
+
+
 			  </TR>
 			  <TR>
+
 				<TD COLSPAN="3" ALIGN="CENTER"
 				 STYLE="border-top: 1pt solid; border-right: 1pt solid; border-bottom: 1pt solid; border-left: 1pt solid">
-
-
 				 </TD>
+
 			  </TR>
 			  <TR>
 				<TD COLSPAN="3" ALIGN="CENTER"

@@ -192,7 +192,7 @@ function grid_change( file_name ){
   puzzle_height = lines.length;
   lines.forEach( grid_getLetters ); //process lines array
 
-  //square_grid(); //make the grid a square filling with pad_char on the right
+  //make the grid a square filling with pad_char on the right
   puzzle.forEach( function(currentValue){
     var arr_length = currentValue.length;
     if(puzzle_width > arr_length) {
@@ -321,10 +321,10 @@ var pad_cells = 0;
 }
 
 function getWordLetterPositions(x,y,dir){
-  var dx,dy;
+  var dx = 1 - dir;
+		var dy = dir;
   var xx = x , yy = y;
   var letter_pos = [];
-  [dx,dy] = getDxDy(dir);
   //get to start of word
   while( (typeof puzzle[yy-dy] !== 'undefined') &&  (typeof puzzle[yy-dy][xx-dx] !== 'undefined') && (puzzle[yy-dy][xx-dx] != pad_char) ){
     xx=xx-dx;
@@ -341,19 +341,6 @@ function getWordLetterPositions(x,y,dir){
     return false;
   }//not a word
   return letter_pos;
-}
-
-function getDxDy(dir){
-  var dx , dy;
-  if(dir == dir_across){
-    dx = 1;
-    dy = 0;
-  }
-  if(dir == dir_down){
-    dx = 0;
-    dy = 1;
-  }
-return [dx,dy];
 }
 
 function loadWordList(arg_wordfile) {
@@ -479,15 +466,10 @@ function calculateOptimalBacktracks() {
 	//targetLettersForBackTrack{x failed letter}{y failed letter}{x}{y} = 1 #pre-generated for speed!
 
 	var x, y, xx, yy;
-	var walk_cells_up_to_xy = [];
+	//var walk_cells_up_to_xy = [];
 	var word_letter_positions;
 	var cell_position;
 
-	var word_position;
-	var word_number;
-	var dir;
-	var walk_words_up_to_current_word = [];
-	var word_positions;
 	var next_letter_position_on_board_temp = JSON.parse(JSON.stringify(next_letter_position_on_board)); //backup as we are going to tear it up
 	var next_word_on_board_temp = JSON.parse(JSON.stringify(next_word_on_board)); //backup as we are going to tear it up
 
@@ -499,7 +481,7 @@ function calculateOptimalBacktracks() {
 
 			for (dir = 0; dir < 2; dir++) {
 				//if (typeof walk_cells_up_to_xy === 'undefined') {
-					//continue;
+				//continue;
 				//} //code will not work if walk_cells_up_to_xy is empty
 				if (typeof this_square_belongs_to_word_number[dir][y][x] === 'undefined') {
 					continue;
@@ -517,48 +499,45 @@ function calculateOptimalBacktracks() {
 					} //skip current cell as it should not be a backtrack destination
 					//let val = JSON.stringify(word_position);
 					//if (walk_cells_up_to_xy.includes(val)) {//only do previous walk cells
-						//add to target_cells_for_letter_backtrack
-						if (typeof target_cells_for_letter_backtrack[x_y] === 'undefined') {
-							target_cells_for_letter_backtrack[x_y] = {};
-						}
-						target_cells_for_letter_backtrack[x_y][xx_yy] = true; //x_y is this cell and target _cells are stored in keys xx_yy!
+					//add to target_cells_for_letter_backtrack
+					if (typeof target_cells_for_letter_backtrack[x_y] === 'undefined') {
+						target_cells_for_letter_backtrack[x_y] = {};
+					}
+					target_cells_for_letter_backtrack[x_y][xx_yy] = true; //x_y is this cell and target _cells are stored in keys xx_yy!
 					//}
 				});
 			}
-			walk_cells_up_to_xy.push(JSON.stringify(cell_position));
+			//walk_cells_up_to_xy.push(JSON.stringify(cell_position));
 		}
 	}
 
-	//for now ignore differences from simple word search and crossing word search
-	//we will just backtrack to crossing words
-	//after testing we may expand the crossing word backtrack
+	//MUST backtrack to all crossing words, and all crossing words of those...
 	if (mode == 'word') {
-		while (next_word_on_board_temp.length != 0) {
-			word_position = next_word_on_board_temp.shift(); //keep in subroutine unchaged as we may need to unshift on a recursive return
-			dir = word_position[0];
-			word_number = word_position[1];
-			//let tsbtwn = this_square_belongs_to_word_number[dir][y][x];
-			word_letter_positions = letter_positions_of_word[dir][word_number];
-			//what words are crossing this word?
-			word_positions = getCrossingWords(dir , word_number);
+		while (next_word_on_board_temp.length != 0) { //for each word position
+			let word_position = next_word_on_board_temp.shift(); //keep in subroutine unchaged as we may need to unshift on a recursive return
+			let dir = word_position[0];
+			let word_number = word_position[1];
+			var d_w = '' + dir + '_' + word_number;
+			if (typeof target_words_for_word_backtrack[d_w] === 'undefined') {
+					target_words_for_word_backtrack[d_w] = {};
+				}
+			let word_positions = getCrossingWords(dir, word_number);
+
 			word_positions.forEach(function(word_position) {
-				dir_temp = word_position[0];
-				word_number_temp = word_position[1];
-				var d_w = '' + dir + '_' + word_number;
-				var d_w_temp = '' + dir_temp + '_' + word_number_temp;
-				if (d_w == d_w_temp) {
-					return;
-				} //skip current word as it should not be a backtrack destination
-				//let val = JSON.stringify(word_position);
-				//if (walk_words_up_to_current_word.includes(val)) { //add to target_words_for_word_backtrack
-					if (typeof target_words_for_word_backtrack[d_w] === 'undefined') {
-						target_words_for_word_backtrack[d_w] = {};
-					}
-					target_words_for_word_backtrack[d_w][d_w_temp] = 1;
-				//}
+				let dir = word_position[0];
+				let word_number = word_position[1];
+				let d_w_temp = '' + dir + '_' + word_number;
+				target_words_for_word_backtrack[d_w][d_w_temp] = 1; //add 1st set of crossing words
+				//do 2nd level of crossing words
+				let word_positions = getCrossingWords(dir, word_number);
+				word_positions.forEach(function(word_position) {
+					let dir = word_position[0];
+					let word_number = word_position[1];
+					let d_w_temp = '' + dir + '_' + word_number;
+					target_words_for_word_backtrack[d_w][d_w_temp] = 1; //add 2st set of crossing words
+					});
 			});
-			walk_words_up_to_current_word.push(JSON.stringify(word_position)); //put it on @upToCurrentWord
-		}
+		}//while end
 	}
 }
 
