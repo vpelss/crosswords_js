@@ -203,6 +203,17 @@ function grid_change( file_name ){
 
 }
 
+function readStringFromFileAtPath(pathOfFileToReadFrom){
+	const request = new XMLHttpRequest();
+	request.addEventListener("error", function(){return 0;});
+	request.open("GET", pathOfFileToReadFrom, false);
+	request.send(null);
+	var status = request.status;
+	if (status != 200 ) { return status; }
+	var returnValue = request.responseText;
+	return returnValue;
+	}
+
 function grid_getLetters(currentValue , y) {
 	var line = currentValue.trim(); //remove whitespace
 	if( line.length > puzzle_width ) {
@@ -215,168 +226,598 @@ function grid_getLetters(currentValue , y) {
 	}
  }
 
-function printSolvedPuzzle(){
-var temp;
-var y;
+	function numberBlankSquares(){
+ //gridToGlobalVars()
+ //this does a lot of var setup
+ //and also associate all squares with words and word # , get word lengths on grid ,
+//thisSquareBelongsToWordNumber[$xx][$yy][$dir]
+//positionInWord[$xx][$yy][$dir] = $PositionCount;
+//letterPositionsOfWord[$numberCount][$dir] = [TempLetterPositions];
+//all_masks_on_board[$numberCount][$dir] = $blankWord;
 var x;
+var y;
+var word_length;
+var word_number = 0;
+var was_there_an_across_word = 0; //
+var blank_word = '';
+var dir;
+var word_letter_positions_array = [];
 
-temp = "<table cellspacing='0' CLASS='tableclass'>";
-for (y = 0; y < puzzle_height; y++){
-    temp += "<tr>";
-	for (x = 0; x < puzzle_width; x++){
-		if(puzzle[y][x] == pad_char){
-			temp += "<td CLASS='tdblackclass'></td>";
-			continue;
-			}
-        if (puzzle[y][x] == unoccupied){
-			temp += "<td CLASS='tdwhiteclass'>&nbsp</td>";
-			}
-		//zz = puzzle[y][x].search(/[A-Z]/);
-        if( puzzle[y][x].search(/[A-Z1-9]/) >= 0){
-			temp += `<td CLASS='tdwhiteclass'>${puzzle[y][x]}</td>`;
-			}
-    }
-    temp += "</tr>\n";
+//label all grid squares with data
+  for (y = 0 ; y < puzzle_height ; y++) {
+    for (x = 0 ; x < puzzle_width ; x++) {
+      was_there_an_across_word = 0; //assume not
+      for (dir = 0 ; dir < 2 ; dir++) { //#for both across 0 and down 1 words
+        if(puzzle[y][x] == pad_char){continue;}
+        word_letter_positions_array = getWordLetterPositions(x , y , dir);
+        if(word_letter_positions_array){
+          if( (word_letter_positions_array[0][0] == x) && (word_letter_positions_array[0][1] == y) ){//first letter in word?
+             word_length = word_letter_positions_array.length;
+             word_lengths[word_length] = 1; //mark globally that there is a word of this length
+             if(! was_there_an_across_word ){//allows us to not increase count if across and down share first letter pos
+				word_number++;
+			 }
+             was_there_an_across_word = 1;
+			 number_of_HV_words[dir]++; //used in recursiveWords()
+             //set letter_positions_of_word[$numberCount][$dir] = [TempLetterPositions];
+             if(typeof letter_positions_of_word[dir] === 'undefined' ){letter_positions_of_word[dir] = [];}
+             letter_positions_of_word[dir][word_number] = JSON.parse(JSON.stringify(word_letter_positions_array)); //deep copy multi dim array
+             //set all_masks_on_board[dir][word_number] = 'ooooooooo';
+			 blank_word = ''; // must do to ensure we get the right word/mask length
+             blank_word = blank_word.padEnd(word_length , unoccupied);
+             if(typeof all_masks_on_board[dir] === 'undefined' ){all_masks_on_board[dir] = [];}
+             all_masks_on_board[dir][word_number] = blank_word;
+             //set position_in_word , this_square_belongs_to_word_number
+             word_letter_positions_array.forEach(function(currentValue , index){
+                   //set position_in_word for all word_letter_positions_array in this word
+                   var xx = currentValue[0];
+                   var yy = currentValue[1];
+                   if(typeof position_in_word[dir] === 'undefined' ){position_in_word[dir] = [];}
+                   if(typeof position_in_word[dir][yy] === 'undefined' ){position_in_word[dir][yy] = [];}
+                   position_in_word[dir][yy][xx] = index;
+                   //set this_square_belongs_to_word_number[dir][yy][xx] for all word_letter_positions_array in this word
+                   if(typeof this_square_belongs_to_word_number[dir] === 'undefined' ){this_square_belongs_to_word_number[dir] = [];}
+                   if(typeof this_square_belongs_to_word_number[dir][yy] === 'undefined' ){this_square_belongs_to_word_number[dir][yy] = [];}
+                   this_square_belongs_to_word_number[dir][yy][xx] = word_number;
+              });
+          }
         }
-temp += "</table>\n";
-return temp;
+      }
+    }
+  }
+
+// biggest_word_number = word_number;
+var crossing_cells = 0;
+var total_cells = 0;
+var white_cells = 0;
+var pad_cells = 0;
+
+//calculate interlock and density
+  for(y = 0 ; y < puzzle_height ; y++){
+    for(x = 0 ; x < puzzle_width ; x++){
+       if(puzzle[y][x] == pad_char){pad_cells++;}
+       if(puzzle[y][x] == unoccupied){white_cells++;}
+      if( (typeof this_square_belongs_to_word_number[0][y][x] !== 'undefined') && (typeof this_square_belongs_to_word_number[1][y][x] !== 'undefined') ){
+          crossing_cells++;
+       }
+    }
+  }
+
+  total_cells = puzzle_height * puzzle_width;
+  var interlock = 100 * crossing_cells / total_cells;
+  var density = 100 * white_cells / total_cells;
+
+  console.log("Total Cells: " + total_cells);
+  console.log("White Cells: " + white_cells);
+  console.log("Pad Cells: " + pad_cells);
+  console.log("Interlock: " + interlock);
+  console.log("Density: " + density);
+  console.log("Grid has words of lengths :");
+  var wl = Object.keys(word_lengths);
+  wl.forEach(function(currentValue){
+    console.log(currentValue);
+   });
+
 }
 
-function numberClueList() {
-var x = -1;
-var y = -1;
-//var word;
-var hints;
-var clues = [];
+function getWordLetterPositions(x,y,dir){
+  var dx,dy;
+  var xx = x , yy = y;
+  var letter_pos = [];
+  [dx,dy] = getDxDy(dir);
+  //get to start of word
+  while( (typeof puzzle[yy-dy] !== 'undefined') &&  (typeof puzzle[yy-dy][xx-dx] !== 'undefined') && (puzzle[yy-dy][xx-dx] != pad_char) ){
+    xx=xx-dx;
+    yy=yy-dy;
+  }
+  letter_pos.push([xx,yy]);
+  //now look for all letters of word
+  while( (typeof puzzle[yy+dy] !== 'undefined') && (typeof puzzle[yy+dy][xx+dx] !== 'undefined') && (puzzle[yy+dy][xx+dx] != pad_char) ){
+    xx=xx+dx;
+    yy=yy+dy;
+    letter_pos.push([xx,yy]);
+  }
+  if(letter_pos.length == 1){
+    return false;
+  }//not a word
+  return letter_pos;
+}
 
-all_masks_on_board.forEach(function(item , dir){
-	hints = '';
-	all_masks_on_board[dir].forEach(function(word , word_number){ //for all our words on the board
-		//word = all_masks_on_board[dir][word_number];
-		//get clue(s) for this word
-		var first_2_leters = word.substring(0, 2);
-		var directory = "./wordlists/" + arg_wordfile + "/clues/";
-		var filename = directory + "_" + first_2_leters + ".clu";
-		var clue_list_text = readStringFromFileAtPath(filename);
-		var clue_list_array = clue_list_text.split(/\r?\n|\r|\n/g); //split on lines into array
-		if (clue_list_array[clue_list_array.length - 1].trim() == '') {
-			clue_list_array.pop();
+function getDxDy(dir){
+  var dx , dy;
+  if(dir == dir_across){
+    dx = 1;
+    dy = 0;
+  }
+  if(dir == dir_down){
+    dx = 0;
+    dy = 1;
+  }
+return [dx,dy];
+}
+
+function loadWordList(arg_wordfile) {
+	//load word lists and set word and letter search variables
+	var db = arg_wordfile;
+	var wl = Object.keys(word_lengths);
+	wl.forEach(function(word_length) {
+		var file_and_path = './wordlists/' + db + '/words/' + word_length + '.txt';
+		var word_list_text = readStringFromFileAtPath(file_and_path);
+		//still need to process
+		var word_list_array = word_list_text.split(/\r?\n|\r|\n/g); //split on lines into array
+		if (word_list_array[word_list_array.length - 1].trim() == '') {
+			word_list_array.pop();
 		} //remove last line if empty
-		clues = [];//
-		clue_list_array.forEach(function(line){
-			var clue_temp = line.split('|');
-			if(clue_temp[0] == word){
-				clues.push(clue_temp[1]);
+
+		words_of_length[word_length] = word_list_array.length;
+		//process word_list_array
+		words_of_length_string[word_length] = ''; //start blank
+		word_list_array.forEach(function(word) {
+
+			//if (mode == 'letter') { //letter walk
+				var mask_pre = '';
+				var mask = '';
+				var letters_array = word.split('');
+				letters_array.forEach(function( letter ) {
+					mask = mask_pre.padEnd(word_length, unoccupied);
+					if (typeof linear_word_search[mask] == 'undefined') {
+						linear_word_search[mask] = {};
+					} //create on first access
+					linear_word_search[mask][letter] = 1; //letter list will be accessible by object.keys()
+					mask_pre += letter;
+
+				});
+			//} else { //word walk
+				words_of_length_string[word_length] = words_of_length_string[word_length] + ',' + word.toUpperCase();
+			//}
+
+		});
+	});
+	word_list_text = ''; //cleanup
+}
+
+function generateNextWordPositionsOnBoardCrossing(){
+		//start with 1 horiz.
+		//find all crossing words
+		//find all their crossing words.
+		//only add # and direction once!
+		//FIFO
+
+		//get my @WordLetterPositions = @{$letterPositionsOfWord[$wordNumber][$dir]}
+		//used to find crossing words fast with @ThisSquareBelongsToWordNumber
+		var already_in_list = {}; // already_in_list[number][direction] = 1 if already in list
+		already_in_list[dir_across] = {};
+		already_in_list[dir_down] = {};
+		var word_number = 1;
+		var dir = 0;
+
+		if (typeof all_masks_on_board[dir][word_number] === 'undefined' ) {dir = dir_vert;}// no horizontal #1 word. go vertical
+		var to_do_list = []; //list of words and directions to process. ((1,0) , (2,0) , .... ) shift off and push on so we do in an orderly fasion!
+		to_do_list.push( [dir , word_number] );
+		//if(typeof already_in_list[dir] === 'undefined'){already_in_list[dir] = {};}
+		already_in_list[dir][word_number] = 1;
+		next_word_on_board.push( [dir, word_number] );
+		while ( to_do_list.length > 0 ){
+				[dir , word_number] = to_do_list.shift();
+					var crossing_words = getCrossingWords(dir , word_number);
+					while ( crossing_words.length > 0 ){
+							[dir , word_number] = crossing_words.shift();
+							//if(typeof already_in_list[dir] === 'undefined'){already_in_list[dir] = {};}
+							if (typeof already_in_list[dir][word_number] !== 'undefined'){
+								continue;
+							}//already added. skip
+							to_do_list.push( [dir , word_number] );
+							next_word_on_board.push( [dir , word_number] );
+							if(typeof already_in_list[dir] === 'undefined'){already_in_list[dir] = {};}
+							already_in_list[dir][word_number] = 1;
+					}
+		}
+}
+
+function getCrossingWords(dir , word_number) {
+	//input: word number and direction
+	//output: [[crossing_word_number,crossing_word_number],[crossing_word_number,crossing_word_number], ...]
+	var crossing_words = [];
+	var x;
+	var y;
+	var crossing_word_number;
+
+	var word_letter_positions = letter_positions_of_word[dir][word_number];
+	word_letter_positions.forEach(function(letter_position) {
+		x = letter_position[0];
+		y = letter_position[1];
+		crossing_word_dir = 1 - dir;
+
+		//find and mark crossing words
+		crossing_word_number = this_square_belongs_to_word_number[crossing_word_dir][y][x];
+		if (crossing_word_number > 0) {
+			crossing_words.push([crossing_word_dir , crossing_word_number]);
+		}
+	});
+	return crossing_words;
+}
+
+function calculateOptimalBacktracks() {
+	//letter backtrack
+	//cycle through each letter cell, provided by next_letter_position_on_board_temp, and build : target_cells_for_letter_backtrack
+	//optimal backtrack targets are all n,e,w,s letters of the horizontal and vertical word centered on the cell.
+	//don't include our cell
+	//we MUST only include cells that precede our cell in the walk path.
+	//when using optimal backtrack, we use the naive backtrack and stop at the first encountered member of target_cells_for_letter_backtrack
+
+	//word backtrack
+	//cycle through all words on board, provided by next_word_on_board_temp, and build : target_words_for_word_backtrack
+	//optimal backtrack targets are all crossing words, for now.... test and investigate later
+
+
+	//from PERL version
+	//touching_words_for_backtrack; #global as we need to backtrack to the first  member of it we encounter. if not == () we are in a backtrack state!
+
+	//rule 1. All letters in the horizontal and vertical words (up to the failed letter) can affect the failure of laying a letter
+	//rule 2. All crossing words of both the horizontal and vertical words of the failed letter can affect the failure of laying a letter
+	//rule 3 Remove shadows by only keeping the intersection of rule 1 and 2
+	//targetLettersForBackTrack{x failed letter}{y failed letter}{x}{y} = 1 #pre-generated for speed!
+
+	var x, y, xx, yy;
+	var walk_cells_up_to_xy = [];
+	var word_letter_positions;
+	var cell_position;
+
+	var word_position;
+	var word_number;
+	var dir;
+	var walk_words_up_to_current_word = [];
+	var word_positions;
+	var next_letter_position_on_board_temp = JSON.parse(JSON.stringify(next_letter_position_on_board)); //backup as we are going to tear it up
+	var next_word_on_board_temp = JSON.parse(JSON.stringify(next_word_on_board)); //backup as we are going to tear it up
+
+	if (mode == "letter") {
+		while (next_letter_position_on_board_temp.length != 0) {
+			cell_position = next_letter_position_on_board_temp.shift(); //remove next letter position
+			x = cell_position[0];
+			y = cell_position[1];
+
+			for (dir = 0; dir < 2; dir++) {
+				//if (typeof walk_cells_up_to_xy === 'undefined') {
+					//continue;
+				//} //code will not work if walk_cells_up_to_xy is empty
+				if (typeof this_square_belongs_to_word_number[dir][y][x] === 'undefined') {
+					continue;
+				} //no word
+				let tsbtwn = this_square_belongs_to_word_number[dir][y][x];
+				word_letter_positions = letter_positions_of_word[dir][tsbtwn];
+				//is word_letter_positions in walk_cells_up_to_xy : use array intersection routine
+				word_letter_positions.forEach(function(word_position) {
+					xx = word_position[0];
+					yy = word_position[1];
+					var x_y = '' + x + '_' + y;
+					var xx_yy = '' + xx + '_' + yy;
+					if (x_y == xx_yy) {
+						return;
+					} //skip current cell as it should not be a backtrack destination
+					//let val = JSON.stringify(word_position);
+					//if (walk_cells_up_to_xy.includes(val)) {//only do previous walk cells
+						//add to target_cells_for_letter_backtrack
+						if (typeof target_cells_for_letter_backtrack[x_y] === 'undefined') {
+							target_cells_for_letter_backtrack[x_y] = {};
+						}
+						target_cells_for_letter_backtrack[x_y][xx_yy] = true; //x_y is this cell and target _cells are stored in keys xx_yy!
+					//}
+				});
+			}
+			walk_cells_up_to_xy.push(JSON.stringify(cell_position));
+		}
+	}
+
+	//for now ignore differences from simple word search and crossing word search
+	//we will just backtrack to crossing words
+	//after testing we may expand the crossing word backtrack
+	if (mode == 'word') {
+		while (next_word_on_board_temp.length != 0) {
+			word_position = next_word_on_board_temp.shift(); //keep in subroutine unchaged as we may need to unshift on a recursive return
+			dir = word_position[0];
+			word_number = word_position[1];
+			//let tsbtwn = this_square_belongs_to_word_number[dir][y][x];
+			word_letter_positions = letter_positions_of_word[dir][word_number];
+			//what words are crossing this word?
+			word_positions = getCrossingWords(dir , word_number);
+			word_positions.forEach(function(word_position) {
+				dir_temp = word_position[0];
+				word_number_temp = word_position[1];
+				var d_w = '' + dir + '_' + word_number;
+				var d_w_temp = '' + dir_temp + '_' + word_number_temp;
+				if (d_w == d_w_temp) {
+					return;
+				} //skip current word as it should not be a backtrack destination
+				//let val = JSON.stringify(word_position);
+				//if (walk_words_up_to_current_word.includes(val)) { //add to target_words_for_word_backtrack
+					if (typeof target_words_for_word_backtrack[d_w] === 'undefined') {
+						target_words_for_word_backtrack[d_w] = {};
+					}
+					target_words_for_word_backtrack[d_w][d_w_temp] = 1;
+				//}
+			});
+			walk_words_up_to_current_word.push(JSON.stringify(word_position)); //put it on @upToCurrentWord
+		}
+	}
+}
+
+var letter_backtrack_source; //set to () to stop backtrack and set for backtrack $letterBackTrackSource{x} and  $letterBackTrackSource{y}
+//async function recursiveLetters() {
+function recursiveLetters() {
+	//recursive try to lay down letters using @nextLetterPositionsOnBoard, this function will shift off, store and unshift if required
+	//store locally the possible letters in  @possibleLetter
+	//the next index in the list (@nextLetterPositionsOnBoard) is the next letter position we are trying to fill
+
+	//recurse if we can't find possible letters (going forward) or run out of possible letters
+	//next / loop if we can't lay a letter (word already used) and we have more possible letters to pick from
+	//anytime we next / loop set to $unoccupied as we are processing (just in case)
+	//anytime we recurse back (can't lay a letter or run out) a square we must unshift @nextLetterPositionsOnBoard , {x => $x, y => $y}; and return 0
+	//if our recursive calls have returned from a failed letter, set $unoccupied (to try another letter) and next / loop to see if there are anymore possible letters for this square
+
+	//note optimal recursion will not work if upper letter is part of a horizontal word ?????
+	//the reason is that we may be backtracking due to a later letter in the upper horizontal word.
+	//If we wipe that word out without trying ALL the combinations in that upper word we may be missing possible words in the horizontal word we are working on now
+	//an exception is if it is the last letter of a horizontal word
+	//so: only optimal up if:
+	//1. the upper target letter it is not part of a horizontal word
+	//2. the upper target letter is the last letter in a horizontal word
+	//3. the letter that failed is in a single vertical word
+	var x , y , x_y;
+	var cell_position;
+	var letters_that_fit = [];
+	var popped_letter;
+	var success = 0;//assume we failed to get in while loop
+	var words_that_were_laid = [];
+
+	recursive_count++;
+	printProcessing();
+
+	//moving forward
+	letter_backtrack_source = undefined; //clear global indicating that we are moving forward and have cleared the backtrack state
+	if (next_letter_position_on_board.length == 0) {
+		return true;
+		} //we have filled all the possible letter positions, we are done. This breaks us out of all recursive  success loops
+	forward_count++; //count forward moving calls
+	cell_position = next_letter_position_on_board.shift(); //keep cell_position in subroutine unchanged as we may need to unshift on a recursive return
+	x = cell_position[0];
+	y = cell_position[1];
+
+	//get possible letters for this cell
+	if (arg_shuffle) {
+		letters_that_fit = shuffle(lettersPossibleAtCell(x, y));
+	} else {
+		letters_that_fit = lettersPossibleAtCell(x, y).sort();
+	}
+
+	while (success == 0) {
+		if (letters_that_fit.length == 0) { //there are NO possible letters for this cell left. BACTRACK start
+			next_letter_position_on_board.unshift(cell_position); //always unshift our current position back on to next_letter_position_on_board before backtracking
+			//next_letter_position_on_board.unshift([x, y]); //always unshift our current position back on to next_letter_position_on_board before backtracking
+			if (arg_optimalbacktrack) { //optimal backtrack setup
+				if (typeof letter_backtrack_source === 'undefined') { //only set for optimal if we are not already in an optimal backtrack mode
+					x_y = '' + x + '_' + y;
+					if (typeof target_cells_for_letter_backtrack[x_y] !== 'undefined') { //check to see if there are any backtrack targets possible for $x $y first
+						//letter_backtrack_source = [x , y]; //set source/start cell for optimal bactracking
+						letter_backtrack_source = x_y; //set source/start cell for optimal bactracking
+					}
+				}
+			}
+			naive_backtrack++; //really should be called all_backtracks
+			return false; //start our backtrack : naive & optimal
+		}
+
+		//try the next letter that fit in this location
+		popped_letter = letters_that_fit.pop();
+
+		words_that_were_laid = setXY(x , y , popped_letter); //lay a letter and save any horiz or vert words that were laid
+		if (! words_that_were_laid) { //if words_that_were_laid = false, a horizontal or vertical word was already been laid/used in the puzzle. so backtrack
+			continue;
+		}
+
+		//we laid a letter in this cell so try and fill the next cell
+		success = recursiveLetters(); //lay next letter in the next position. true means puzzle is complete, false means we are backtracking
+		//await recursiveLetters().then(function(value){ success = value; }); //lay next letter in the next position. true means puzzle is complete, false means we are backtracking
+		//after a failed (or the puzzle is completed), we will be here
+		if (success == true) {
+			return true;
+			} //test to see if board was filled, this is where we return out of all recursive calls successfully. it was triggered a few lines above.
+
+		//------------------------------------------------------------
+
+		//success == false , so we have been backtracking to...
+		//if we are here, the last recursive attempt to lay a letter failed
+
+		//delete words_that_are_inserted[words_that_were_laid[0]]; //if a word was laid before, reverse that
+		//delete words_that_are_inserted[words_that_were_laid[1]];
+		setXY(x, y, unoccupied); //failed so reset letter to unoccupied
+		//exclusively optimal backtrack check and processing
+		if (typeof letter_backtrack_source !== 'undefined') { //we are doing an optimal backtrack
+			//xx_yy = '' + letter_backtrack_source[0] + '_' + letter_backtrack_source[1];
+			x_y = '' + x + '_' + y;
+			if (target_cells_for_letter_backtrack[letter_backtrack_source][x_y]) { //we have hit the first optimal backtrack target.
+				letter_backtrack_source = undefined; //turn off optimal backtrack
+			} else {//we did not find optimal backtrack target yet
+				next_letter_position_on_board.unshift(cell_position);//always unshift our current position back on to @nextLetterPositionsOnBoard when we return!
+				//next_letter_position_on_board.unshift([x, y]); //always unshift our current position back on to @nextLetterPositionsOnBoard when we return!
+				optimal_backtrack++;
+				return false; //go back one to see if it is optimal backtrack target
+			}
+		}
+	} //end while
+	tt = 9;
+	document.alert('Error: Recursive, we should never get here.');
+}
+
+function lettersPossibleAtCell(x, y) {
+	//at the input position x,y and given the prefix of a word for a mask, find and return all possible letters
+	var letters_that_fit = [];
+	var word_number;
+	var possible_letters_HV = [];
+	var mask = [];
+
+	for (dir = 0; dir < 2; dir++) {
+		if (typeof this_square_belongs_to_word_number[dir][y][x] === 'undefined') {
+			possible_letters_HV[dir] = [];
+			continue;
+		} //no word here
+		word_number = this_square_belongs_to_word_number[dir][y][x];
+		mask[dir] = all_masks_on_board[dir][word_number];
+		possible_letters_HV[dir] = Object.keys(linear_word_search[ mask[dir] ]);
+	}
+
+	if (possible_letters_HV[0].length && possible_letters_HV[1].length) { //intersect horiz and vert letters
+		letters_that_fit = possible_letters_HV[0].filter(function(item) {
+			if (possible_letters_HV[1].includes(item)) {
+				return true;
 			}
 		});
-		//choose a random clue
-		var clue = clues[ Math.floor(Math.random() * clues.length) ];
-		//place it is global associative array
-        clues[word] = clue;
+	} else { //one of these might have letters
+		letters_that_fit.push(possible_letters_HV[0]);
+		letters_that_fit.push(possible_letters_HV[1]);
 
-		//build html clue list
+	}
+	return letters_that_fit;
+}
+
+function shuffle(array) {
+	var m = array.length , t , i;
+	while (m) { //while there remain elements to shuffle
+		// Pick a remaining element
+		i = Math.floor(Math.random() * m--);
+		// And swap it with the current element.
+		//or [array[i], array[m]] = [array[m], array[i]];
+		t = array[m];
+		array[m] = array[i];
+		array[i] = t;
+	}
+	return array;
+}
+
+function setXY(x, y, letter) {
+	//see if potential mask equates to a word already laid. if true return false
+	//set cell, horiz mask , vert mask
+	//return : true if mask laid , false if mask or word already used , [full words laid]
+
+	var word_number; // = this_square_belongs_to_word_number;
+	var position;
+	var mask = [];
+	var dir;
+	//var words_laid; //leave undefined and any define if we need to push a mask to return
+
+	//get masks, see if unique mask (equating to a word) or full word is already laid, if so return false
+	for (dir = 0; dir < 2; dir++) {
+		if (typeof this_square_belongs_to_word_number[dir][y][x] === 'undefined') {
+			continue;
+		} //no word here
+		word_number = this_square_belongs_to_word_number[dir][y][x];
+		position = position_in_word[dir][y][x];
+		mask[dir] = all_masks_on_board[dir][word_number];
+
+		if( (mode == 'word') && (letter == unoccupied) ) { //remove mask from words_that_are_inserted. It may be full.
+			delete words_that_are_inserted[mask[dir]]; //remove mask from words_that_are_inserted. It may be full.
+		}
+
+		//add letter to mask
+		mask[dir] = mask[dir].substring(0, position) + letter + mask[dir].substring(position + 1);
+
+		if (mode == 'letter') {//only do isWordAlreadyUsed if we are in letter mode! Word mode is checked in recursive routine
+			if (letter != unoccupied) { //no need if we are setting unoccupied
+				if (isWordAlreadyUsed(mask[dir])) { //any word already used return false
+					return false;
+				}
+			}
+		}
+		if( (mode == 'word') && (! arg_simplewordmasksearch) ){ //if not using simple word mode then we can add all MASKS as all full crossing words have been tested
+			if( ! mask[dir].includes(unoccupied) ){//full mask add to words_that_are_inserted
+			words_that_are_inserted[mask[dir]] = 1;
+			}
+		}
+
+	}
+
+	//set cell then mask(s)
+	puzzle[y][x] = letter; //keep grid up to date
+	for (dir = 0; dir < 2; dir++) {
+		if (typeof this_square_belongs_to_word_number[dir][y][x] === 'undefined') {
+			continue;
+		} //no word here
+		word_number = this_square_belongs_to_word_number[dir][y][x];
+		all_masks_on_board[dir][word_number] = mask[dir];
+		//is it a full word?
 		/*
-		var word_letter_positions_json = '[';
-		letter_positions_of_word[dir][word_number].forEach(function(cell){
-			word_letter_positions_json += cell[0] + ',' + cell[1];
-			});
-		word_letter_positions_json += ']';
+		if (!mask[dir].includes(unoccupied)) { //if mask full word add to words_laid and also to $wordsThatAreInserted
+			//words_that_are_inserted[mask[dir]] = 1;
+			if (typeof words_laid === 'undefined') {
+				words_laid = [];
+			}
+			words_laid.push(mask[dir]);
+		}
 		*/
+	}
 
-		x = letter_positions_of_word[dir][word_number][0][0];
-		y = letter_positions_of_word[dir][word_number][0][1];
-
-		//var temp = `<font size=-1><a href='http://www.google.ca/search?q=${word}' target='_blank'>google</a></font> `;
-		//#<font><i><A ONCLICK="if (this.innerHTML=='show') {this.innerHTML='$word'} else {this.innerHTML='show'}" HREF="\#self">show</A></i></font>
-		hints += `
-			${word_number}. <a href="#self" id='[${dir},${word_number},"cell"]' class="clues" ONCLICK="choose_clue(this.id);">${clues[word]}</a>
-			&nbsp;<font size=-2><a href="http://www.google.ca/search?q=${clues[word]}" target="_blank">google</a></font>
-			&nbsp;&nbsp;&nbsp;&nbsp;
-
-			<font><i>
-			<span id='show${word}' ONCLICK="hide2('show${word}');show2('clue${word}');show2('google${word}');" >
-			 <a href="#" ONCLICK="return false">show</a>
-			 </span>
-			<span id='clue${word}' ONCLICK="hide2('clue${word}');hide2('google${word}');show2('show${word}');" style="display:none;">
-			 <a href="#" ONCLICK="return false">${word}</a>
-			 </span>
-			<span id='google${word}'  style="display:none;">
-			 <font size=-2><a href="http://www.google.ca/search?q=${word}" target="_blank">google</a></font>
-			 </span>
-			<i></font>
-			</br>
-			<script>hide2('clue${word}');hide2('google${word}');</script>
-			`;
-		if (dir == 0) {document.getElementById('across').innerHTML = hints;}
-		if (dir == 1) {document.getElementById('down').innerHTML = hints;}
-	});
-});
+	//if (typeof words_laid !== 'undefined') {
+		//return words_laid;
+	//}
+	return true;
 }
 
-function printProcessing() {
-//my $message = $_[0];
-var x , y;
-var line;
-var string = '<pre>';
-var time = ( Date.now() - start_time ) / 1000;
+function isWordAlreadyUsed(mask) {
+//input of mask WORooooo
+//check to see if all possible letters 'o' have only one possible letter. If so, only one word can be created. See if this word has been used.
+//saves us from filling in a whole word on letter fills only to have to backtrack
 
-//open(my $processing, ">processing.txt") or die "Can't open : $!";
+//WHICH IS FASTER
+/*
+	var next_letters;
+	let pattern =  new RegExp(`${unoccupied}`, 'g'); // /${unoccupied}/g;
+	while ( pattern.test(mask) ) { //see if we get single letters until end of word
+			next_letters = Object.keys(linear_word_search[ mask ]);
+			if (next_letters.length > 1){ //multiple words possible for mask.
+				return 0;
+				}
+			mask = mask.replace( unoccupied , next_letters[0]); //replace first blank with the single letter
+			}
+	//only one word is possible for mask at this point
+	//but has it been used?
+	if (typeof words_that_are_inserted[mask] !== 'undefined') { return 1; }
+	else {return 0;}
+*/
 
-//limit script run time!
-//if (time > timelimit){
-     //&PrintResults( qq| Time limit exceeded | );
-     //&Quit( "Time limit exceeded<br>\n\n" );
-  //   }
-
-string += "\n";
-//string += "Loops per Sec: " . $recursiveCount / (time + 1 - $timeForCrossword); #print time to create crosword
-string += "\n";
-
-for (y = 0 ; y < puzzle_height ; y++){
-	line = '';
-	for (x = 0 ; x < puzzle_width ; x++) {
-        line = line + puzzle[y][x];
-    }
-	string +=  line;
-	string += "\n";
-
+	var list_of_words = wordsFromMask(mask);
+	if(list_of_words.length == 1){//only one word is possible
+		var the_word = list_of_words.pop();
+		if (typeof words_that_are_inserted[the_word] !== 'undefined') { //it was used
+			return true;
+		}
+		else {
+			return false;
+		}
+	}
+	else{
+		return false;
+	}
 }
-
-for (var wordNumber = 1 ; wordNumber < 300 ; wordNumber++){
-      for (var dir = 0 ; dir < 2 ; dir++){
-            var word = all_masks_on_board[dir][wordNumber];
-            //#if (undef ne $word)
-            if (typeof word !== 'undefined'){
-                 //string += "$wordNumber $dir: $word \n"
-                 }
-            }
-      }
-
-string +=  "\n";
-string += "Time: " + time; //#print time to create crossword
-string += "\n";
-string += "Recursive calls: " + recursive_count; //print time to create crossword
-string += "\n";
-string += "Sec per Recursive call: " + (time / recursive_count); //print time to create crossword
-string += "\n";
-string +=  "Recursive calls per Sec: " + (recursive_count / time); //print time to create crossword
-string += "\n";
-string += "optimalBacktrack:" + optimal_backtrack ;
-string += "\n";
-string += "naive_backtrack:" + naive_backtrack;
-string += "\n";
-string += "try_another_word_loop:" + try_another_word_loop;
-string += "\n";
-string += "</pre>";
-
-
-document.getElementById('workspace').innerHTML = string;
-console.log(string);
-
-//setTimeout( printProcessing , 1000);
-}
-
-
 
 var word_backtrack_source; //set to () to stop backtrack and set for backtrack $letterBackTrackSource{x} and  $letterBackTrackSource{y}
 //var words_that_must_be_laid; // true, false , or list of words that MUST be laid if we continue.
@@ -579,54 +1020,47 @@ function recursiveWords2() {
 		//try the next word that fit in this location
 		popped_word = words_that_fit.pop();
 
-		//tests and what to do with popped_word
-		var xwords_ok = letterListsFor(dir, word_number); //if xwords are ok, then we should not get []
-		if ((arg_simplewordmasksearch) && (!xwords_ok)) {} //just loop
-		if ((arg_simplewordmasksearch) && (xwords_ok)) {
-			placeMaskOnBoard(dir, word_number, popped_word);
-			success = recursiveWords2();
-		}
-		if ((words_that_are_inserted[popped_word]) && (mask != popped_word)) {} //just loop
-		if (mask == popped_word) {
-			success = recursiveWords2();
-		}
-		if (!words_that_are_inserted[popped_word]) {
-			placeMaskOnBoard(dir, word_number, popped_word);
-			success = recursiveWords2();
-		}
-		/*
-		if (arg_simplewordmasksearch) {//simple
-			var xwords_ok = letterListsFor(dir , word_number); //if xwords are ok, then we should not get []
-			if(xwords_ok.length != 0){ //all crosswords are ok, so try next recursive word.
-				placeMaskOnBoard(dir, word_number, popped_word);
-				if(mask == popped_word){ //want to recursiveWords2
-					placeMaskOnBoard(dir, word_number, popped_word); //NOT REQUIRED
-
-					success = recursiveWords2(); //lay next word in the next position
+		//tests on what to do with popped_word. order is important
+		var xwords_ok = false; //assume
+		//arg_simplewordmasksearch stare we want to check if all crossing words are ok, or not
+		if(arg_simplewordmasksearch){
+			xwords_ok = letterListsFor(dir, word_number); //if xwords are ok, then we should not get []
+			if(xwords_ok){
+				if (words_that_are_inserted[popped_word]){
+						if (mask == popped_word) {//it is the word we are checking. don't worry about it
+							success = recursiveWords2();
+						}
+						else{//the word is placed elsewhere. worry about it
+							//loop
+						}
 				}
-				else{ //want to
-					if(words_that_are_inserted[popped_word]){//just loop
-
-					}
-					else{
-						placeMaskOnBoard(dir, word_number, popped_word);
-						success = recursiveWords2(); //lay next word in the next position
-					}
+				else{
+					placeMaskOnBoard(dir, word_number, popped_word);
+					success = recursiveWords2();
 				}
-				//success = recursiveWords2(); //lay next word in the next position
 			}
-			else{}//just loop to try next_possible_word
+			else{//crossing words do not fit
+				//loop
+			}
 		}
 		else{//complex
-			placeMaskOnBoard(dir, word_number, popped_word);
-			success = recursiveWords2(); //lay next word in the next position
+			if (words_that_are_inserted[popped_word]){
+					if (mask == popped_word) {//it is the word we are checking. don't worry about it
+						success = recursiveWords2();
+					}
+					else{//the word is placed elsewhere. worry about it
+						//loop
+					}
+			}
+			else{
+				placeMaskOnBoard(dir, word_number, popped_word);
+				success = recursiveWords2();
+			}
 		}
-*/
+
 		try_another_word_loop++;
-		qq = 8; //for breakpoint
 	} //end while loop
 	return true;
-	document.alert('Error: Recursive, we should never get here.');
 }
 function wordsFromMask(mask){
 //mask letters should be capitalized
@@ -784,428 +1218,165 @@ return possible_words_array.filter(function(word){
 */
 }
 
-var letter_backtrack_source; //set to () to stop backtrack and set for backtrack $letterBackTrackSource{x} and  $letterBackTrackSource{y}
-//async function recursiveLetters() {
-function recursiveLetters() {
-	//recursive try to lay down letters using @nextLetterPositionsOnBoard, this function will shift off, store and unshift if required
-	//store locally the possible letters in  @possibleLetter
-	//the next index in the list (@nextLetterPositionsOnBoard) is the next letter position we are trying to fill
+function numberClueList() {
+var x = -1;
+var y = -1;
+//var word;
+var hints;
+var clues = [];
 
-	//recurse if we can't find possible letters (going forward) or run out of possible letters
-	//next / loop if we can't lay a letter (word already used) and we have more possible letters to pick from
-	//anytime we next / loop set to $unoccupied as we are processing (just in case)
-	//anytime we recurse back (can't lay a letter or run out) a square we must unshift @nextLetterPositionsOnBoard , {x => $x, y => $y}; and return 0
-	//if our recursive calls have returned from a failed letter, set $unoccupied (to try another letter) and next / loop to see if there are anymore possible letters for this square
-
-	//note optimal recursion will not work if upper letter is part of a horizontal word ?????
-	//the reason is that we may be backtracking due to a later letter in the upper horizontal word.
-	//If we wipe that word out without trying ALL the combinations in that upper word we may be missing possible words in the horizontal word we are working on now
-	//an exception is if it is the last letter of a horizontal word
-	//so: only optimal up if:
-	//1. the upper target letter it is not part of a horizontal word
-	//2. the upper target letter is the last letter in a horizontal word
-	//3. the letter that failed is in a single vertical word
-	var x , y , x_y;
-	var cell_position;
-	var letters_that_fit = [];
-	var popped_letter;
-	var success = 0;//assume we failed to get in while loop
-	var words_that_were_laid = [];
-
-	recursive_count++;
-	printProcessing();
-
-	//moving forward
-	letter_backtrack_source = undefined; //clear global indicating that we are moving forward and have cleared the backtrack state
-	if (next_letter_position_on_board.length == 0) {
-		return true;
-		} //we have filled all the possible letter positions, we are done. This breaks us out of all recursive  success loops
-	forward_count++; //count forward moving calls
-	cell_position = next_letter_position_on_board.shift(); //keep cell_position in subroutine unchanged as we may need to unshift on a recursive return
-	x = cell_position[0];
-	y = cell_position[1];
-
-	//get possible letters for this cell
-	if (arg_shuffle) {
-		letters_that_fit = shuffle(lettersPossibleAtCell(x, y));
-	} else {
-		letters_that_fit = lettersPossibleAtCell(x, y).sort();
-	}
-
-	while (success == 0) {
-		if (letters_that_fit.length == 0) { //there are NO possible letters for this cell left. BACTRACK start
-			next_letter_position_on_board.unshift(cell_position); //always unshift our current position back on to next_letter_position_on_board before backtracking
-			//next_letter_position_on_board.unshift([x, y]); //always unshift our current position back on to next_letter_position_on_board before backtracking
-			if (arg_optimalbacktrack) { //optimal backtrack setup
-				if (typeof letter_backtrack_source === 'undefined') { //only set for optimal if we are not already in an optimal backtrack mode
-					x_y = '' + x + '_' + y;
-					if (typeof target_cells_for_letter_backtrack[x_y] !== 'undefined') { //check to see if there are any backtrack targets possible for $x $y first
-						//letter_backtrack_source = [x , y]; //set source/start cell for optimal bactracking
-						letter_backtrack_source = x_y; //set source/start cell for optimal bactracking
-					}
-				}
-			}
-			naive_backtrack++; //really should be called all_backtracks
-			return false; //start our backtrack : naive & optimal
-		}
-
-		//try the next letter that fit in this location
-		popped_letter = letters_that_fit.pop();
-
-		words_that_were_laid = setXY(x , y , popped_letter); //lay a letter and save any horiz or vert words that were laid
-		if (! words_that_were_laid) { //if words_that_were_laid = false, a horizontal or vertical word was already been laid/used in the puzzle. so backtrack
-			continue;
-		}
-
-		//we laid a letter in this cell so try and fill the next cell
-		success = recursiveLetters(); //lay next letter in the next position. true means puzzle is complete, false means we are backtracking
-		//await recursiveLetters().then(function(value){ success = value; }); //lay next letter in the next position. true means puzzle is complete, false means we are backtracking
-		//after a failed (or the puzzle is completed), we will be here
-		if (success == true) {
-			return true;
-			} //test to see if board was filled, this is where we return out of all recursive calls successfully. it was triggered a few lines above.
-
-		//------------------------------------------------------------
-
-		//success == false , so we have been backtracking to...
-		//if we are here, the last recursive attempt to lay a letter failed
-
-		//delete words_that_are_inserted[words_that_were_laid[0]]; //if a word was laid before, reverse that
-		//delete words_that_are_inserted[words_that_were_laid[1]];
-		setXY(x, y, unoccupied); //failed so reset letter to unoccupied
-		//exclusively optimal backtrack check and processing
-		if (typeof letter_backtrack_source !== 'undefined') { //we are doing an optimal backtrack
-			//xx_yy = '' + letter_backtrack_source[0] + '_' + letter_backtrack_source[1];
-			x_y = '' + x + '_' + y;
-			if (target_cells_for_letter_backtrack[letter_backtrack_source][x_y]) { //we have hit the first optimal backtrack target.
-				letter_backtrack_source = undefined; //turn off optimal backtrack
-			} else {//we did not find optimal backtrack target yet
-				next_letter_position_on_board.unshift(cell_position);//always unshift our current position back on to @nextLetterPositionsOnBoard when we return!
-				//next_letter_position_on_board.unshift([x, y]); //always unshift our current position back on to @nextLetterPositionsOnBoard when we return!
-				optimal_backtrack++;
-				return false; //go back one to see if it is optimal backtrack target
-			}
-		}
-	} //end while
-	tt = 9;
-	document.alert('Error: Recursive, we should never get here.');
-}
-
-function setXY(x, y, letter) {
-	//see if potential mask equates to a word already laid. if true return false
-	//set cell, horiz mask , vert mask
-	//return : true if mask laid , false if mask or word already used , [full words laid]
-
-	var word_number; // = this_square_belongs_to_word_number;
-	var position;
-	var mask = [];
-	var dir;
-	//var words_laid; //leave undefined and any define if we need to push a mask to return
-
-	//get masks, see if unique mask (equating to a word) or full word is already laid, if so return false
-	for (dir = 0; dir < 2; dir++) {
-		if (typeof this_square_belongs_to_word_number[dir][y][x] === 'undefined') {
-			continue;
-		} //no word here
-		word_number = this_square_belongs_to_word_number[dir][y][x];
-		position = position_in_word[dir][y][x];
-		mask[dir] = all_masks_on_board[dir][word_number];
-
-		if( (mode == 'word') && (letter == unoccupied) ) { //remove mask from words_that_are_inserted. It may be full.
-			delete words_that_are_inserted[mask[dir]]; //remove mask from words_that_are_inserted. It may be full.
-		}
-
-		//add letter to mask
-		mask[dir] = mask[dir].substring(0, position) + letter + mask[dir].substring(position + 1);
-
-		if (mode == 'letter') {//only do isWordAlreadyUsed if we are in letter mode! Word mode is checked in recursive routine
-			if (letter != unoccupied) { //no need if we are setting unoccupied
-				if (isWordAlreadyUsed(mask[dir])) { //any word already used return false
-					return false;
-				}
-			}
-		}
-		if( (mode == 'word') && (! arg_simplewordmasksearch) ){ //if not using simple word mode then we can add all MASKS as all full crossing words have been tested
-			if( ! mask[dir].includes(unoccupied) ){//full mask add to words_that_are_inserted
-			words_that_are_inserted[mask[dir]] = 1;
-			}
-		}
-
-	}
-
-	//set cell then mask(s)
-	puzzle[y][x] = letter; //keep grid up to date
-	for (dir = 0; dir < 2; dir++) {
-		if (typeof this_square_belongs_to_word_number[dir][y][x] === 'undefined') {
-			continue;
-		} //no word here
-		word_number = this_square_belongs_to_word_number[dir][y][x];
-		all_masks_on_board[dir][word_number] = mask[dir];
-		//is it a full word?
-		/*
-		if (!mask[dir].includes(unoccupied)) { //if mask full word add to words_laid and also to $wordsThatAreInserted
-			//words_that_are_inserted[mask[dir]] = 1;
-			if (typeof words_laid === 'undefined') {
-				words_laid = [];
-			}
-			words_laid.push(mask[dir]);
-		}
-		*/
-	}
-
-	//if (typeof words_laid !== 'undefined') {
-		//return words_laid;
-	//}
-	return true;
-}
-
-function isWordAlreadyUsed(mask) {
-//input of mask WORooooo
-//check to see if all possible letters 'o' have only one possible letter. If so, only one word can be created. See if this word has been used.
-//saves us from filling in a whole word on letter fills only to have to backtrack
-
-//WHICH IS FASTER
-/*
-	var next_letters;
-	let pattern =  new RegExp(`${unoccupied}`, 'g'); // /${unoccupied}/g;
-	while ( pattern.test(mask) ) { //see if we get single letters until end of word
-			next_letters = Object.keys(linear_word_search[ mask ]);
-			if (next_letters.length > 1){ //multiple words possible for mask.
-				return 0;
-				}
-			mask = mask.replace( unoccupied , next_letters[0]); //replace first blank with the single letter
-			}
-	//only one word is possible for mask at this point
-	//but has it been used?
-	if (typeof words_that_are_inserted[mask] !== 'undefined') { return 1; }
-	else {return 0;}
-*/
-
-	var list_of_words = wordsFromMask(mask);
-	if(list_of_words.length == 1){//only one word is possible
-		var the_word = list_of_words.pop();
-		if (typeof words_that_are_inserted[the_word] !== 'undefined') { //it was used
-			return true;
-		}
-		else {
-			return false;
-		}
-	}
-	else{
-		return false;
-	}
-
-}
-
-function shuffle(array) {
-	var m = array.length , t , i;
-	while (m) { //while there remain elements to shuffle
-		// Pick a remaining element
-		i = Math.floor(Math.random() * m--);
-		// And swap it with the current element.
-		//or [array[i], array[m]] = [array[m], array[i]];
-		t = array[m];
-		array[m] = array[i];
-		array[i] = t;
-	}
-	return array;
-}
-
-function lettersPossibleAtCell(x, y) {
-	//at the input position x,y and given the prefix of a word for a mask, find and return all possible letters
-	var letters_that_fit = [];
-	var word_number;
-	var possible_letters_HV = [];
-	var mask = [];
-
-	for (dir = 0; dir < 2; dir++) {
-		if (typeof this_square_belongs_to_word_number[dir][y][x] === 'undefined') {
-			possible_letters_HV[dir] = [];
-			continue;
-		} //no word here
-		word_number = this_square_belongs_to_word_number[dir][y][x];
-		mask[dir] = all_masks_on_board[dir][word_number];
-		possible_letters_HV[dir] = Object.keys(linear_word_search[ mask[dir] ]);
-	}
-
-	if (possible_letters_HV[0].length && possible_letters_HV[1].length) { //intersect horiz and vert letters
-		letters_that_fit = possible_letters_HV[0].filter(function(item) {
-			if (possible_letters_HV[1].includes(item)) {
-				return true;
+all_masks_on_board.forEach(function(item , dir){
+	hints = '';
+	all_masks_on_board[dir].forEach(function(word , word_number){ //for all our words on the board
+		//word = all_masks_on_board[dir][word_number];
+		//get clue(s) for this word
+		var first_2_leters = word.substring(0, 2);
+		var directory = "./wordlists/" + arg_wordfile + "/clues/";
+		var filename = directory + "_" + first_2_leters + ".clu";
+		var clue_list_text = readStringFromFileAtPath(filename);
+		var clue_list_array = clue_list_text.split(/\r?\n|\r|\n/g); //split on lines into array
+		if (clue_list_array[clue_list_array.length - 1].trim() == '') {
+			clue_list_array.pop();
+		} //remove last line if empty
+		clues = [];//
+		clue_list_array.forEach(function(line){
+			var clue_temp = line.split('|');
+			if(clue_temp[0] == word){
+				clues.push(clue_temp[1]);
 			}
 		});
-	} else { //one of these might have letters
-		letters_that_fit.push(possible_letters_HV[0]);
-		letters_that_fit.push(possible_letters_HV[1]);
+		//choose a random clue
+		var clue = clues[ Math.floor(Math.random() * clues.length) ];
+		//place it is global associative array
+        clues[word] = clue;
 
-	}
-	return letters_that_fit;
-}
-
-function calculateOptimalBacktracks() {
-	//letter backtrack
-	//cycle through each letter cell, provided by next_letter_position_on_board_temp, and build : target_cells_for_letter_backtrack
-	//optimal backtrack targets are all n,e,w,s letters of the horizontal and vertical word centered on the cell.
-	//don't include our cell
-	//we MUST only include cells that precede our cell in the walk path.
-	//when using optimal backtrack, we use the naive backtrack and stop at the first encountered member of target_cells_for_letter_backtrack
-
-	//word backtrack
-	//cycle through all words on board, provided by next_word_on_board_temp, and build : target_words_for_word_backtrack
-	//optimal backtrack targets are all crossing words, for now.... test and investigate later
-
-
-	//from PERL version
-	//touching_words_for_backtrack; #global as we need to backtrack to the first  member of it we encounter. if not == () we are in a backtrack state!
-
-	//rule 1. All letters in the horizontal and vertical words (up to the failed letter) can affect the failure of laying a letter
-	//rule 2. All crossing words of both the horizontal and vertical words of the failed letter can affect the failure of laying a letter
-	//rule 3 Remove shadows by only keeping the intersection of rule 1 and 2
-	//targetLettersForBackTrack{x failed letter}{y failed letter}{x}{y} = 1 #pre-generated for speed!
-
-	var x, y, xx, yy;
-	var walk_cells_up_to_xy = [];
-	var word_letter_positions;
-	var cell_position;
-
-	var word_position;
-	var word_number;
-	var dir;
-	var walk_words_up_to_current_word = [];
-	var word_positions;
-	var next_letter_position_on_board_temp = JSON.parse(JSON.stringify(next_letter_position_on_board)); //backup as we are going to tear it up
-	var next_word_on_board_temp = JSON.parse(JSON.stringify(next_word_on_board)); //backup as we are going to tear it up
-
-	if (mode == "letter") {
-		while (next_letter_position_on_board_temp.length != 0) {
-			cell_position = next_letter_position_on_board_temp.shift(); //remove next letter position
-			x = cell_position[0];
-			y = cell_position[1];
-
-			for (dir = 0; dir < 2; dir++) {
-				//if (typeof walk_cells_up_to_xy === 'undefined') {
-					//continue;
-				//} //code will not work if walk_cells_up_to_xy is empty
-				if (typeof this_square_belongs_to_word_number[dir][y][x] === 'undefined') {
-					continue;
-				} //no word
-				let tsbtwn = this_square_belongs_to_word_number[dir][y][x];
-				word_letter_positions = letter_positions_of_word[dir][tsbtwn];
-				//is word_letter_positions in walk_cells_up_to_xy : use array intersection routine
-				word_letter_positions.forEach(function(word_position) {
-					xx = word_position[0];
-					yy = word_position[1];
-					var x_y = '' + x + '_' + y;
-					var xx_yy = '' + xx + '_' + yy;
-					if (x_y == xx_yy) {
-						return;
-					} //skip current cell as it should not be a backtrack destination
-					//let val = JSON.stringify(word_position);
-					//if (walk_cells_up_to_xy.includes(val)) {//only do previous walk cells
-						//add to target_cells_for_letter_backtrack
-						if (typeof target_cells_for_letter_backtrack[x_y] === 'undefined') {
-							target_cells_for_letter_backtrack[x_y] = {};
-						}
-						target_cells_for_letter_backtrack[x_y][xx_yy] = true; //x_y is this cell and target _cells are stored in keys xx_yy!
-					//}
-				});
-			}
-			walk_cells_up_to_xy.push(JSON.stringify(cell_position));
-		}
-	}
-
-	//for now ignore differences from simple word search and crossing word search
-	//we will just backtrack to crossing words
-	//after testing we may expand the crossing word backtrack
-	if (mode == 'word') {
-		while (next_word_on_board_temp.length != 0) {
-			word_position = next_word_on_board_temp.shift(); //keep in subroutine unchaged as we may need to unshift on a recursive return
-			dir = word_position[0];
-			word_number = word_position[1];
-			//let tsbtwn = this_square_belongs_to_word_number[dir][y][x];
-			word_letter_positions = letter_positions_of_word[dir][word_number];
-			//what words are crossing this word?
-			word_positions = getCrossingWords(dir , word_number);
-			word_positions.forEach(function(word_position) {
-				dir_temp = word_position[0];
-				word_number_temp = word_position[1];
-				var d_w = '' + dir + '_' + word_number;
-				var d_w_temp = '' + dir_temp + '_' + word_number_temp;
-				if (d_w == d_w_temp) {
-					return;
-				} //skip current word as it should not be a backtrack destination
-				//let val = JSON.stringify(word_position);
-				//if (walk_words_up_to_current_word.includes(val)) { //add to target_words_for_word_backtrack
-					if (typeof target_words_for_word_backtrack[d_w] === 'undefined') {
-						target_words_for_word_backtrack[d_w] = {};
-					}
-					target_words_for_word_backtrack[d_w][d_w_temp] = 1;
-				//}
+		//build html clue list
+		/*
+		var word_letter_positions_json = '[';
+		letter_positions_of_word[dir][word_number].forEach(function(cell){
+			word_letter_positions_json += cell[0] + ',' + cell[1];
 			});
-			walk_words_up_to_current_word.push(JSON.stringify(word_position)); //put it on @upToCurrentWord
-		}
-	}
-}
+		word_letter_positions_json += ']';
+		*/
 
-function generateNextWordPositionsOnBoardCrossing(){
-		//start with 1 horiz.
-		//find all crossing words
-		//find all their crossing words.
-		//only add # and direction once!
-		//FIFO
+		x = letter_positions_of_word[dir][word_number][0][0];
+		y = letter_positions_of_word[dir][word_number][0][1];
 
-		//get my @WordLetterPositions = @{$letterPositionsOfWord[$wordNumber][$dir]}
-		//used to find crossing words fast with @ThisSquareBelongsToWordNumber
-		var already_in_list = {}; // already_in_list[number][direction] = 1 if already in list
-		already_in_list[dir_across] = {};
-		already_in_list[dir_down] = {};
-		var word_number = 1;
-		var dir = 0;
+		//var temp = `<font size=-1><a href='http://www.google.ca/search?q=${word}' target='_blank'>google</a></font> `;
+		//#<font><i><A ONCLICK="if (this.innerHTML=='show') {this.innerHTML='$word'} else {this.innerHTML='show'}" HREF="\#self">show</A></i></font>
+		hints += `
+			${word_number}. <a href="#self" id='[${dir},${word_number},"cell"]' class="clues" ONCLICK="choose_clue(this.id);">${clues[word]}</a>
+			&nbsp;<font size=-2><a href="http://www.google.ca/search?q=${clues[word]}" target="_blank">google</a></font>
+			&nbsp;&nbsp;&nbsp;&nbsp;
 
-		if (typeof all_masks_on_board[dir][word_number] === 'undefined' ) {dir = dir_vert;}// no horizontal #1 word. go vertical
-		var to_do_list = []; //list of words and directions to process. ((1,0) , (2,0) , .... ) shift off and push on so we do in an orderly fasion!
-		to_do_list.push( [dir , word_number] );
-		//if(typeof already_in_list[dir] === 'undefined'){already_in_list[dir] = {};}
-		already_in_list[dir][word_number] = 1;
-		next_word_on_board.push( [dir, word_number] );
-		while ( to_do_list.length > 0 ){
-				[dir , word_number] = to_do_list.shift();
-					var crossing_words = getCrossingWords(dir , word_number);
-					while ( crossing_words.length > 0 ){
-							[dir , word_number] = crossing_words.shift();
-							//if(typeof already_in_list[dir] === 'undefined'){already_in_list[dir] = {};}
-							if (typeof already_in_list[dir][word_number] !== 'undefined'){
-								continue;
-							}//already added. skip
-							to_do_list.push( [dir , word_number] );
-							next_word_on_board.push( [dir , word_number] );
-							if(typeof already_in_list[dir] === 'undefined'){already_in_list[dir] = {};}
-							already_in_list[dir][word_number] = 1;
-					}
-		}
-}
-
-function getCrossingWords(dir , word_number) {
-	//input: word number and direction
-	//output: [[crossing_word_number,crossing_word_number],[crossing_word_number,crossing_word_number], ...]
-	var crossing_words = [];
-	var x;
-	var y;
-	var crossing_word_number;
-
-	var word_letter_positions = letter_positions_of_word[dir][word_number];
-	word_letter_positions.forEach(function(letter_position) {
-		x = letter_position[0];
-		y = letter_position[1];
-		crossing_word_dir = 1 - dir;
-
-		//find and mark crossing words
-		crossing_word_number = this_square_belongs_to_word_number[crossing_word_dir][y][x];
-		if (crossing_word_number > 0) {
-			crossing_words.push([crossing_word_dir , crossing_word_number]);
-		}
+			<font><i>
+			<span id='show${word}' ONCLICK="hide2('show${word}');show2('clue${word}');show2('google${word}');" >
+			 <a href="#" ONCLICK="return false">show</a>
+			 </span>
+			<span id='clue${word}' ONCLICK="hide2('clue${word}');hide2('google${word}');show2('show${word}');" style="display:none;">
+			 <a href="#" ONCLICK="return false">${word}</a>
+			 </span>
+			<span id='google${word}'  style="display:none;">
+			 <font size=-2><a href="http://www.google.ca/search?q=${word}" target="_blank">google</a></font>
+			 </span>
+			<i></font>
+			</br>
+			<script>hide2('clue${word}');hide2('google${word}');</script>
+			`;
+		if (dir == 0) {document.getElementById('across').innerHTML = hints;}
+		if (dir == 1) {document.getElementById('down').innerHTML = hints;}
 	});
-	return crossing_words;
+});
+}
+
+function printSolvedPuzzle(){
+var temp;
+var y;
+var x;
+
+temp = "<table cellspacing='0' CLASS='tableclass'>";
+for (y = 0; y < puzzle_height; y++){
+    temp += "<tr>";
+	for (x = 0; x < puzzle_width; x++){
+		if(puzzle[y][x] == pad_char){
+			temp += "<td CLASS='tdblackclass'></td>";
+			continue;
+			}
+        if (puzzle[y][x] == unoccupied){
+			temp += "<td CLASS='tdwhiteclass'>&nbsp</td>";
+			}
+		//zz = puzzle[y][x].search(/[A-Z]/);
+        if( puzzle[y][x].search(/[A-Z1-9]/) >= 0){
+			temp += `<td CLASS='tdwhiteclass'>${puzzle[y][x]}</td>`;
+			}
+    }
+    temp += "</tr>\n";
+        }
+temp += "</table>\n";
+return temp;
+}
+
+function printProcessing() {
+//my $message = $_[0];
+var x , y;
+var line;
+var string = '<pre>';
+var time = ( Date.now() - start_time ) / 1000;
+
+//open(my $processing, ">processing.txt") or die "Can't open : $!";
+
+//limit script run time!
+//if (time > timelimit){
+     //&PrintResults( qq| Time limit exceeded | );
+     //&Quit( "Time limit exceeded<br>\n\n" );
+  //   }
+
+string += "\n";
+//string += "Loops per Sec: " . $recursiveCount / (time + 1 - $timeForCrossword); #print time to create crosword
+string += "\n";
+
+for (y = 0 ; y < puzzle_height ; y++){
+	line = '';
+	for (x = 0 ; x < puzzle_width ; x++) {
+        line = line + puzzle[y][x];
+    }
+	string +=  line;
+	string += "\n";
+
+}
+
+for (var wordNumber = 1 ; wordNumber < 300 ; wordNumber++){
+      for (var dir = 0 ; dir < 2 ; dir++){
+            var word = all_masks_on_board[dir][wordNumber];
+            //#if (undef ne $word)
+            if (typeof word !== 'undefined'){
+                 //string += "$wordNumber $dir: $word \n"
+                 }
+            }
+      }
+
+string +=  "\n";
+string += "Time: " + time; //#print time to create crossword
+string += "\n";
+string += "Recursive calls: " + recursive_count; //print time to create crossword
+string += "\n";
+string += "Sec per Recursive call: " + (time / recursive_count); //print time to create crossword
+string += "\n";
+string +=  "Recursive calls per Sec: " + (recursive_count / time); //print time to create crossword
+string += "\n";
+string += "optimalBacktrack:" + optimal_backtrack ;
+string += "\n";
+string += "naive_backtrack:" + naive_backtrack;
+string += "\n";
+string += "try_another_word_loop:" + try_another_word_loop;
+string += "\n";
+string += "</pre>";
+
+
+document.getElementById('workspace').innerHTML = string;
+console.log(string);
+
+//setTimeout( printProcessing , 1000);
 }
 
 function generateNextLetterPositionOnBoardZigzag(){
@@ -1272,187 +1443,7 @@ function generateNextLetterPositionOnBoardFlat(){
   }
 }
 
-function readStringFromFileAtPath(pathOfFileToReadFrom){
-	const request = new XMLHttpRequest();
-	request.addEventListener("error", function(){return 0;});
-	request.open("GET", pathOfFileToReadFrom, false);
-	request.send(null);
-	var status = request.status;
-	if (status != 200 ) { return status; }
-	var returnValue = request.responseText;
-	return returnValue;
-	}
 
-function numberBlankSquares(){
- //gridToGlobalVars()
- //this does a lot of var setup
- //and also associate all squares with words and word # , get word lengths on grid ,
-//thisSquareBelongsToWordNumber[$xx][$yy][$dir]
-//positionInWord[$xx][$yy][$dir] = $PositionCount;
-//letterPositionsOfWord[$numberCount][$dir] = [TempLetterPositions];
-//all_masks_on_board[$numberCount][$dir] = $blankWord;
-
-var x;
-var y;
-var word_length;
-var word_number = 0;
-var was_there_an_across_word = 0; //
-var blank_word = '';
-var dir;
-var word_letter_positions_array = [];
-
-//label all grid squares with data
-  for (y = 0 ; y < puzzle_height ; y++) {
-    for (x = 0 ; x < puzzle_width ; x++) {
-      was_there_an_across_word = 0; //assume not
-      for (dir = 0 ; dir < 2 ; dir++) { //#for both across 0 and down 1 words
-        if(puzzle[y][x] == pad_char){continue;}
-        word_letter_positions_array = getWordLetterPositions(x , y , dir);
-        if(word_letter_positions_array){
-          if( (word_letter_positions_array[0][0] == x) && (word_letter_positions_array[0][1] == y) ){//first letter in word?
-             word_length = word_letter_positions_array.length;
-             word_lengths[word_length] = 1; //mark globally that there is a word of this length
-             if(! was_there_an_across_word ){//allows us to not increase count if across and down share first letter pos
-				word_number++;
-			 }
-             was_there_an_across_word = 1;
-			 number_of_HV_words[dir]++; //used in recursiveWords()
-             //set letter_positions_of_word[$numberCount][$dir] = [TempLetterPositions];
-             if(typeof letter_positions_of_word[dir] === 'undefined' ){letter_positions_of_word[dir] = [];}
-             letter_positions_of_word[dir][word_number] = JSON.parse(JSON.stringify(word_letter_positions_array)); //deep copy multi dim array
-             //set all_masks_on_board[dir][word_number] = 'ooooooooo';
-			 blank_word = ''; // must do to ensure we get the right word/mask length
-             blank_word = blank_word.padEnd(word_length , unoccupied);
-             if(typeof all_masks_on_board[dir] === 'undefined' ){all_masks_on_board[dir] = [];}
-             all_masks_on_board[dir][word_number] = blank_word;
-             //set position_in_word , this_square_belongs_to_word_number
-             word_letter_positions_array.forEach(function(currentValue , index){
-                   //set position_in_word for all word_letter_positions_array in this word
-                   var xx = currentValue[0];
-                   var yy = currentValue[1];
-                   if(typeof position_in_word[dir] === 'undefined' ){position_in_word[dir] = [];}
-                   if(typeof position_in_word[dir][yy] === 'undefined' ){position_in_word[dir][yy] = [];}
-                   position_in_word[dir][yy][xx] = index;
-                   //set this_square_belongs_to_word_number[dir][yy][xx] for all word_letter_positions_array in this word
-                   if(typeof this_square_belongs_to_word_number[dir] === 'undefined' ){this_square_belongs_to_word_number[dir] = [];}
-                   if(typeof this_square_belongs_to_word_number[dir][yy] === 'undefined' ){this_square_belongs_to_word_number[dir][yy] = [];}
-                   this_square_belongs_to_word_number[dir][yy][xx] = word_number;
-              });
-          }
-        }
-      }
-    }
-  }
-
-// biggest_word_number = word_number;
-var crossing_cells = 0;
-var total_cells = 0;
-var white_cells = 0;
-var pad_cells = 0;
-
-//calculate interlock and density
-  for(y = 0 ; y < puzzle_height ; y++){
-    for(x = 0 ; x < puzzle_width ; x++){
-       if(puzzle[y][x] == pad_char){pad_cells++;}
-       if(puzzle[y][x] == unoccupied){white_cells++;}
-      if( (typeof this_square_belongs_to_word_number[0][y][x] !== 'undefined') && (typeof this_square_belongs_to_word_number[1][y][x] !== 'undefined') ){
-          crossing_cells++;
-       }
-    }
-  }
-
-  total_cells = puzzle_height * puzzle_width;
-  var interlock = 100 * crossing_cells / total_cells;
-  var density = 100 * white_cells / total_cells;
-
-  console.log("Total Cells: " + total_cells);
-  console.log("White Cells: " + white_cells);
-  console.log("Pad Cells: " + pad_cells);
-  console.log("Interlock: " + interlock);
-  console.log("Density: " + density);
-  console.log("Grid has words of lengths :");
-  var wl = Object.keys(word_lengths);
-  wl.forEach(function(currentValue){
-    console.log(currentValue);
-   });
-
-}
-
-function getWordLetterPositions(x,y,dir){
-  var dx,dy;
-  var xx = x , yy = y;
-  var letter_pos = [];
-  [dx,dy] = getDxDy(dir);
-  //get to start of word
-  while( (typeof puzzle[yy-dy] !== 'undefined') &&  (typeof puzzle[yy-dy][xx-dx] !== 'undefined') && (puzzle[yy-dy][xx-dx] != pad_char) ){
-    xx=xx-dx;
-    yy=yy-dy;
-  }
-  letter_pos.push([xx,yy]);
-  //now look for all letters of word
-  while( (typeof puzzle[yy+dy] !== 'undefined') && (typeof puzzle[yy+dy][xx+dx] !== 'undefined') && (puzzle[yy+dy][xx+dx] != pad_char) ){
-    xx=xx+dx;
-    yy=yy+dy;
-    letter_pos.push([xx,yy]);
-  }
-  if(letter_pos.length == 1){
-    return false;
-  }//not a word
-  return letter_pos;
-}
-
-function getDxDy(dir){
-  var dx , dy;
-  if(dir == dir_across){
-    dx = 1;
-    dy = 0;
-  }
-  if(dir == dir_down){
-    dx = 0;
-    dy = 1;
-  }
-return [dx,dy];
-}
-
-function loadWordList(arg_wordfile) {
-	//load word lists and set word and letter search variables
-	var db = arg_wordfile;
-	var wl = Object.keys(word_lengths);
-	wl.forEach(function(word_length) {
-		var file_and_path = './wordlists/' + db + '/words/' + word_length + '.txt';
-		var word_list_text = readStringFromFileAtPath(file_and_path);
-		//still need to process
-		var word_list_array = word_list_text.split(/\r?\n|\r|\n/g); //split on lines into array
-		if (word_list_array[word_list_array.length - 1].trim() == '') {
-			word_list_array.pop();
-		} //remove last line if empty
-
-		words_of_length[word_length] = word_list_array.length;
-		//process word_list_array
-		words_of_length_string[word_length] = ''; //start blank
-		word_list_array.forEach(function(word) {
-
-			//if (mode == 'letter') { //letter walk
-				var mask_pre = '';
-				var mask = '';
-				var letters_array = word.split('');
-				letters_array.forEach(function( letter ) {
-					mask = mask_pre.padEnd(word_length, unoccupied);
-					if (typeof linear_word_search[mask] == 'undefined') {
-						linear_word_search[mask] = {};
-					} //create on first access
-					linear_word_search[mask][letter] = 1; //letter list will be accessible by object.keys()
-					mask_pre += letter;
-
-				});
-			//} else { //word walk
-				words_of_length_string[word_length] = words_of_length_string[word_length] + ',' + word.toUpperCase();
-			//}
-
-		});
-	});
-	word_list_text = ''; //cleanup
-}
 
 function printPuzzle(){
   var temp , temp3 , temp4;
