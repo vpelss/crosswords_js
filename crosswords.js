@@ -119,14 +119,25 @@ function main() {
 	if (arg_walkpath == 'crossingwords') {
 		generateNextWordPositionsOnBoardCrossing();
 	}
+	if (arg_walkpath == 'zigzag') {
+		generateNextWordPositionsOnBoardZigZag();
+	}
+	if (arg_walkpath == 'diagonal') {
+		generateNextWordPositionsOnBoardDiag();
+	}
+
 
 	//letter walks
-	if (arg_walkpath == 'GenerateNextLetterPositionsOnBoardZigZag') {
-		generateNextLetterPositionOnBoardZigzag();
-	}
 	if (arg_walkpath == 'GenerateNextLetterPositionsOnBoardFlat') {
 		generateNextLetterPositionOnBoardFlat();
 	}
+	if (arg_walkpath == 'GenerateNextLetterPositionsOnBoardZigZag') {
+		generateNextLetterPositionOnBoardZigzag();
+	}
+	if (arg_walkpath == 'GenerateNextLetterPositionsOnBoardDiag') {
+		generateNextLetterPositionsOnBoardDiag();
+	}
+
 
 	// is simplewordmasksearch=on
 	 arg_simplewordmasksearch = urlParams.get('simplewordmasksearch');
@@ -419,6 +430,206 @@ function generateNextWordPositionsOnBoardCrossing(){
 							already_in_list[dir][word_number] = 1;
 					}
 		}
+}
+
+function generateNextWordPositionsOnBoardZigZag(){
+//create a top right to bottom left list in which we will lay down words. FIFO
+//zigzag alternate top right to bottom left then botom left to top right
+var x = 1;
+var y = -1;
+var divX = -1;
+var divY = 1;
+
+do {
+			//process cursor position
+		if (puzzle[y][x] != pad_char) {
+			//see if we are at start of word. If so add to list
+			for (var dir = 0; dir < 2; dir++) {
+				var word_number = this_square_belongs_to_word_number[dir][y][x];
+				if (position_in_word[dir][y][x] == 0) { //first letter in word!
+					next_word_on_board.push([dir, word_number]);
+				}
+			}
+		}
+		//next cell
+		x = x + divX;
+		y = y + divY;
+
+			     //test cursor position
+        if ( (x == 0) && (y == puzzle_height) ) {//bottom left corner
+               $divX = -$divX; $divY = -$divY; //change directions
+															continue;
+               }
+        if ( (x == puzzle_width) && (y == 0) ) {//top right corner
+               $divX = -$divX; $divY = -$divY; #change directions
+               continue;
+               }
+        if ($x < 0){//off left
+             $divX = -$divX; $divY = -$divY; #change directions
+             $x = 0;
+             }
+        if ($y < 0){//off top
+             $divX = -$divX; $divY = -$divY; #change directions
+             $y = 0;
+             }
+        if ($x >=  $in{width}){//off right
+             $divX = -$divX; $divY = -$divY; #change directions
+             $x =  $in{width} - 1;
+             $y = $y + 2;
+             }
+        if ($y >=  $in{height}){//off bottom
+             $divX = -$divX; $divY = -$divY; #change directions
+             $x =  $x + 2;
+             $y = $in{height} - 1;
+             }
+
+        }
+	while ((x != puzzle_width - 1) || (y != puzzle_height - 1));
+//until ( ($x == $in{width} - 1) and ($y == $in{height} - 1) );
+}
+
+function generateNextWordPositionsOnBoardDiag() {
+	//create a top right to bottom left list in which we will lay down words. FIFO
+	var x = 0;
+	var y = 0;
+	var divX = -1;
+	var divY = 1;
+	var diag_count = 0;
+	next_word_on_board = [];
+
+	do {
+		//process cursor position
+		if (puzzle[y][x] != pad_char) {
+			//see if we are at start of word. If so add to list
+			for (var dir = 0; dir < 2; dir++) {
+				var word_number = this_square_belongs_to_word_number[dir][y][x];
+				if (position_in_word[dir][y][x] == 0) { //first letter in word!
+					next_word_on_board.push([dir, word_number]);
+				}
+			}
+		}
+		//next cell
+		x = x + divX;
+		y = y + divY;
+		//are we outside puzzle? push us back in
+		if ((x < 0) || (y > puzzle_height - 1)) {
+			diag_count++;
+			x = diag_count;
+			if (x > puzzle_width - 1) {
+				x = puzzle_width - 1;
+				y = diag_count - x;
+			} else {
+				y = 0;
+			}
+			continue;
+		}
+	}
+	while ((x != puzzle_width - 1) || (y != puzzle_height - 1));
+}
+
+function generateNextLetterPositionOnBoardZigzag(){
+		//create a top right to bottom left list in which we will lay down words. FIFO
+		//zigzag alternate top right to bottom left then bottom left to top right
+		var x = 1;
+		var y = -1;
+		var divX = -1;
+		var divY = 1;
+
+		next_letter_position_on_board = [];
+		do {
+				//move cursor
+				x = x + divX;
+				y = y + divY;
+				//test cursor position
+				if ( (x < 0) && (y >= puzzle_height) ) {//bottom left corner
+						divX = -divX; divY = -divY; //change directions
+						x = 1;
+						y = puzzle_height - 1;
+				}
+				if ( (x >= puzzle_width) && (y < 0) ) {//top right corner
+						divX = -divX; divY = -divY; //change directions
+						x = puzzle_width - 1;
+						y = 1;
+				}
+				if (x < 0){//off left
+						divX = -divX; divY = -divY; //change directions
+						x = 0;
+				}
+				if (y < 0){//off top
+						divX = -divX; divY = -divY; //change directions
+						y = 0;
+				}
+				if (x >=  puzzle_width){//off right
+						divX = -divX; divY = -divY; //change directions
+						x =  puzzle_width - 1;
+						y = y + 2;
+				}
+				if (y >=  puzzle_height){//off bottom
+									divX = -divX; divY = -divY; //change directions
+									x =  x + 2;
+									y = puzzle_height - 1;
+									}
+				//process cursor position
+				if (puzzle[y][x] != pad_char){
+						next_letter_position_on_board.push([x,y]);
+				}
+  } 	while( (x != puzzle_width - 1) || (y != puzzle_height - 1) );
+		h = 99;
+}
+
+function generateNextLetterPositionsOnBoardDiag(){
+	//create a top right to bottom left list in which we will lay down words. FIFO
+	var x = 1;
+	var y = -1;
+	var divX = -1;
+	var divY = 1;
+	var diag_count;
+
+	next_word_on_board = [];
+
+	do { //move cursor
+		x = x + divX;
+		y = y + divY;
+
+		if ((x < 0) || (y >= puzzle_height)) {
+			diag_count++;
+			x = diag_count;
+			if (x >= puzzle_width - 1) {
+				x = puzzle_width - 1;
+				y = diag_count - x;
+			} else {
+				y = 0;
+			}
+		}
+		//process cursor position
+		if (puzzle[y][x] != pad_char) {
+			//see if we are at start of word. If so add to list
+			for (var dir = 0; dir < 2; dir++) {
+				var word_number = this_square_belongs_to_word_number[dir][y][x];
+				//var word_letter_positions = letter_positions_of_word[dir][word_number];
+				if (position_in_word[dir][y][x] == 0) { //first letter in word!
+					next_letter_positions_on_board.push( [x,y] );
+				}
+			}
+		}
+	}
+	while ((x < puzzle_width - 1) && (y < puzzle_height - 1));
+
+}
+
+function generateNextLetterPositionOnBoardFlat(){
+//create right to left top to bottom list in which we will lay down words. FIFO
+		var x = 0;
+		var y = 0;
+
+		next_letter_position_on_board = [];
+		for (y = 0 ; y < puzzle_height ; y++){
+     for (x = 0 ; x < puzzle_width ; x++){
+							if (puzzle[y][x] != pad_char){
+									next_letter_position_on_board.push([x,y]);
+       }
+     }
+  }
 }
 
 function getCrossingWords(dir , word_number) {
@@ -1041,6 +1252,7 @@ function recursiveWords2() {
 	} //end while loop
 	return true;
 }
+
 function wordsFromMask(mask){
 //mask letters should be capitalized
 //input: A_PL_ where _ will be whatever $unoccupied is
@@ -1061,12 +1273,6 @@ if(possible_words_array === null){
 	possible_words_array = [];
 }
 return possible_words_array;
-/*
- return possible_words_array.filter(function(word){
-//return words_of_length_string[word_length].match(pattern).filter(function(word){
-	return words_that_are_inserted[word] != 1; //ignore words already used
-	});
-*/
 }
 
 function placeMaskOnBoard(dir , word_number , mask){ //place mask, add letters and update crossing masks
@@ -1188,13 +1394,6 @@ if(possible_words_array === null){
 	possible_words_array = [];
 }
 return possible_words_array; //just return full array, we check if words are layed in recursive routine
-/*
-return possible_words_array.filter(function(word){
-//return words_of_length_string[word_length].match(pattern).filter(function(word){
-	//return words_that_are_inserted[word] != 1; //ignore words already used
-	return true;
-	});
-*/
 }
 
 function numberClueList() {
@@ -1207,7 +1406,6 @@ var clues = [];
 all_masks_on_board.forEach(function(item , dir){
 	hints = '';
 	all_masks_on_board[dir].forEach(function(word , word_number){ //for all our words on the board
-		//word = all_masks_on_board[dir][word_number];
 		//get clue(s) for this word
 		var first_2_leters = word.substring(0, 2);
 		var directory = "./wordlists/" + arg_wordfile + "/clues/";
@@ -1229,20 +1427,9 @@ all_masks_on_board.forEach(function(item , dir){
 		//place it is global associative array
         clues[word] = clue;
 
-		//build html clue list
-		/*
-		var word_letter_positions_json = '[';
-		letter_positions_of_word[dir][word_number].forEach(function(cell){
-			word_letter_positions_json += cell[0] + ',' + cell[1];
-			});
-		word_letter_positions_json += ']';
-		*/
-
 		x = letter_positions_of_word[dir][word_number][0][0];
 		y = letter_positions_of_word[dir][word_number][0][1];
 
-		//var temp = `<font size=-1><a href='http://www.google.ca/search?q=${word}' target='_blank'>google</a></font> `;
-		//#<font><i><A ONCLICK="if (this.innerHTML=='show') {this.innerHTML='$word'} else {this.innerHTML='show'}" HREF="\#self">show</A></i></font>
 		hints += `
 			${word_number}. <a href="#self" id='[${dir},${word_number},"cell"]' class="clues" ONCLICK="choose_clue(this.id);">${clues[word]}</a>
 			&nbsp;<font size=-2><a href="http://www.google.ca/search?q=${clues[word]}" target="_blank">google</a></font>
@@ -1284,7 +1471,6 @@ for (y = 0; y < puzzle_height; y++){
         if (puzzle[y][x] == unoccupied){
 			temp += "<td CLASS='tdwhiteclass'>&nbsp</td>";
 			}
-		//zz = puzzle[y][x].search(/[A-Z]/);
         if( puzzle[y][x].search(/[A-Z1-9]/) >= 0){
 			temp += `<td CLASS='tdwhiteclass'>${puzzle[y][x]}</td>`;
 			}
@@ -1324,16 +1510,6 @@ for (y = 0 ; y < puzzle_height ; y++){
 
 }
 
-for (var wordNumber = 1 ; wordNumber < 300 ; wordNumber++){
-      for (var dir = 0 ; dir < 2 ; dir++){
-            var word = all_masks_on_board[dir][wordNumber];
-            //#if (undef ne $word)
-            if (typeof word !== 'undefined'){
-                 //string += "$wordNumber $dir: $word \n"
-                 }
-            }
-      }
-
 string +=  "\n";
 string += "Time: " + time; //#print time to create crossword
 string += "\n";
@@ -1351,78 +1527,11 @@ string += "try_another_word_loop:" + try_another_word_loop;
 string += "\n";
 string += "</pre>";
 
-
 document.getElementById('workspace').innerHTML = string;
 console.log(string);
 
 //setTimeout( printProcessing , 1000);
 }
-
-function generateNextLetterPositionOnBoardZigzag(){
-		//create a top right to bottom left list in which we will lay down words. FIFO
-		//zigzag alternate top right to bottom left then bottom left to top right
-		var x = 1;
-		var y = -1;
-		var divX = -1;
-		var divY = 1;
-
-		next_letter_position_on_board = [];
-		do {
-				//move cursor
-				x = x + divX;
-				y = y + divY;
-				//test cursor position
-				if ( (x < 0) && (y >= puzzle_height) ) {//bottom left corner
-						divX = -divX; divY = -divY; //change directions
-						x = 1;
-						y = puzzle_height - 1;
-				}
-				if ( (x >= puzzle_width) && (y < 0) ) {//top right corner
-						divX = -divX; divY = -divY; //change directions
-						x = puzzle_width - 1;
-						y = 1;
-				}
-				if (x < 0){//off left
-						divX = -divX; divY = -divY; //change directions
-						x = 0;
-				}
-				if (y < 0){//off top
-						divX = -divX; divY = -divY; //change directions
-						y = 0;
-				}
-				if (x >=  puzzle_width){//off right
-						divX = -divX; divY = -divY; //change directions
-						x =  puzzle_width - 1;
-						y = y + 2;
-				}
-				if (y >=  puzzle_height){//off bottom
-									divX = -divX; divY = -divY; //change directions
-									x =  x + 2;
-									y = puzzle_height - 1;
-									}
-				//process cursor position
-				if (puzzle[y][x] != pad_char){
-						next_letter_position_on_board.push([x,y]);
-				}
-  } 	while( (x != puzzle_width - 1) || (y != puzzle_height - 1) );
-}
-
-function generateNextLetterPositionOnBoardFlat(){
-//create right to left top to bottom list in which we will lay down words. FIFO
-		var x = 0;
-		var y = 0;
-
-		next_letter_position_on_board = [];
-		for (y = 0 ; y < puzzle_height ; y++){
-     for (x = 0 ; x < puzzle_width ; x++){
-							if (puzzle[y][x] != pad_char){
-									next_letter_position_on_board.push([x,y]);
-       }
-     }
-  }
-}
-
-
 
 function printPuzzle(){
   var temp , temp3 , temp4;
@@ -1491,8 +1600,8 @@ return temp;
 }
 
 //--------------------------------------
-
-
+//puzzle navigation functions
+//---------------------------------------
 
 var forever = new Date('October 17, 2030 03:24:00'); //use in cookies
 //var isAClickableClass['tdwordselectedclass'] = 1;
