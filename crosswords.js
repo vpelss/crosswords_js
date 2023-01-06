@@ -88,6 +88,8 @@ var arg_simplewordmasksearch;
 function main() {
 	start_time = Date.now();
 
+	hide2('Answers');
+
 	//url arg processing
 	const queryString = window.location.search;
 	const urlParams = new URLSearchParams(queryString);
@@ -432,22 +434,26 @@ function generateNextWordPositionsOnBoardCrossing(){
 		}
 }
 
-function generateNextWordPositionsOnBoardZigZag(){
-//create a top right to bottom left list in which we will lay down words. FIFO
-//zigzag alternate top right to bottom left then botom left to top right
-var x = 1;
-var y = -1;
-var divX = -1;
-var divY = 1;
+function generateNextWordPositionsOnBoardZigZag() {
+	//create a top right to bottom left list in which we will lay down words. FIFO
+	//zigzag alternate top right to bottom left then botom left to top right
+	var x = 0;
+	var y = 0;
+	var divX = -1;
+	var divY = 1;
 
-do {
-			//process cursor position
-		if (puzzle[y][x] != pad_char) {
-			//see if we are at start of word. If so add to list
-			for (var dir = 0; dir < 2; dir++) {
-				var word_number = this_square_belongs_to_word_number[dir][y][x];
-				if (position_in_word[dir][y][x] == 0) { //first letter in word!
-					next_word_on_board.push([dir, word_number]);
+	do {
+		//process cursor position
+		var a = typeof puzzle[y];
+		var b = typeof puzzle[y][x];
+
+		if ((typeof puzzle[y] !== 'undefined') && (typeof puzzle[y][x] !== 'undefined')) {
+			if (puzzle[y][x] != pad_char) {
+				for (var dir = 0; dir < 2; dir++) { //see if we are at start of word. If so add to list
+					var word_number = this_square_belongs_to_word_number[dir][y][x];
+					if (position_in_word[dir][y][x] == 0) { //first letter in word!
+						next_word_on_board.push([dir, word_number]);
+					}
 				}
 			}
 		}
@@ -455,37 +461,50 @@ do {
 		x = x + divX;
 		y = y + divY;
 
-			     //test cursor position
-        if ( (x == 0) && (y == puzzle_height) ) {//bottom left corner
-               $divX = -$divX; $divY = -$divY; //change directions
-															continue;
-               }
-        if ( (x == puzzle_width) && (y == 0) ) {//top right corner
-               $divX = -$divX; $divY = -$divY; #change directions
-               continue;
-               }
-        if ($x < 0){//off left
-             $divX = -$divX; $divY = -$divY; #change directions
-             $x = 0;
-             }
-        if ($y < 0){//off top
-             $divX = -$divX; $divY = -$divY; #change directions
-             $y = 0;
-             }
-        if ($x >=  $in{width}){//off right
-             $divX = -$divX; $divY = -$divY; #change directions
-             $x =  $in{width} - 1;
-             $y = $y + 2;
-             }
-        if ($y >=  $in{height}){//off bottom
-             $divX = -$divX; $divY = -$divY; #change directions
-             $x =  $x + 2;
-             $y = $in{height} - 1;
-             }
-
-        }
+		//test cursor position
+		if ((x < 0) && (y > puzzle_height - 1)) { //bottom left corner
+			divX = -divX;
+			divY = -divY; //change directions
+			x = 1;
+			y = puzzle_height - 1;
+			continue;
+		}
+		if ((x > puzzle_width - 1) && (y < 0)) { //top right corner
+			divX = -divX;
+			divY = -divY; //change directions
+			x = puzzle_width - 1;
+			y = 1;
+			continue;
+		}
+		if (x < 0) { //off left
+			divX = -divX;
+			divY = -divY; //change directions
+			x = 0;
+			continue;
+		}
+		if (y < 0) { //off top
+			divX = -divX;
+			divY = -divY; //change directions
+			y = 0;
+			continue;
+		}
+		if (x > puzzle_width - 1) { //off right
+			divX = -divX;
+			divY = -divY; //change directions
+			x = puzzle_width - 1;
+			y = y + 2;
+			continue;
+		}
+		if (y > puzzle_height - 1) { //off bottom
+			divX = -divX;
+			divY = -divY; //change directions
+			x = x + 2;
+			y = puzzle_height - 1;
+			continue;
+		}
+	}
 	while ((x != puzzle_width - 1) || (y != puzzle_height - 1));
-//until ( ($x == $in{width} - 1) and ($y == $in{height} - 1) );
+	h=9;
 }
 
 function generateNextWordPositionsOnBoardDiag() {
@@ -527,7 +546,7 @@ function generateNextWordPositionsOnBoardDiag() {
 	while ((x != puzzle_width - 1) || (y != puzzle_height - 1));
 }
 
-function generateNextLetterPositionOnBoardZigzag(){
+function generateNextLetterPositionOnBoardZigzag(){ngcfhgfh
 		//create a top right to bottom left list in which we will lay down words. FIFO
 		//zigzag alternate top right to bottom left then bottom left to top right
 		var x = 1;
@@ -605,8 +624,6 @@ function generateNextLetterPositionsOnBoardDiag(){
 		if (puzzle[y][x] != pad_char) {
 			//see if we are at start of word. If so add to list
 			for (var dir = 0; dir < 2; dir++) {
-				var word_number = this_square_belongs_to_word_number[dir][y][x];
-				//var word_letter_positions = letter_positions_of_word[dir][word_number];
 				if (position_in_word[dir][y][x] == 0) { //first letter in word!
 					next_letter_positions_on_board.push( [x,y] );
 				}
@@ -614,7 +631,6 @@ function generateNextLetterPositionsOnBoardDiag(){
 		}
 	}
 	while ((x < puzzle_width - 1) && (y < puzzle_height - 1));
-
 }
 
 function generateNextLetterPositionOnBoardFlat(){
@@ -1753,5 +1769,5 @@ HighlightNextBox();//go to next box
 
 //-------------------------------------
 
-hide2('Answers');
+
 //SetCellsFromCookies();
