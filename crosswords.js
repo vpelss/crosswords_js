@@ -41,7 +41,7 @@ var mode = ''; //letter or word
 
 var next_letter_position_on_board = [];
 // all letter position on board used for cycling through letter placements, etc
-// [{x => $x, y => $y} , , ]
+// [{x => x, y => y} , , ]
 // next_letter_position_on_board[]{x} NextWordPositionsOnBoard[]{y}
 
 var next_word_on_board = []; //next_word_on_board = [ [word_number , dir] , [] , ... ]
@@ -131,9 +131,9 @@ function main() {
 	if (arg_walkpath == 'acrossthendown') {
 		generateNextWordPositionsOnBoardAcrossThenDown();
 	}
-
-
-
+if (arg_walkpath == 'random') {
+		generateNextWordPositionsOnBoardRandom();
+	}
 
 	//letter walks
 	if (arg_walkpath == 'GenerateNextLetterPositionsOnBoardFlat') {
@@ -145,8 +145,9 @@ function main() {
 	if (arg_walkpath == 'GenerateNextLetterPositionsOnBoardDiag') {
 		generateNextLetterPositionsOnBoardDiag();
 	}
-
-
+	if (arg_walkpath == 'GenerateNextLetterPositionsOnBoardSwitchWalk') {
+		generateNextLetterPositionsOnBoardSwitchWalk();
+	}
 
 	// is simplewordmasksearch=on
 	 arg_simplewordmasksearch = urlParams.get('simplewordmasksearch');
@@ -250,8 +251,8 @@ function grid_getLetters(currentValue , y) {
  //gridToGlobalVars()
  //this does a lot of var setup
  //and also associate all squares with words and word # , get word lengths on grid ,
-//thisSquareBelongsToWordNumber[$xx][$yy][dir]
-//positionInWord[$xx][$yy][dir] = $PositionCount;
+//thisSquareBelongsToWordNumber[xx][yy][dir]
+//positionInWord[xx][yy][dir] = $PositionCount;
 //letterPositionsOfWord[$numberCount][dir] = [TempLetterPositions];
 //all_masks_on_board[$numberCount][dir] = $blankWord;
 var x;
@@ -451,9 +452,6 @@ function generateNextWordPositionsOnBoardZigZag() {
 
 	do {
 		//process cursor position
-		var a = typeof puzzle[y];
-		var b = typeof puzzle[y][x];
-
 		if ((typeof puzzle[y] !== 'undefined') && (typeof puzzle[y][x] !== 'undefined')) {
 			if (puzzle[y][x] != pad_char) {
 				for (var dir = 0; dir < 2; dir++) { //see if we are at start of word. If so add to list
@@ -520,7 +518,9 @@ function generateNextWordPositionsOnBoardDiag() {
 	var y = 0;
 	var divX = -1;
 	var divY = 1;
-	var diag_count = 0;
+	//var diag_count = 0;
+	x_start = 0;
+	y_start = 0;
 
 	do {
 		//process cursor position
@@ -537,19 +537,18 @@ function generateNextWordPositionsOnBoardDiag() {
 		x = x + divX;
 		y = y + divY;
 		//are we outside puzzle? push us back in
-		if ((x < 0) || (y > puzzle_height - 1)) {
-			diag_count++;
-			x = diag_count;
-			if (x > puzzle_width - 1) {
-				x = puzzle_width - 1;
-				y = diag_count - x;
-			} else {
-				y = 0;
+		if ((y > puzzle_height - 1) || (x < 0)) { //bottom or left
+			//find our start position
+			x_start++;
+			if (x_start > puzzle_width - 1) {
+				x_start = puzzle_width - 1;
+				y_start++;
 			}
-			continue;
+			x = x_start;
+			y = y_start;
 		}
-	}
-	while ((x != puzzle_width - 1) || (y != puzzle_height - 1));
+	}	while ((x != puzzle_width - 1) || (y != puzzle_height - 1));
+	h=9;
 }
 
 function generateNextWordPositionsOnBoardNumerical() {
@@ -579,6 +578,13 @@ function generateNextWordPositionsOnBoardAcrossThenDown() {
 			next_word_on_board.push([dir,word_number]);
 		}
 	}
+}
+
+function generateNextWordPositionsOnBoardRandom() {
+	//create a sequential list in which we will lay down words. FIFO
+	//just go numerically 1 .. ??? alternating horiz / vert
+	generateNextWordPositionsOnBoardCrossing();
+	next_word_on_board = shuffle(next_word_on_board);
 }
 
 function generateNextLetterPositionOnBoardZigzag(){
@@ -630,41 +636,38 @@ function generateNextLetterPositionOnBoardZigzag(){
   } 	while( (x != puzzle_width - 1) || (y != puzzle_height - 1) );
 }
 
-function generateNextLetterPositionsOnBoardDiag(){
+function generateNextLetterPositionsOnBoardDiag() {
 	//create a top right to bottom left list in which we will lay down words. FIFO
-	var x = 1;
-	var y = -1;
+	var x = 0;
+	var y = 0;
 	var divX = -1;
 	var divY = 1;
-	var diag_count;
-
-	next_word_on_board = [];
+	//var diag_count = 0;
+	var x_start = 0;
+	var y_start = 0;
 
 	do { //move cursor
+		//process cursor position
+		if (puzzle[y][x] != pad_char) {
+				next_letter_position_on_board.push([x, y]);
+		}
+
 		x = x + divX;
 		y = y + divY;
 
-		if ((x < 0) || (y >= puzzle_height)) {
-			diag_count++;
-			x = diag_count;
-			if (x >= puzzle_width - 1) {
-				x = puzzle_width - 1;
-				y = diag_count - x;
-			} else {
-				y = 0;
+		if ((y > puzzle_height - 1) || (x < 0)) { //bottom or left
+			//find our start position
+			x_start++;
+			if (x_start > puzzle_width - 1) {
+				x_start = puzzle_width - 1;
+				y_start++;
 			}
-		}
-		//process cursor position
-		if (puzzle[y][x] != pad_char) {
-			//see if we are at start of word. If so add to list
-			for (var dir = 0; dir < 2; dir++) {
-				if (position_in_word[dir][y][x] == 0) { //first letter in word!
-					next_letter_positions_on_board.push( [x,y] );
-				}
-			}
+			x = x_start;
+			y = y_start;
 		}
 	}
-	while ((x < puzzle_width - 1) && (y < puzzle_height - 1));
+	while ((x != puzzle_width - 1) || (y != puzzle_height - 1));
+	next_letter_position_on_board.push([x, y]);
 }
 
 function generateNextLetterPositionOnBoardFlat(){
@@ -680,6 +683,37 @@ function generateNextLetterPositionOnBoardFlat(){
        }
      }
   }
+}
+
+function generateNextLetterPositionsOnBoardSwitchWalk() {
+	//create a top right to bottom left list in which we will lay down words. FIFO
+	var x = 0;
+	var y = 0;
+	var xx = 0; //last starting run
+	var yy = 0; //last starting run
+	var dir = 0; //horiz first
+
+	do {
+		if (puzzle[y][x] != pad_char) {
+			next_letter_position_on_board.push([y, x]);
+		}
+		if (x == puzzle_width - 1) {
+			x = xx;
+			y = yy;
+			yy = yy + 1;
+			dir = 1;
+		}
+		if (y == puzzle_height - 1) {
+			x = xx;
+			y = yy;
+			xx = xx + 1;
+			dir = 0;
+		}
+		x = x + (!dir);
+		y = y + dir;
+	}
+	while ((x + y + 2) <= (puzzle_height + puzzle_width));
+	kk = 9;
 }
 
 function getCrossingWords(dir , word_number) {
@@ -716,7 +750,6 @@ function calculateOptimalBacktracks() {
 	//word backtrack
 	//cycle through all words on board, provided by next_word_on_board_temp, and build : target_words_for_word_backtrack
 	//optimal backtrack targets are all crossing words, for now.... test and investigate later
-
 
 	//from PERL version
 	//touching_words_for_backtrack; #global as we need to backtrack to the first  member of it we encounter. if not == () we are in a backtrack state!
@@ -812,7 +845,7 @@ function recursiveLetters() {
 	//recurse if we can't find possible letters (going forward) or run out of possible letters
 	//next / loop if we can't lay a letter (word already used) and we have more possible letters to pick from
 	//anytime we next / loop set to $unoccupied as we are processing (just in case)
-	//anytime we recurse back (can't lay a letter or run out) a square we must unshift @nextLetterPositionsOnBoard , {x => $x, y => $y}; and return 0
+	//anytime we recurse back (can't lay a letter or run out) a square we must unshift @nextLetterPositionsOnBoard , {x => x, y => y}; and return 0
 	//if our recursive calls have returned from a failed letter, set $unoccupied (to try another letter) and next / loop to see if there are anymore possible letters for this square
 
 	//note optimal recursion will not work if upper letter is part of a horizontal word ?????
@@ -857,7 +890,7 @@ function recursiveLetters() {
 			if (arg_optimalbacktrack) { //optimal backtrack setup
 				if (typeof letter_backtrack_source === 'undefined') { //only set for optimal if we are not already in an optimal backtrack mode
 					x_y = '' + x + '_' + y;
-					if (typeof target_cells_for_letter_backtrack[x_y] !== 'undefined') { //check to see if there are any backtrack targets possible for $x $y first
+					if (typeof target_cells_for_letter_backtrack[x_y] !== 'undefined') { //check to see if there are any backtrack targets possible for x y first
 						//letter_backtrack_source = [x , y]; //set source/start cell for optimal bactracking
 						letter_backtrack_source = x_y; //set source/start cell for optimal bactracking
 					}
@@ -923,7 +956,13 @@ function lettersPossibleAtCell(x, y) {
 		} //no word here
 		word_number = this_square_belongs_to_word_number[dir][y][x];
 		mask[dir] = all_masks_on_board[dir][word_number];
-		possible_letters_HV[dir] = Object.keys(linear_word_search[ mask[dir] ]);
+		if(typeof linear_word_search[ mask[dir] ] === 'undefined'){//cases where the mask is not linear or word does not exist. if walk is well designed, this should not occur. If it does, puzzle will never complete
+			throw new Error("Illegal mask when it should be a linear word search. Probably and incompatible letter walk.");
+			//possible_letters_HV[dir] = [];
+		}
+		else{
+			possible_letters_HV[dir] = Object.keys(linear_word_search[ mask[dir] ]);
+		}
 	}
 
 	if (possible_letters_HV[0].length && possible_letters_HV[1].length) { //intersect horiz and vert letters
@@ -933,14 +972,20 @@ function lettersPossibleAtCell(x, y) {
 			}
 		});
 	} else { //one of these might have letters
-		letters_that_fit.push(possible_letters_HV[0]);
-		letters_that_fit.push(possible_letters_HV[1]);
-
+		if(possible_letters_HV[0].length){
+			letters_that_fit = possible_letters_HV[0];
+		}
+		else{
+			letters_that_fit = possible_letters_HV[1];
+		}
 	}
 	return letters_that_fit;
 }
 
 function shuffle(array) {
+	//array is passed by reference and will be shuffled directly
+	//returning and array is also by reference
+	//so if you need a new copy, use myNewArray = JSON.parse(JSON.stringify( myArray )) to make a new array
 	var m = array.length , t , i;
 	while (m) { //while there remain elements to shuffle
 		// Pick a remaining element
