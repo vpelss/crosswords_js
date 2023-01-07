@@ -17,8 +17,8 @@
 	 <TITLE>Javascript Crossword Puzzle Generator by Emogic.com</TITLE>
 
  </HEAD>
-	 <BODY onload='main();'
-	ONKEYUP="if(CurrentFocus != ''){send_cell_update(event.keyCode||event.which);}//send keycode event to function for firefox">
+	 <BODY onload=''
+	ONKEYUP="if(CurrentFocus != ''){send_cell_update(event.keyCode||event.which);} return 1;">
 
 	 <!--start How To Play dialog jqueryui-->
 	 <SCRIPT>
@@ -40,7 +40,7 @@ function howtoplay ()
  {
  $( '#dialog-message' ).dialog( "open" );
 $( "#dialog-message" ).dialog( "option", "width", 800 );
- };
+ }
 
 </SCRIPT>
 
@@ -80,13 +80,24 @@ $( "#dialog-message" ).dialog( "option", "width", 800 );
 	 <DIV ALIGN="CENTER"><B><FONT COLOR="#CC0000">Click on puzzle or Clues and
 		type your answer</FONT></B></DIV>
 	 <DIV ALIGN="CENTER">
+   <P></P>
+
 		<TABLE CELLPADDING="3" CELLSPACING="0">
 		  <TR>
 
 				<TD>
+				<div id='puzzle_place'>
 
-				<div id='puzzle_place'></div>
+	 <DIV ALIGN="CENTER" style="border: solid 1px;">
+   <h3>Right click and 'Inspect' first, if you want to see live console generation log, set break points, single step, etc...</h3>
+   <script>var giddy_up = `<h3>Starting puzzle generation.
+		It may take several minutes depending on your choices. This browser tab may be unresponsive as Javascript is preforming many recursive calls.</h3>`</script>
+		<FORM>
+   <INPUT TYPE="BUTTON" NAME="Button1" VALUE="START PUZZLE GENERATION" ONCLICK="setTimeout(main,1000);	document.getElementById('puzzle_place').innerHTML = giddy_up;">
+  </FORM>
+  </DIV>
 
+    </div>
 				</TD>
 
 			 <TD> </TD>
@@ -111,18 +122,13 @@ $( "#dialog-message" ).dialog( "option", "width", 800 );
 		 <DIV ALIGN="CENTER">
 		<FORM><INPUT TYPE="BUTTON" NAME="Button1"
 		  VALUE="Clear Crossword"
-		  ONCLICK="if (confirm('Are you sure you want to clear this crossword?')){DeleteCookies();location.reload();}"></FORM></DIV><SCRIPT>//hide2("fbhide3");</SCRIPT>
-
+		  ONCLICK="if(confirm('Are you sure you want to clear this crossword?')){DeleteCookies();location.reload();}"></FORM></DIV>
 	 <P></P>
 
  <DIV ALIGN="CENTER"> <B>Crossword Script by <A HREF="/">Emogic</A></B><BR>
 		</DIV>
 
 <div id='workspace'  ALIGN="CENTER">.</div>
-
-<textarea  ALIGN="CENTER">
-
-</textarea>
 
 </BODY>
 </HTML>

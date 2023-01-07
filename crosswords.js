@@ -46,18 +46,18 @@ var next_letter_position_on_board = [];
 
 var next_word_on_board = []; //next_word_on_board = [ [word_number , dir] , [] , ... ]
 //all words position on board used for cycling through word placements, etc
-// [{wordNumber => $wordNumber, dir => $dir},{},{}...]
+// [{wordNumber => word_number, dir => dir},{},{}...]
 //$nextWordOnBoard[]{wordNumber} $nextWordOnBoard[]{dir}
 
 //optimal search variables
-//var word_number_dir_used; //$word_number_dir_used{$wordNumber}{$dir} so we only backtrack or note words that have been filled
+//var word_number_dir_used; //word_number_dir_used{word_number}{dir} so we only backtrack or note words that have been filled
 var naive_backtrack = 0; //a counter
 var optimal_backtrack = 0; //a counter
 //var touchingWordsForBackTrack; //global as we need to backtrack to the first  member of it we encounter. if not == () we are in a backtrack state!
 var target_cells_for_letter_backtrack = {}; //global as we need to backtrack to the first  member of it we encounter. if $targetLettersForBackTrack{x failed letter}{y failed letter} == undef there are NO targets!
 //target_cells_for_letter_backtrack[x_y][xx_yy] = 1; //x_y is this cell and target _cells are stored in keys xx_yy!
 var target_words_for_word_backtrack = {}; //global as we need to backtrack to the first  member of it we encounter. if $target_words_for_word_backtrack{# source}{dir source} == undef there are NO targets!
-//eg $target_words_for_word_backtrack{$wordNumberSource}{$dirSource}{$crossingWordNumber}{$crossingWordDir}
+//eg $target_words_for_word_backtrack{word_numberSource}{dirSource}{$crossingWordNumber}{$crossingWordDir}
 var words_that_are_inserted = {};
 
 var forward_count = 0;
@@ -99,8 +99,6 @@ function main() {
 	if (!urlParams.has('wordfile')) {
 		setCellsFromCookies();
 		return;
-		//alert('Please call from main form.');
-		//throw new Error('done');
 	}
 
 	var arg_grid = urlParams.get('grid');
@@ -127,6 +125,14 @@ function main() {
 	if (arg_walkpath == 'diagonal') {
 		generateNextWordPositionsOnBoardDiag();
 	}
+	if (arg_walkpath == 'numerical') {
+		generateNextWordPositionsOnBoardNumerical();
+	}
+	if (arg_walkpath == 'acrossthendown') {
+		generateNextWordPositionsOnBoardAcrossThenDown();
+	}
+
+
 
 
 	//letter walks
@@ -139,6 +145,7 @@ function main() {
 	if (arg_walkpath == 'GenerateNextLetterPositionsOnBoardDiag') {
 		generateNextLetterPositionsOnBoardDiag();
 	}
+
 
 
 	// is simplewordmasksearch=on
@@ -243,10 +250,10 @@ function grid_getLetters(currentValue , y) {
  //gridToGlobalVars()
  //this does a lot of var setup
  //and also associate all squares with words and word # , get word lengths on grid ,
-//thisSquareBelongsToWordNumber[$xx][$yy][$dir]
-//positionInWord[$xx][$yy][$dir] = $PositionCount;
-//letterPositionsOfWord[$numberCount][$dir] = [TempLetterPositions];
-//all_masks_on_board[$numberCount][$dir] = $blankWord;
+//thisSquareBelongsToWordNumber[$xx][$yy][dir]
+//positionInWord[$xx][$yy][dir] = $PositionCount;
+//letterPositionsOfWord[$numberCount][dir] = [TempLetterPositions];
+//all_masks_on_board[$numberCount][dir] = $blankWord;
 var x;
 var y;
 var word_length;
@@ -272,7 +279,7 @@ var word_letter_positions_array = [];
 			 }
              was_there_an_across_word = 1;
 			 number_of_HV_words[dir]++; //used in recursiveWords()
-             //set letter_positions_of_word[$numberCount][$dir] = [TempLetterPositions];
+             //set letter_positions_of_word[$numberCount][dir] = [TempLetterPositions];
              if(typeof letter_positions_of_word[dir] === 'undefined' ){letter_positions_of_word[dir] = [];}
              letter_positions_of_word[dir][word_number] = JSON.parse(JSON.stringify(word_letter_positions_array)); //deep copy multi dim array
              //set all_masks_on_board[dir][word_number] = 'ooooooooo';
@@ -403,7 +410,7 @@ function generateNextWordPositionsOnBoardCrossing(){
 		//only add # and direction once!
 		//FIFO
 
-		//get my @WordLetterPositions = @{$letterPositionsOfWord[$wordNumber][$dir]}
+		//get my @WordLetterPositions = @{$letterPositionsOfWord[word_number][dir]}
 		//used to find crossing words fast with @ThisSquareBelongsToWordNumber
 		var already_in_list = {}; // already_in_list[number][direction] = 1 if already in list
 		already_in_list[dir_across] = {};
@@ -514,7 +521,6 @@ function generateNextWordPositionsOnBoardDiag() {
 	var divX = -1;
 	var divY = 1;
 	var diag_count = 0;
-	next_word_on_board = [];
 
 	do {
 		//process cursor position
@@ -546,7 +552,36 @@ function generateNextWordPositionsOnBoardDiag() {
 	while ((x != puzzle_width - 1) || (y != puzzle_height - 1));
 }
 
-function generateNextLetterPositionOnBoardZigzag(){ngcfhgfh
+function generateNextWordPositionsOnBoardNumerical() {
+	//create a sequential list in which we will lay down words. FIFO
+	//just go numerically 1 .. ??? alternating horiz / vert
+	for (var word_number = 1; word_number < 300; word_number++) { //loop through all word numbers even if they don't exist
+		for (var dir = 0; dir < 2; dir++) {
+			var word = all_masks_on_board[dir][word_number]; // get WORD or MASK at this crossword position
+			if (typeof word === 'undefined') {
+				continue;
+			}
+			next_word_on_board.push([dir, word_number]);
+		}
+	}
+}
+
+function generateNextWordPositionsOnBoardAcrossThenDown() {
+	//create a sequential list in which we will lay down words. FIFO
+	//just go numerically 1 .. ??? alternating all horiz then all vert
+
+	for (var dir = 0; dir < 2; dir++) {
+		for (var word_number = 1; word_number < 300; word_number++) { //loop through all word numbers even if they don't exist
+			var word = all_masks_on_board[dir][word_number]; // get WORD or MASK at this crossword position
+			if (typeof word === 'undefined') {
+				continue;
+			}
+			next_word_on_board.push([dir,word_number]);
+		}
+	}
+}
+
+function generateNextLetterPositionOnBoardZigzag(){
 		//create a top right to bottom left list in which we will lay down words. FIFO
 		//zigzag alternate top right to bottom left then bottom left to top right
 		var x = 1;
@@ -593,7 +628,6 @@ function generateNextLetterPositionOnBoardZigzag(){ngcfhgfh
 						next_letter_position_on_board.push([x,y]);
 				}
   } 	while( (x != puzzle_width - 1) || (y != puzzle_height - 1) );
-		h = 99;
 }
 
 function generateNextLetterPositionsOnBoardDiag(){
@@ -972,7 +1006,7 @@ function setXY(x, y, letter) {
 		all_masks_on_board[dir][word_number] = mask[dir];
 		//is it a full word?
 		/*
-		if (!mask[dir].includes(unoccupied)) { //if mask full word add to words_laid and also to $wordsThatAreInserted
+		if (!mask[dir].includes(unoccupied)) { //if mask full word add to words_laid and also to wordsThatAreInserted
 			//words_that_are_inserted[mask[dir]] = 1;
 			if (typeof words_laid === 'undefined') {
 				words_laid = [];
@@ -1280,7 +1314,7 @@ var pattern =  new RegExp( unoccupied , 'g');
 //mask = mask.replace(pattern , '.'); //make a mask of 'GO$unoccupiedT' into 'GO.T' for the regexp
 mask = mask.replace(pattern , '\\w'); //make a mask of 'GO$unoccupiedT' into 'GO.T' for the regexp
 
-//need to filter out $wordsThatAreInserted{$popWord} == 1 below if ( $wordsThatAreInserted{$popWord} == 1 )
+//need to filter out wordsThatAreInserted{$popWord} == 1 below if ( wordsThatAreInserted{$popWord} == 1 )
 //note that we need to return an empty list if the word is already inserted see:  else {()} If we do not, the map will return an empty word in the middle of the list which will pooch our code later.
 
 pattern =  new RegExp(`${mask}`, 'g'); // /${mask}/g;
@@ -1362,7 +1396,7 @@ var letters = {};
 var letter;
 
 words.forEach(function(word){
-	//if(word.length <= nth ) {die("@words $count word $word of length  too short nth $nth")}
+	//if(word.length <= nth ) {die("@words $count word word of length  too short nth $nth")}
 	letter = word.charAt(nTh);
 	letters[letter] = 1; //no duplicates so associative array
 	});
@@ -1400,9 +1434,9 @@ for(var i = 0 ; i < letter_lists.length ; i++){ //for each letter's position
         regexp_string = regexp_string + '[' + letter_list.join('') + ']'; //regexp_string will be /[ABC][HGR][OHR]..../
 }
 
-// ($wordsOfLengthString[$wordLength] =~ /$regexpstring/g) returns all possible words
+// (wordsOfLengthString[wordLength] =~ /$regexpstring/g) returns all possible words
 //look for words already used and ignore using map!
-//@possibleWords = map( { if ( $wordsThatAreInserted{$_} == 0 ) {$_} else {()} }   ($wordsOfLengthString[$wordLength] =~ /$regexpstring/g) );
+//@possibleWords = map( { if ( wordsThatAreInserted{$_} == 0 ) {$_} else {()} }   (wordsOfLengthString[wordLength] =~ /$regexpstring/g) );
 //return @possibleWords; # speed up by direct output!
 var pattern =  new RegExp(`${regexp_string}`, 'g');
 var possible_words_array = words_of_length_string[word_length].match(pattern);
@@ -1497,6 +1531,7 @@ temp += "</table>\n";
 return temp;
 }
 
+var console_log_count = 0;
 function printProcessing() {
 //my $message = $_[0];
 var x , y;
@@ -1545,6 +1580,11 @@ string += "</pre>";
 
 document.getElementById('workspace').innerHTML = string;
 console.log(string);
+console_log_count++;
+if(console_log_count > 10000){
+	console.clear();
+	console_log_count = 0;
+	} //if we don't it can blank out completely
 
 //setTimeout( printProcessing , 1000);
 }
@@ -1574,7 +1614,7 @@ function printPuzzle(){
                 if (typeof word !== 'undefined'){
                   if (dir == dir_across) {direction = 'Across';}
                   if (dir == dir_down) {direction = 'Down';}
-                  //temp3 += "direction: $clues{$word} \n";
+                  //temp3 += "direction: $clues{word} \n";
                   //temp3 =~ s/[\'\"]//g; //remove quotes from title s it is in a tag
                 }
             }
