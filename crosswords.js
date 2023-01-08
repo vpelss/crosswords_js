@@ -148,6 +148,9 @@ if (arg_walkpath == 'random') {
 	if (arg_walkpath == 'GenerateNextLetterPositionsOnBoardSwitchWalk') {
 		generateNextLetterPositionsOnBoardSwitchWalk();
 	}
+if (arg_walkpath == 'GenerateNextLetterPositionsOnBoardSnakeWalk') {
+		generateNextLetterPositionsOnBoardSnakeWalk();
+	}
 
 	// is simplewordmasksearch=on
 	 arg_simplewordmasksearch = urlParams.get('simplewordmasksearch');
@@ -713,7 +716,51 @@ function generateNextLetterPositionsOnBoardSwitchWalk() {
 		y = y + dir;
 	}
 	while ((x + y + 2) <= (puzzle_height + puzzle_width));
-	kk = 9;
+}
+
+function generateNextLetterPositionsOnBoardSnakeWalk() {
+	//create a top right to bottom left list in which we will lay down words. FIFO
+	var dx = 1;
+	var dy = 0;
+	var walk_length = 2;
+	//var walk_step;
+	var x = 0;
+	var y = 1;
+counter = 1;
+next_letter_position_on_board = [
+		[0, 0],
+		[1, 0]
+	];
+
+	if (puzzle_height != puzzle_width) {
+		throw new Error("The grid is not square. Snake walk failed.");
+	}
+
+		while(1) {
+			counter++;
+			for (var dir = 0; dir < 2; dir++) {
+				for (var walk_step = 1; walk_step <= walk_length; walk_step++) {
+					if (puzzle[y][x] != pad_char) {
+						next_letter_position_on_board.push([x, y]);
+						x = x + dx;
+						y = y + dy;
+					}
+				}
+				if(walk_length == puzzle_height){
+					return true;
+				}
+				dx = 1 - dx; //change dir
+				dy = 1 - dy;
+				x = counter;
+				y = 0;
+			}
+			x = 0;
+			y = counter;
+			walk_length++;
+		}
+		 //while (walk_length < puzzle_height);
+
+	h = 9;
 }
 
 function getCrossingWords(dir , word_number) {
@@ -880,7 +927,8 @@ function recursiveLetters() {
 	if (arg_shuffle) {
 		letters_that_fit = shuffle(lettersPossibleAtCell(x, y));
 	} else {
-		letters_that_fit = lettersPossibleAtCell(x, y).sort();
+		//letters_that_fit = lettersPossibleAtCell(x, y).sort();
+		letters_that_fit = lettersPossibleAtCell(x, y);
 	}
 
 	while (success == 0) {
@@ -956,13 +1004,19 @@ function lettersPossibleAtCell(x, y) {
 		} //no word here
 		word_number = this_square_belongs_to_word_number[dir][y][x];
 		mask[dir] = all_masks_on_board[dir][word_number];
+
 		if(typeof linear_word_search[ mask[dir] ] === 'undefined'){//cases where the mask is not linear or word does not exist. if walk is well designed, this should not occur. If it does, puzzle will never complete
 			throw new Error("Illegal mask when it should be a linear word search. Probably and incompatible letter walk.");
-			//possible_letters_HV[dir] = [];
 		}
 		else{
 			possible_letters_HV[dir] = Object.keys(linear_word_search[ mask[dir] ]);
 		}
+	//OR using full word code it is half as fast
+	/*
+	var words = wordsFromMask(mask[dir]);
+	var nTh = position_in_word[dir][y][x];
+	possible_letters_HV[dir] = nThLettersFromListOfWords(nTh , words);
+*/
 	}
 
 	if (possible_letters_HV[0].length && possible_letters_HV[1].length) { //intersect horiz and vert letters
