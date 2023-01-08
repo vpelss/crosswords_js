@@ -5,6 +5,10 @@
 
 //is promise async?
 
+//on HTML page only no get....
+
+//redo clue script!!!
+
 //"use strict";
 
 var start_time;
@@ -14,18 +18,14 @@ var pad_char = 'x';
 var unoccupied = 'o';
 var pads_either_side = 'padsEitherSide';
 
-//puzzle will be accessed a lot if using letter searches! but js arrays and associative arrays are comparable ONLY if the key is a simple integer
-//{} object will be easier to read in code puzzle[x][y] but is really hard to decipher when looking at the object itself
-//[] arrays you will have to start with puzzle[y][x] or make code more complex (not by much) to create array first, OR convert puzzle[y][x] to puzzle[x][y]
-//I think the ease of visualizing [] internally for troubleshooting is the better option.
 var puzzle = []; // puzzle[y][x] = 'the_letter'
 var puzzle_width;
 var puzzle_height;
 const dir_across = 0;
 const dir_down = 1;
 var word_lengths = {}; //wordLengths[wordLength] = 1 ; so we have a list of word sizes = object.keys(wordLengths);
-var words_of_length = {}; //a count of the number of words of length x : words_of_length[x]
-var words_of_length_string = {}; // ,word1,word2, etc
+//var words_of_length = {}; //a count of the number of words of length x : words_of_length[x]
+var words_of_length_string = ''; // ,word1,word2, etc
 var linear_word_search = {}; // linear_word_search[WORo] = next letter : next_letters = Object.keys(linear_word_search[ mask ]);
 
 //key orders should be [dir][yy][xx] for less typeof calls and for readability when troubleshooting !!!
@@ -163,7 +163,7 @@ if (arg_walkpath == 'GenerateNextLetterPositionsOnBoardSnakeWalk') {
 	printProcessing();
 
 	if (mode == 'word') {
-		recursiveWords2();
+		recursiveWords();
 	} else {
 		recursiveLetters();
 	}
@@ -380,12 +380,11 @@ function loadWordList(arg_wordfile) {
 			word_list_array.pop();
 		} //remove last line if empty
 
-		words_of_length[word_length] = word_list_array.length;
 		//process word_list_array
 		words_of_length_string[word_length] = ''; //start blank
 		word_list_array.forEach(function(word) {
 
-			//if (mode == 'letter') { //letter walk
+			//build linear_word_search for most letter searches
 				var mask_pre = '';
 				var mask = '';
 				var letters_array = word.split('');
@@ -396,12 +395,10 @@ function loadWordList(arg_wordfile) {
 					} //create on first access
 					linear_word_search[mask][letter] = 1; //letter list will be accessible by object.keys()
 					mask_pre += letter;
-
 				});
-			//} else { //word walk
-				words_of_length_string[word_length] = words_of_length_string[word_length] + ',' + word.toUpperCase();
-			//}
 
+			//create words_of_length_string strings for word searches. It is also used to verify letter searches, isWordAlreadyUsed, etc...
+				words_of_length_string[word_length] = words_of_length_string[word_length] + ',' + word.toUpperCase();
 		});
 	});
 	word_list_text = ''; //cleanup
@@ -927,8 +924,8 @@ function recursiveLetters() {
 	if (arg_shuffle) {
 		letters_that_fit = shuffle(lettersPossibleAtCell(x, y));
 	} else {
-		//letters_that_fit = lettersPossibleAtCell(x, y).sort();
-		letters_that_fit = lettersPossibleAtCell(x, y);
+		letters_that_fit = lettersPossibleAtCell(x, y).sort();
+		//letters_that_fit = lettersPossibleAtCell(x, y);
 	}
 
 	while (success == 0) {
@@ -949,7 +946,7 @@ function recursiveLetters() {
 		}
 
 		//try the next letter that fit in this location
-		popped_letter = letters_that_fit.pop();
+		popped_letter = letters_that_fit.shift();
 
 		words_that_were_laid = setXY(x , y , popped_letter); //lay a letter and save any horiz or vert words that were laid
 		if (! words_that_were_laid) { //if words_that_were_laid = false, a horizontal or vertical word was already been laid/used in the puzzle. so backtrack
@@ -1158,120 +1155,12 @@ function isWordAlreadyUsed(mask) {
 	}
 }
 
-var word_backtrack_source; //set to () to stop backtrack and set for backtrack $letterBackTrackSource{x} and  $letterBackTrackSource{y}
-//var words_that_must_be_laid; // true, false , or list of words that MUST be laid if we continue.
-//it be added to by wordsFromLetterLists for unique words used in and placeMaskOnBoard to see if word(s) have already been used
-function recursiveWords() {
-	//recursive try to lay down words using @nextWordOnBoard, will shift off, store and unshift if required
-	//store locally the possible words in  @possibleLetterLists
-	//in just the next index in a list (@NextWordPositionsOnBoard) of word position we are trying to fill
-
-	if(next_word_on_board.length == 0){
-		return true;
-	}
-	//alternate done....?
-	if (Object.keys(words_that_are_inserted).length == (number_of_HV_words[dir_across] + number_of_HV_words[dir_down]) ) {
-		k=9;//return true;
-	} //if we have filled all the possible words, we are done. This breaks us out of all recursive  success loops
-
-	var words_that_fit;
-	var popped_word;
-	word_backtrack_source = undefined; //clear global indicating that we are moving forward and have cleared the backtrack state
-	var word_position = next_word_on_board.shift(); //keep in subroutine unchanged as we may need to unshift on a recursive return
-	var dir = word_position[0];
-	var word_number = word_position[1];
-	var d_w = '' + dir + '_' + word_number;
-
-	recursive_count++;
-	printProcessing();
-
-	//get all possible words for mask
-	var mask = all_masks_on_board[dir][word_number]; // get WORD or MASK at this crossword position
-	if (arg_simplewordmasksearch) {
-		//simple one. 0.0002 sec a call.  better for less cross links?
-		//ignore crossing words as future mask checks will find the failures/errors. not true for some walks as there msay be no crossword checking!
-		//it will only work well with alternating across and down checks
-		if (arg_shuffle) {
-			words_that_fit = shuffle(wordsFromMask(mask));
-		} else {
-			words_that_fit = shuffle(wordsFromMask(mask)).sort();
-		}
-	} else {
-		//complex one 0.05 sec a call. better for more crosslinks?
-		var possibleLetterLists = letterListsFor(dir, word_number);
-		if (arg_shuffle) {
-			words_that_fit = shuffle(wordsFromLetterLists(possibleLetterLists));
-		} else {
-			words_that_fit = shuffle(wordsFromLetterLists(possibleLetterLists)).sort();
-		}
-	}
-
-	var success = 0;
-	while (success == 0) {
-		//if(mask != popped_word){//go forward to recursiveWord as this word was laid and is ok mask == popped_word
-			if (words_that_fit.length == 0) { //are there any possible words? If no backtrack
-				next_word_on_board.unshift(word_position);
-				if (arg_optimalbacktrack) {
-					if (typeof word_backtrack_source === 'undefined') { //only set for optimal if we are not already in an optimal backtrack mode
-						//d_w = '' + dir + '_' + word_number;
-						if (typeof target_words_for_word_backtrack[d_w] !== 'undefined') { //check to see if there are any backtrack targets possible for dir word_number first
-							word_backtrack_source = d_w; //set source/start cell for optimal bactracking
-						}
-					}
-				}
-				naive_backtrack++; //really should be called all_backtracks
-				return false;
-			} //no words so fail
-
-			//try the next word that fit in this location
-			popped_word = words_that_fit.pop();
-
-		if (arg_simplewordmasksearch) {//simple
-			var xwords_ok = letterListsFor(dir , word_number); //if xwords are ok, then we should not get []
-			if(xwords_ok.length != 0){ //all crosswords are ok, so try next recursive word.
-				placeMaskOnBoard(dir, word_number, popped_word);
-				success = recursiveWords(); //lay next word in the next position
-			}
-			else{}//just loop to try next_possible_word
-		}
-		else{//complex
-			placeMaskOnBoard(dir, word_number, popped_word);
-			success = recursiveWords(); //lay next word in the next position
-		}
-
-		//success = recursiveWords(); //lay next word in the next position
-		if (success == true) {
-			return true;
-		} //board is filled, return out of all recursive calls successfuly
-		//-------------------------------------------------------------------------------
-		//if we are here, the last recursive attempt to lay a word failed.
-		//OR
-		//the last simple search word will fail based on all crossing words
-		//OR
-		//we are in an optimal backtrack run
-		//So we are backtracking.
-
-		placeMaskOnBoard(dir, word_number, mask); //failed so reset word to previous mask
-
-		//exclusively optimal backtrack check and processing
-		if (typeof word_backtrack_source !== 'undefined') { //we are doing an optimal backtrack
-			//d_w2 = '' + dir + '_' + word_number;
-			if (target_words_for_word_backtrack[word_backtrack_source][d_w]) { //we have hit the first optimal backtrack target.
-				word_backtrack_source = undefined; //turn off optimal backtrack
-			}
-			else { //we did not find optimal backtrack target yet
-				next_word_on_board.unshift(word_position); //always unshift our current position back on to @nextLetterPositionsOnBoard when we return!
-				optimal_backtrack++;
-				return false; //go back one to see if it is optimal backtrack target
-			}
-		}
-	} //end while loop
-document.alert('Error: Recursive, we should never get here.');
-//return true;
-}
-
+var word_backtrack_source; //set to [] to stop optimal backtrack and set for optimal backtrack word_backtrack_source[dir][word_number]
 var try_another_word_loop = 0;
-function recursiveWords2() {
+//simple vs complex search
+//complex: for a word spot, based on the word mask, it checks all crossing words and picks possible words that satisfies ALL the crossing words
+//simple: for a word spot, it simply picks possible words based on the word mask. Then it tests each word against the crossing words to see if it will fit.
+function recursiveWords() {
 	//recursive try to lay down words using @nextWordOnBoard, will shift off, store and unshift if required
 	//store locally the possible words in  @possibleLetterLists
 	//in just the next index in a list (@NextWordPositionsOnBoard) of word position we are trying to fill
@@ -1283,6 +1172,7 @@ function recursiveWords2() {
 		k = 9; //return true;
 	} //if we have filled all the possible words, we are done. This breaks us out of all recursive  success loops
 
+	var possibleLetterLists;
 	var words_that_fit;
 	var popped_word;
 	word_backtrack_source = undefined; //clear global indicating that we are moving forward and have cleared the backtrack state
@@ -1303,15 +1193,17 @@ function recursiveWords2() {
 		if (arg_shuffle) {
 			words_that_fit = shuffle(wordsFromMask(mask));
 		} else {
-			words_that_fit = shuffle(wordsFromMask(mask)).sort();
+			//words_that_fit = shuffle(wordsFromMask(mask)).sort();
+			words_that_fit = wordsFromMask(mask);
 		}
 	} else {
 		//complex one 0.05 sec a call. better for more crosslinks?
-		var possibleLetterLists = letterListsFor(dir, word_number);
+		possibleLetterLists = letterListsFor(dir, word_number);
 		if (arg_shuffle) {
 			words_that_fit = shuffle(wordsFromLetterLists(possibleLetterLists));
 		} else {
-			words_that_fit = shuffle(wordsFromLetterLists(possibleLetterLists)).sort();
+			//words_that_fit = shuffle(wordsFromLetterLists(possibleLetterLists)).sort();
+			words_that_fit = wordsFromLetterLists(possibleLetterLists);
 		}
 	}
 
@@ -1357,43 +1249,46 @@ function recursiveWords2() {
 		//word_backtrack_source = undefined; //turn off optimal backtrack
 
 		//try the next word that fit in this location
-		popped_word = words_that_fit.pop();
+		popped_word = words_that_fit.shift();
 
 		//tests on what to do with popped_word. order is important
-		var xwords_ok = false; //assume
-		//arg_simplewordmasksearch stare we want to check if all crossing words are ok, or not
-		if(arg_simplewordmasksearch){
-			xwords_ok = letterListsFor(dir, word_number); //if xwords are ok, then we should not get []
-			if(xwords_ok){
-				if (words_that_are_inserted[popped_word]){
-						if (mask == popped_word) {//it is the word we are checking. don't worry about it
-							success = recursiveWords2();
-						}
-						else{//the word is placed elsewhere. worry about it
-							//loop
-						}
+		//var xwords_ok = []; //assume
+		//arg_simplewordmasksearch state: we want to check if all crossing words are ok, or not
+		if (arg_simplewordmasksearch) {
+
+			if (words_that_are_inserted[popped_word]) {
+				if (mask == popped_word) { //it is the word we are checking. don't worry about it
+					success = recursiveWords();
+				} else { //the word is placed elsewhere. worry about it
+					//loop
 				}
-				else{
-					placeMaskOnBoard(dir, word_number, popped_word);
-					success = recursiveWords2();
-				}
-			}
-			else{//crossing words do not fit
-				//loop
-			}
-		}
-		else{//complex
-			if (words_that_are_inserted[popped_word]){
-					if (mask == popped_word) {//it is the word we are checking. don't worry about it
-						success = recursiveWords2();
-					}
-					else{//the word is placed elsewhere. worry about it
-						//loop
-					}
-			}
-			else{
+			} else {
 				placeMaskOnBoard(dir, word_number, popped_word);
-				success = recursiveWords2();
+				//quickly see if crossing words fail. if so, backtrack
+				var set_to_win = true;
+				var crossing_positions = letter_positions_of_word[dir][word_number];
+				crossing_positions.forEach(function(letter_postion) {
+					let word_number = this_square_belongs_to_word_number[1 - dir][y][x];
+					let mask = all_masks_on_board[1 - dir][word_number];
+					let words_that_fit = wordsFromMask(mask);
+					if (words_that_fit.length == 0) {
+						set_to_win = false;
+					}
+				});
+				if (set_to_win) {
+					success = recursiveWords();
+				}
+			}
+		} else { //complex
+			if (words_that_are_inserted[popped_word]) {
+				if (mask == popped_word) { //it is the word we are checking. don't worry about it
+					success = recursiveWords();
+				} else { //the word is placed elsewhere. worry about it
+					//loop
+				}
+			} else {
+				placeMaskOnBoard(dir, word_number, popped_word);
+				success = recursiveWords();
 			}
 		}
 

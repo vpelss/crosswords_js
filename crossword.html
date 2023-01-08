@@ -93,7 +93,7 @@ $( "#dialog-message" ).dialog( "option", "width", 800 );
    <script>var giddy_up = `<h3>Starting puzzle generation.
 		It may take several minutes, or many, depending on your choices. This browser tab may be unresponsive as Javascript is preforming many recursive calls.</h3>`</script>
 		<FORM>
-   <INPUT TYPE="BUTTON" NAME="Button1" VALUE="START PUZZLE GENERATION" ONCLICK="setTimeout(main,1000);	document.getElementById('puzzle_place').innerHTML = giddy_up;">
+   <INPUT TYPE="BUTTON" NAME="Button1" VALUE="START PUZZLE GENERATION" ONCLICK="setTimeout(main,1000); document.getElementById('puzzle_place').innerHTML = giddy_up;">
   </FORM>
   </DIV>
 
@@ -103,11 +103,12 @@ $( "#dialog-message" ).dialog( "option", "width", 800 );
 			 <TD> </TD>
 		  </TR>
 		</TABLE></DIV>
+
 	 <DIV ALIGN="CENTER">
 		<TABLE CELLPADDING="3" CELLSPACING="0">
 		  <TR VALIGN="TOP">
-			 <TD VALIGN="TOP">Across:<HR> <div id='across'><%across%></div></TD>
-			 <TD VALIGN="TOP"> Down:<HR> <div id='down'><%down%></div></TD>
+			 <TD VALIGN="TOP">Across:<HR> <div id='across'>  </div></TD>
+			 <TD VALIGN="TOP"> Down:<HR> <div id='down'>  </div></TD>
 		  </TR>
 		</TABLE></DIV>
 
@@ -117,12 +118,6 @@ $( "#dialog-message" ).dialog( "option", "width", 800 );
 
 		<DIV ID="Answers" ALIGN="CENTER"></DIV>
 
-	 <P></P>
-
-		 <DIV ALIGN="CENTER">
-		<FORM><INPUT TYPE="BUTTON" NAME="Button1"
-		  VALUE="Clear Crossword"
-		  ONCLICK="if(confirm('Are you sure you want to clear this crossword?')){DeleteCookies();location.reload();}"></FORM></DIV>
 	 <P></P>
 
  <DIV ALIGN="CENTER"> <B>Crossword Script by <A HREF="/">Emogic</A></B><BR>
