@@ -12,63 +12,40 @@
 //"use strict";
 
 var start_time;
-var recursive_count = 0;
-
-var pad_char = 'x';
-var unoccupied = 'o';
-var pads_either_side = 'padsEitherSide';
-
 var puzzle = []; // puzzle[y][x] = 'the_letter'
 var puzzle_width;
 var puzzle_height;
+var pad_char = 'x';
+var unoccupied = 'o';
 const dir_across = 0;
 const dir_down = 1;
-var word_lengths = {}; //wordLengths[wordLength] = 1 ; so we have a list of word sizes = object.keys(wordLengths);
-//var words_of_length = {}; //a count of the number of words of length x : words_of_length[x]
-var words_of_length_string = ''; // ,word1,word2, etc
-var linear_word_search = {}; // linear_word_search[WORo] = next letter : next_letters = Object.keys(linear_word_search[ mask ]);
-
-//key orders should be [dir][yy][xx] for less typeof calls and for readability when troubleshooting !!!
-var letter_positions_of_word = []; //letter_positions_of_word[dir][word_number] returns [ ofLetterPositions ];
-var position_in_word = []; //position_in_word[dir][yy][xx] = position_count
-
-var this_square_belongs_to_word_number = []; //this_square_belongs_to_word_number[dir][yy][xx]
-
-var all_masks_on_board = []; //all_masks_on_board[dir][word_number] returns the letters that have been laid down including unoccupied. eg: XoLoooo
-
-//var walkpath = '';
-var mode = ''; //letter or word
-
-var next_letter_position_on_board = [];
-// all letter position on board used for cycling through letter placements, etc
-// [{x => x, y => y} , , ]
-// next_letter_position_on_board[]{x} NextWordPositionsOnBoard[]{y}
-
-var next_word_on_board = []; //next_word_on_board = [ [word_number , dir] , [] , ... ]
-//all words position on board used for cycling through word placements, etc
-// [{wordNumber => word_number, dir => dir},{},{}...]
-//$nextWordOnBoard[]{wordNumber} $nextWordOnBoard[]{dir}
-
+var word_lengths = {}; //wordLengths[wordLength] = 1 ; list of word sizes stored in objects keys
+var words_of_length_string = {}; // words_of_length_string[word_length] = ",word1,word2, etc"
+var linear_word_search = {}; // quickly get next possible letters from a mask 'WOooo' : next_letters = Object.keys(linear_word_search[ mask ]);
+// key/array order should normally be [dir][yy][xx] for less typeof calls and for readability when troubleshooting!
+//exceptions are normally [x , y] arrays, or similar
+var letter_positions_of_word = []; //letter_positions_of_word[dir][word_number] returns [ [x0,y0] , [x1,y1] , ... ];
+var position_in_word = []; //position_in_word[dir][yy][xx] = 0, 1, 2, 3...
+var this_square_belongs_to_word_number = []; //this_square_belongs_to_word_number[dir][yy][xx] = 1, 2, 3...
+var all_masks_on_board = []; //all_masks_on_board[dir][word_number] returns the letters that have been laid down for a word including unoccupied letters. eg: XoLoooo
+var mode = ''; //search/walk letter or word
+var next_letter_position_on_board = []; //the letter walk [[x0,y0] , [x1,y1] ...]
+var next_word_on_board = []; //the word walk [ [word_number , dir] , [] , ... ]
 //optimal search variables
-//var word_number_dir_used; //word_number_dir_used{word_number}{dir} so we only backtrack or note words that have been filled
+var recursive_count = 0;
 var naive_backtrack = 0; //a counter
 var optimal_backtrack = 0; //a counter
-//var touchingWordsForBackTrack; //global as we need to backtrack to the first  member of it we encounter. if not == () we are in a backtrack state!
+var letter_backtrack_source; //set to [] to stop an OPTIMAL backtrack and set to [x,y] to start  OPTIMAL backtrack
 var target_cells_for_letter_backtrack = {}; //global as we need to backtrack to the first  member of it we encounter. if $targetLettersForBackTrack{x failed letter}{y failed letter} == undef there are NO targets!
-//target_cells_for_letter_backtrack[x_y][xx_yy] = 1; //x_y is this cell and target _cells are stored in keys xx_yy!
+//eg: for cell x,y there is a backtrack cell xx,yy (there may be others) target_cells_for_letter_backtrack['x_y']['xx_yy'] = 1;
+//x_y is this cell and possible target cells are stored in keys xx_yy!
+var word_backtrack_source; //set to [] to stop an OPTIMAL backtrack and set to [dir,word_number] to start an OPTIMAL backtrack
 var target_words_for_word_backtrack = {}; //global as we need to backtrack to the first  member of it we encounter. if $target_words_for_word_backtrack{# source}{dir source} == undef there are NO targets!
-//eg $target_words_for_word_backtrack{word_numberSource}{dirSource}{$crossingWordNumber}{$crossingWordDir}
-var words_that_are_inserted = {};
+//eg: for word dir,word_number there is a backtrack word dir1,word_number1 (there may be others) target_words_for_word_backtrack['dir_word_number']['dir1_word_number1'] = 1;
+//dir_word_number is this word and possible target words are stored in keys dir1_word_number1
+var words_that_are_inserted = {}; //keep track of words successfully laid on puzzle so we don't lay duplicate words
 
-var forward_count = 0;
-//var naive_count = 0;
-
-var number_of_HV_words = []; //used in to test completion of recursiveWords()
-number_of_HV_words[0] = 0;
-number_of_HV_words[1] = 0;
-//var clues = {};
-
-//nav vars
+//html navigation vars
 var startx ; //based on word #1 across or down
 var starty ;
 var LetterPosArray;
@@ -282,8 +259,7 @@ var word_letter_positions_array = [];
 				word_number++;
 			 }
              was_there_an_across_word = 1;
-			 number_of_HV_words[dir]++; //used in recursiveWords()
-             //set letter_positions_of_word[$numberCount][dir] = [TempLetterPositions];
+	            //set letter_positions_of_word[$numberCount][dir] = [TempLetterPositions];
              if(typeof letter_positions_of_word[dir] === 'undefined' ){letter_positions_of_word[dir] = [];}
              letter_positions_of_word[dir][word_number] = JSON.parse(JSON.stringify(word_letter_positions_array)); //deep copy multi dim array
              //set all_masks_on_board[dir][word_number] = 'ooooooooo';
@@ -385,44 +361,39 @@ function loadWordList(arg_wordfile) {
 		word_list_array.forEach(function(word) {
 
 			//build linear_word_search for most letter searches
-				var mask_pre = '';
-				var mask = '';
-				var letters_array = word.split('');
-				letters_array.forEach(function( letter ) {
-					mask = mask_pre.padEnd(word_length, unoccupied);
-					if (typeof linear_word_search[mask] == 'undefined') {
-						linear_word_search[mask] = {};
-					} //create on first access
-					linear_word_search[mask][letter] = 1; //letter list will be accessible by object.keys()
-					mask_pre += letter;
-				});
+			var mask_pre = '';
+			var mask = '';
+			var letters_array = word.split('');
+			letters_array.forEach(function(letter) {
+				mask = mask_pre.padEnd(word_length, unoccupied);
+				if (typeof linear_word_search[mask] == 'undefined') {
+					linear_word_search[mask] = {};
+				} //create on first access
+				linear_word_search[mask][letter] = 1; //letter list will be accessible by object.keys()
+				mask_pre += letter;
+			});
 
 			//create words_of_length_string strings for word searches. It is also used to verify letter searches, isWordAlreadyUsed, etc...
-				words_of_length_string[word_length] = words_of_length_string[word_length] + ',' + word.toUpperCase();
+			words_of_length_string[word_length] = words_of_length_string[word_length] + ',' + word.toUpperCase();
 		});
 	});
 	word_list_text = ''; //cleanup
 }
 
 function generateNextWordPositionsOnBoardCrossing(){
-		//start with 1 horiz.
-		//find all crossing words
-		//find all their crossing words.
-		//only add # and direction once!
-		//FIFO
+		//start with 1 horiz. find all crossing words find all their crossing words. add word # and direction only once
 
 		//get my @WordLetterPositions = @{$letterPositionsOfWord[word_number][dir]}
 		//used to find crossing words fast with @ThisSquareBelongsToWordNumber
-		var already_in_list = {}; // already_in_list[number][direction] = 1 if already in list
+		var already_in_list = {}; // already_in_list[direction][number] = 1 if [direction][number] already in list
 		already_in_list[dir_across] = {};
 		already_in_list[dir_down] = {};
 		var word_number = 1;
-		var dir = 0;
+		var dir = dir_down;
 
 		if (typeof all_masks_on_board[dir][word_number] === 'undefined' ) {dir = dir_vert;}// no horizontal #1 word. go vertical
 		var to_do_list = []; //list of words and directions to process. ((1,0) , (2,0) , .... ) shift off and push on so we do in an orderly fasion!
 		to_do_list.push( [dir , word_number] );
-		//if(typeof already_in_list[dir] === 'undefined'){already_in_list[dir] = {};}
 		already_in_list[dir][word_number] = 1;
 		next_word_on_board.push( [dir, word_number] );
 		while ( to_do_list.length > 0 ){
@@ -430,7 +401,6 @@ function generateNextWordPositionsOnBoardCrossing(){
 					var crossing_words = getCrossingWords(dir , word_number);
 					while ( crossing_words.length > 0 ){
 							[dir , word_number] = crossing_words.shift();
-							//if(typeof already_in_list[dir] === 'undefined'){already_in_list[dir] = {};}
 							if (typeof already_in_list[dir][word_number] !== 'undefined'){
 								continue;
 							}//already added. skip
@@ -443,8 +413,7 @@ function generateNextWordPositionsOnBoardCrossing(){
 }
 
 function generateNextWordPositionsOnBoardZigZag() {
-	//create a top right to bottom left list in which we will lay down words. FIFO
-	//zigzag alternate top right to bottom left then botom left to top right
+	//start at 0,0 , moving diag top right to bottom left then alternate bottom left to top right, etc
 	var x = 0;
 	var y = 0;
 	var divX = -1;
@@ -513,7 +482,7 @@ function generateNextWordPositionsOnBoardZigZag() {
 }
 
 function generateNextWordPositionsOnBoardDiag() {
-	//create a top right to bottom left list in which we will lay down words. FIFO
+	//start at 0,0 , moving diag top right to bottom left then top right to bottom left, etc
 	var x = 0;
 	var y = 0;
 	var divX = -1;
@@ -552,8 +521,7 @@ function generateNextWordPositionsOnBoardDiag() {
 }
 
 function generateNextWordPositionsOnBoardNumerical() {
-	//create a sequential list in which we will lay down words. FIFO
-	//just go numerically 1 .. ??? alternating horiz / vert
+	//increase numerically alternating horiz and vert
 	for (var word_number = 1; word_number < 300; word_number++) { //loop through all word numbers even if they don't exist
 		for (var dir = 0; dir < 2; dir++) {
 			var word = all_masks_on_board[dir][word_number]; // get WORD or MASK at this crossword position
@@ -566,9 +534,7 @@ function generateNextWordPositionsOnBoardNumerical() {
 }
 
 function generateNextWordPositionsOnBoardAcrossThenDown() {
-	//create a sequential list in which we will lay down words. FIFO
-	//just go numerically 1 .. ??? alternating all horiz then all vert
-
+	//do all horiz words then all vert words
 	for (var dir = 0; dir < 2; dir++) {
 		for (var word_number = 1; word_number < 300; word_number++) { //loop through all word numbers even if they don't exist
 			var word = all_masks_on_board[dir][word_number]; // get WORD or MASK at this crossword position
@@ -581,15 +547,13 @@ function generateNextWordPositionsOnBoardAcrossThenDown() {
 }
 
 function generateNextWordPositionsOnBoardRandom() {
-	//create a sequential list in which we will lay down words. FIFO
-	//just go numerically 1 .. ??? alternating horiz / vert
+	//random order
 	generateNextWordPositionsOnBoardCrossing();
 	next_word_on_board = shuffle(next_word_on_board);
 }
 
 function generateNextLetterPositionOnBoardZigzag(){
-		//create a top right to bottom left list in which we will lay down words. FIFO
-		//zigzag alternate top right to bottom left then bottom left to top right
+	//start at 0,0 , moving diag top right to bottom left then alternate bottom left to top right, etc
 		var x = 1;
 		var y = -1;
 		var divX = -1;
@@ -637,7 +601,7 @@ function generateNextLetterPositionOnBoardZigzag(){
 }
 
 function generateNextLetterPositionsOnBoardDiag() {
-	//create a top right to bottom left list in which we will lay down words. FIFO
+	//start at 0,0 , moving diag top right to bottom left then top right to bottom left, etc
 	var x = 0;
 	var y = 0;
 	var divX = -1;
@@ -646,7 +610,7 @@ function generateNextLetterPositionsOnBoardDiag() {
 	var x_start = 0;
 	var y_start = 0;
 
-	do { //move cursor
+	do {
 		//process cursor position
 		if (puzzle[y][x] != pad_char) {
 				next_letter_position_on_board.push([x, y]);
@@ -671,7 +635,7 @@ function generateNextLetterPositionsOnBoardDiag() {
 }
 
 function generateNextLetterPositionOnBoardFlat(){
-//create right to left top to bottom list in which we will lay down words. FIFO
+//all first row, then second, etc
 		var x = 0;
 		var y = 0;
 
@@ -686,7 +650,7 @@ function generateNextLetterPositionOnBoardFlat(){
 }
 
 function generateNextLetterPositionsOnBoardSwitchWalk() {
-	//create a top right to bottom left list in which we will lay down words. FIFO
+	//see thesis.cambon.dk.pdf on github
 	var x = 0;
 	var y = 0;
 	var xx = 0; //last starting run
@@ -716,7 +680,7 @@ function generateNextLetterPositionsOnBoardSwitchWalk() {
 }
 
 function generateNextLetterPositionsOnBoardSnakeWalk() {
-	//create a top right to bottom left list in which we will lay down words. FIFO
+	//see thesis.cambon.dk.pdf on github
 	var dx = 1;
 	var dy = 0;
 	var walk_length = 2;
@@ -755,9 +719,6 @@ next_letter_position_on_board = [
 			y = counter;
 			walk_length++;
 		}
-		 //while (walk_length < puzzle_height);
-
-	h = 9;
 }
 
 function getCrossingWords(dir , word_number) {
@@ -879,7 +840,6 @@ function calculateOptimalBacktracks() {
 	}
 }
 
-var letter_backtrack_source; //set to () to stop backtrack and set for backtrack $letterBackTrackSource{x} and  $letterBackTrackSource{y}
 //async function recursiveLetters() {
 function recursiveLetters() {
 	//recursive try to lay down letters using @nextLetterPositionsOnBoard, this function will shift off, store and unshift if required
@@ -915,7 +875,6 @@ function recursiveLetters() {
 	if (next_letter_position_on_board.length == 0) {
 		return true;
 		} //we have filled all the possible letter positions, we are done. This breaks us out of all recursive  success loops
-	forward_count++; //count forward moving calls
 	cell_position = next_letter_position_on_board.shift(); //keep cell_position in subroutine unchanged as we may need to unshift on a recursive return
 	x = cell_position[0];
 	y = cell_position[1];
@@ -1155,7 +1114,6 @@ function isWordAlreadyUsed(mask) {
 	}
 }
 
-var word_backtrack_source; //set to [] to stop optimal backtrack and set for optimal backtrack word_backtrack_source[dir][word_number]
 var try_another_word_loop = 0;
 //simple vs complex search
 //complex: for a word spot, based on the word mask, it checks all crossing words and picks possible words that satisfies ALL the crossing words
@@ -1167,10 +1125,6 @@ function recursiveWords() {
 	if (next_word_on_board.length == 0) {
 		return true;
 	}
-	//alternate done....?
-	if (Object.keys(words_that_are_inserted).length == (number_of_HV_words[dir_across] + number_of_HV_words[dir_down])) {
-		k = 9; //return true;
-	} //if we have filled all the possible words, we are done. This breaks us out of all recursive  success loops
 
 	var possibleLetterLists;
 	var words_that_fit;
@@ -1367,7 +1321,8 @@ for(var i = 0 ; i < word_letter_positions.length ; i++){
 	}
 	if (crossing_word_number === 'undefined') { //there is no crossing word at this letter location so return a single $unoccupied 'o' to indicate that a word can still be made as any letter can go here!
        //@nThLetters = ($unoccupied);
-       nTh_letters = [pads_either_side];
+       //nTh_letters = [pads_either_side];
+			 nTh_letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
     }
 	if( nTh_letters.length == 0) //used to break out earlier for small speed increase. If a letter position has no letters, WordsFromLetterList will fail anyway. Just return empty list
         {
@@ -1417,14 +1372,14 @@ var regexp_string = '';
 //var impossible_word = false; //assume
 for(var i = 0 ; i < letter_lists.length ; i++){ //for each letter's position
 	letter_list = letter_lists[i];
-        if(letter_list[0] == pads_either_side) {
-			letter_list = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
-		} //it can be ANY letter (no crossing word) [A..Z]
-        else{
+        //if(letter_list[0] == pads_either_side) {
+			//letter_list = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+		//} //it can be ANY letter (no crossing word) [A..Z]
+        //else{
 			if (letter_list.length == 0) {
 				return [];
 			}//no possible letters here, return an empty list of words
-		}
+		//}
         regexp_string = regexp_string + '[' + letter_list.join('') + ']'; //regexp_string will be /[ABC][HGR][OHR]..../
 }
 
