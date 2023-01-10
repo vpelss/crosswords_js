@@ -32,6 +32,7 @@ var mode = ''; //search/walk letter or word
 var next_letter_position_on_board = []; //the letter walk [[x0,y0] , [x1,y1] ...]
 var next_word_on_board = []; //the word walk [ [word_number , dir] , [] , ... ]
 //optimal search variables
+var try_another_loop = 0;
 var recursive_count = 0;
 var naive_backtrack = 0; //a counter
 var optimal_backtrack = 0; //a counter
@@ -43,7 +44,7 @@ var word_backtrack_source; //set to [] to stop an OPTIMAL backtrack and set to [
 var target_words_for_word_backtrack = {}; //global as we need to backtrack to the first  member of it we encounter. if $target_words_for_word_backtrack{# source}{dir source} == undef there are NO targets!
 //eg: for word dir,word_number there is a backtrack word dir1,word_number1 (there may be others) target_words_for_word_backtrack['dir_word_number']['dir1_word_number1'] = 1;
 //dir_word_number is this word and possible target words are stored in keys dir1_word_number1
-var words_that_are_inserted = {}; //keep track of words successfully laid on puzzle so we don't lay duplicate words
+var words_already_on_the_board = {}; //keep track of words successfully laid on puzzle so we don't lay duplicate words
 
 //vars used in html navigation
 var startx ; //based on word #1 across or down
@@ -812,7 +813,6 @@ function calculateOptimalBacktracks() {
 	}
 }
 
-//async function recursiveLetters() {
 function recursiveLetters() {
 	//recursive try to lay down letters using @nextLetterPositionsOnBoard, this function will shift off, store and unshift if required
 	//store locally the possible letters in  @possibleLetter
@@ -832,34 +832,54 @@ function recursiveLetters() {
 	//1. the upper target letter it is not part of a horizontal word
 	//2. the upper target letter is the last letter in a horizontal word
 	//3. the letter that failed is in a single vertical word
-	var x , y , x_y;
+	var x, y, x_y;
 	var cell_position;
 	var letters_that_fit = [];
 	var popped_letter;
-	var success = 0;//assume we failed to get in while loop
-	var words_that_were_laid = [];
+	letter_backtrack_source = undefined; //clear global indicating that we are moving forward again, and have cleared the backtrack state
 
-	recursive_count++;
-	printProcessing();
-
-	//moving forward
-	letter_backtrack_source = undefined; //clear global indicating that we are moving forward and have cleared the backtrack state
 	if (next_letter_position_on_board.length == 0) {
 		return true;
-		} //we have filled all the possible letter positions, we are done. This breaks us out of all recursive  success loops
+	} //we have filled all the possible letter positions, we are done. This breaks us out of all recursive  success loops
+
 	cell_position = next_letter_position_on_board.shift(); //keep cell_position in subroutine unchanged as we may need to unshift on a recursive return
 	x = cell_position[0];
 	y = cell_position[1];
+
+	recursive_count++;
+	printProcessing();
 
 	//get possible letters for this cell
 	if (arg_shuffle) {
 		letters_that_fit = shuffle(lettersPossibleAtCell(x, y));
 	} else {
 		letters_that_fit = lettersPossibleAtCell(x, y).sort();
-		//letters_that_fit = lettersPossibleAtCell(x, y);
 	}
 
+	var first_run = true;
+	var success = 0;
 	while (success == 0) {
+
+		if (!first_run) {
+			setXY(x, y, unoccupied); //failed so reset letter to unoccupied
+		}
+		first_run = false; //we are in the loop and running
+
+		//exclusively optimal backtrack check and processing
+		if (typeof letter_backtrack_source !== 'undefined') { //we are doing an optimal backtrack
+			//xx_yy = '' + letter_backtrack_source[0] + '_' + letter_backtrack_source[1];
+			x_y = '' + x + '_' + y;
+			if (target_cells_for_letter_backtrack[letter_backtrack_source][x_y]) { //we have hit the first optimal backtrack target.
+				letter_backtrack_source = undefined; //turn off optimal backtrack
+			} else { //we did not find optimal backtrack target yet
+				next_letter_position_on_board.unshift(cell_position); //always unshift our current position back on to @nextLetterPositionsOnBoard when we return!
+				//next_letter_position_on_board.unshift([x, y]); //always unshift our current position back on to @nextLetterPositionsOnBoard when we return!
+				optimal_backtrack++;
+				return false; //go back one to see if it is optimal backtrack target
+			}
+		}
+
+		//naive backtrack
 		if (letters_that_fit.length == 0) { //there are NO possible letters for this cell left. BACTRACK start
 			next_letter_position_on_board.unshift(cell_position); //always unshift our current position back on to next_letter_position_on_board before backtracking
 			//next_letter_position_on_board.unshift([x, y]); //always unshift our current position back on to next_letter_position_on_board before backtracking
@@ -872,50 +892,22 @@ function recursiveLetters() {
 					}
 				}
 			}
-			naive_backtrack++; //really should be called all_backtracks
+			naive_backtrack++;
 			return false; //start our backtrack : naive & optimal
 		}
 
 		//try the next letter that fit in this location
 		popped_letter = letters_that_fit.shift();
 
-		words_that_were_laid = setXY(x , y , popped_letter); //lay a letter and save any horiz or vert words that were laid
-		if (! words_that_were_laid) { //if words_that_were_laid = false, a horizontal or vertical word was already been laid/used in the puzzle. so backtrack
+		//try to lay letter on puzzle and respond appropriately
+		if ( setXY(x, y, popped_letter) ){
+			success = recursiveLetters(); //we laid a letter in this cell so try and fill the next cell. true means puzzle is complete, false means we are backtracking
+		}
+	 else{ //if words_that_were_laid = false, a horizontal or vertical word was already been laid/used in the puzzle. so backtrack
 			continue;
 		}
-
-		//we laid a letter in this cell so try and fill the next cell
-		success = recursiveLetters(); //lay next letter in the next position. true means puzzle is complete, false means we are backtracking
-		//await recursiveLetters().then(function(value){ success = value; }); //lay next letter in the next position. true means puzzle is complete, false means we are backtracking
-		//after a failed (or the puzzle is completed), we will be here
-		if (success == true) {
-			return true;
-			} //test to see if board was filled, this is where we return out of all recursive calls successfully. it was triggered a few lines above.
-
-		//------------------------------------------------------------
-
-		//success == false , so we have been backtracking to...
-		//if we are here, the last recursive attempt to lay a letter failed
-
-		//delete words_that_are_inserted[words_that_were_laid[0]]; //if a word was laid before, reverse that
-		//delete words_that_are_inserted[words_that_were_laid[1]];
-		setXY(x, y, unoccupied); //failed so reset letter to unoccupied
-		//exclusively optimal backtrack check and processing
-		if (typeof letter_backtrack_source !== 'undefined') { //we are doing an optimal backtrack
-			//xx_yy = '' + letter_backtrack_source[0] + '_' + letter_backtrack_source[1];
-			x_y = '' + x + '_' + y;
-			if (target_cells_for_letter_backtrack[letter_backtrack_source][x_y]) { //we have hit the first optimal backtrack target.
-				letter_backtrack_source = undefined; //turn off optimal backtrack
-			} else {//we did not find optimal backtrack target yet
-				next_letter_position_on_board.unshift(cell_position);//always unshift our current position back on to @nextLetterPositionsOnBoard when we return!
-				//next_letter_position_on_board.unshift([x, y]); //always unshift our current position back on to @nextLetterPositionsOnBoard when we return!
-				optimal_backtrack++;
-				return false; //go back one to see if it is optimal backtrack target
-			}
-		}
-	} //end while
-	tt = 9;
-	document.alert('Error: Recursive, we should never get here.');
+	} ////end while loop
+	return true;
 }
 
 function lettersPossibleAtCell(x, y) {
@@ -982,9 +974,9 @@ function shuffle(array) {
 }
 
 function setXY(x, y, letter) {
-	//see if potential mask equates to a word already laid. if true return false
 	//set cell, horiz mask , vert mask
-	//return : true if mask laid , false if mask or word already used , [full words laid]
+	//return values are, true: if mask laid , false: if mask or word already used
+
 
 	var word_number; // = this_square_belongs_to_word_number;
 	var position;
@@ -1001,8 +993,8 @@ function setXY(x, y, letter) {
 		position = position_in_word[dir][y][x];
 		mask[dir] = all_masks_on_board[dir][word_number];
 
-		if( (mode == 'word') && (letter == unoccupied) ) { //remove mask from words_that_are_inserted. It may be full.
-			delete words_that_are_inserted[mask[dir]]; //remove mask from words_that_are_inserted. It may be full.
+		if( (mode == 'word') && (letter == unoccupied) ) { //remove mask from words_already_on_the_board. It may be full.
+			delete words_already_on_the_board[mask[dir]]; //remove mask from words_already_on_the_board. It may be full.
 		}
 
 		//add letter to mask
@@ -1016,11 +1008,10 @@ function setXY(x, y, letter) {
 			}
 		}
 		if( (mode == 'word') && (! arg_simplewordmasksearch) ){ //if not using simple word mode then we can add all MASKS as all full crossing words have been tested
-			if( ! mask[dir].includes(unoccupied) ){//full mask add to words_that_are_inserted
-			words_that_are_inserted[mask[dir]] = 1;
+			if( ! mask[dir].includes(unoccupied) ){//full mask add to words_already_on_the_board
+			words_already_on_the_board[mask[dir]] = 1;
 			}
 		}
-
 	}
 
 	//set cell then mask(s)
@@ -1034,7 +1025,7 @@ function setXY(x, y, letter) {
 		//is it a full word?
 		/*
 		if (!mask[dir].includes(unoccupied)) { //if mask full word add to words_laid and also to wordsThatAreInserted
-			//words_that_are_inserted[mask[dir]] = 1;
+			//words_already_on_the_board[mask[dir]] = 1;
 			if (typeof words_laid === 'undefined') {
 				words_laid = [];
 			}
@@ -1067,14 +1058,14 @@ function isWordAlreadyUsed(mask) {
 			}
 	//only one word is possible for mask at this point
 	//but has it been used?
-	if (typeof words_that_are_inserted[mask] !== 'undefined') { return 1; }
+	if (typeof words_already_on_the_board[mask] !== 'undefined') { return 1; }
 	else {return 0;}
 */
 
 	var list_of_words = wordsFromMask(mask);
 	if(list_of_words.length == 1){//only one word is possible
 		var the_word = list_of_words.pop();
-		if (typeof words_that_are_inserted[the_word] !== 'undefined') { //it was used
+		if (typeof words_already_on_the_board[the_word] !== 'undefined') { //it was used
 			return true;
 		}
 		else {
@@ -1086,14 +1077,14 @@ function isWordAlreadyUsed(mask) {
 	}
 }
 
-var try_another_word_loop = 0;
+
+function recursiveWords() {
 //simple vs complex search
 //complex: for a word spot, based on the word mask, it checks all crossing words and picks possible words that satisfies ALL the crossing words
 //simple: for a word spot, it simply picks possible words based on the word mask. Then it tests each word against the crossing words to see if it will fit.
-function recursiveWords() {
-	//recursive try to lay down words using @nextWordOnBoard, will shift off, store and unshift if required
-	//store locally the possible words in  @possibleLetterLists
-	//in just the next index in a list (@NextWordPositionsOnBoard) of word position we are trying to fill
+//recursively try to lay down words in order of next_word_on_board. we will shift off and unshift if required
+
+	//check if completed
 	if (next_word_on_board.length == 0) {
 		return true;
 	}
@@ -1110,25 +1101,20 @@ function recursiveWords() {
 	recursive_count++;
 	printProcessing();
 
-	//get all possible words for mask
+	//get all possible words for mask found at word position
 	var mask = all_masks_on_board[dir][word_number]; // get WORD or MASK at this crossword position
 	if (arg_simplewordmasksearch) {
-		//simple one. 0.0002 sec a call.  better for less cross links?
-		//ignore crossing words as future mask checks will find the failures/errors. not true for some walks as there msay be no crossword checking!
-		//it will only work well with alternating across and down checks
+		//simple is 4x faster to find a word. but it will usually have many more recursions and therefore is slower in most cases.  it is better in puzzles with few cross links
 		if (arg_shuffle) {
 			words_that_fit = shuffle(wordsFromMask(mask));
 		} else {
-			//words_that_fit = shuffle(wordsFromMask(mask)).sort();
 			words_that_fit = wordsFromMask(mask);
 		}
-	} else {
-		//complex one 0.05 sec a call. better for more crosslinks?
+	} else {//complex is slower. however it detects errors early so will usually have fewer recursive calls. It works better in puzzles with more crosslinks
 		possibleLetterLists = letterListsFor(dir, word_number);
 		if (arg_shuffle) {
 			words_that_fit = shuffle(wordsFromLetterLists(possibleLetterLists));
 		} else {
-			//words_that_fit = shuffle(wordsFromLetterLists(possibleLetterLists)).sort();
 			words_that_fit = wordsFromLetterLists(possibleLetterLists);
 		}
 	}
@@ -1138,7 +1124,7 @@ function recursiveWords() {
 	while (success == 0) {
 
 		if (!first_run) {
-			//REQUIRED, as setXY will clear words_that_are_inserted
+			//REQUIRED, as setXY will clear words_already_on_the_board
 			//only do this if we have failed to lay a word in this loop
 			placeMaskOnBoard(dir, word_number, mask);
 		} //failed so reset word to previous mask
@@ -1172,17 +1158,13 @@ function recursiveWords() {
 			return false;
 		} //no words so fail
 
-		//word_backtrack_source = undefined; //turn off optimal backtrack
-
 		//try the next word that fit in this location
 		popped_word = words_that_fit.shift();
 
 		//tests on what to do with popped_word. order is important
-		//var xwords_ok = []; //assume
-		//arg_simplewordmasksearch state: we want to check if all crossing words are ok, or not
+		//if arg_simplewordmasksearch state: we want to check if all crossing words are ok, or not so we can detect dead ends earlier
 		if (arg_simplewordmasksearch) {
-
-			if (words_that_are_inserted[popped_word]) {
+			if (words_already_on_the_board[popped_word]) {
 				if (mask == popped_word) { //it is the word we are checking. don't worry about it
 					success = recursiveWords();
 				} else { //the word is placed elsewhere. worry about it
@@ -1206,7 +1188,7 @@ function recursiveWords() {
 				}
 			}
 		} else { //complex
-			if (words_that_are_inserted[popped_word]) {
+			if (words_already_on_the_board[popped_word]) {
 				if (mask == popped_word) { //it is the word we are checking. don't worry about it
 					success = recursiveWords();
 				} else { //the word is placed elsewhere. worry about it
@@ -1218,7 +1200,7 @@ function recursiveWords() {
 			}
 		}
 
-		try_another_word_loop++;
+		try_another_loop++;
 	} //end while loop
 	return true;
 }
@@ -1252,8 +1234,8 @@ letter_positions_of_word[dir][word_number].forEach(function(letter_position , in
         var letter = mask.charAt(index); //letter from word
         setXY(x,y,letter); //does puzzle letter placement and adds to all_masks_on_board
 		if(arg_simplewordmasksearch){ //if using simple word mode then we only add this MASKS as crossing words have not been tested
-			if( ! mask.includes(unoccupied) ){//full mask add to words_that_are_inserted
-			words_that_are_inserted[mask] = 1;
+			if( ! mask.includes(unoccupied) ){//full mask add to words_already_on_the_board
+			words_already_on_the_board[mask] = 1;
 			}
 		}
 	});
@@ -1495,7 +1477,7 @@ string += "optimalBacktrack:" + optimal_backtrack ;
 string += "\n";
 string += "naive_backtrack:" + naive_backtrack;
 string += "\n";
-string += "try_another_word_loop:" + try_another_word_loop;
+string += "try_another_loop:" + try_another_loop;
 string += "\n";
 string += "</pre>";
 
