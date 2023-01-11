@@ -9,6 +9,8 @@
 
 //redo clue script!!!
 
+//improve xword walk?
+
 //"use strict";
 
 var start_time;
@@ -961,6 +963,8 @@ function shuffle(array) {
 function setXY(x, y, letter) {
 	//set cell, horiz mask , vert mask
 	//return values are, true: if mask laid , false: if mask or word already used
+	//also test for full masks and adds to words_already_on_the_board
+	//also if letter == unoccupied also delete words_already_on_the_board
 
 	var word_number; // = this_square_belongs_to_word_number;
 	var position;
@@ -976,27 +980,27 @@ function setXY(x, y, letter) {
 		position = position_in_word[dir][y][x];
 		mask[dir] = all_masks_on_board[dir][word_number];
 
-		//if unoccupied we are removing a word or a letter, so always delete the mask in case it is full!!
-		//if( (mode == 'word') && (letter == unoccupied) ) { //remove mask from words_already_on_the_board. It may be full.
-		if( letter == unoccupied ) { //remove mask from words_already_on_the_board. It may be full.
+		if (letter == unoccupied) { //remove mask from words_already_on_the_board. It may be full.
 			delete words_already_on_the_board[mask[dir]]; //remove mask from words_already_on_the_board. It may be full.
 		}
 
 		//add letter to mask
 		mask[dir] = mask[dir].substring(0, position) + letter + mask[dir].substring(position + 1);
 
-		if (mode == 'letter') {//only do doesMaskProduceSingleWordAlreadyUsed if we are in letter mode! Word mode is checked in placeMaskOnBoard
+		if (mode == 'letter') { //only do doesMaskProduceSingleWordAlreadyUsed if we are in letter mode! crosswords for word mode are checked in recursiveWords , etc
 			if (letter != unoccupied) { //no need if we are setting unoccupied
-				if (doesMaskProduceSingleWordAlreadyUsed(mask[dir])) { //any word already used return false
+				if (doesMaskProduceSingleWordAlreadyUsed(mask[dir])) { //mask produces unique word already used so return false
 					return false;
 				}
 			}
 		}
-		//if( (mode == 'word') && (! arg_simplewordmasksearch) ){ //if not using simple word mode then we can add all MASKS as all full crossing words have been tested
-			if( ! mask[dir].includes(unoccupied) ){//full mask add to words_already_on_the_board
+	}
+
+	//if we found a full masks add to words_already_on_the_board
+	for (dir = 0; dir < 2; dir++) {
+				if (!mask[dir].includes(unoccupied)) {
 			words_already_on_the_board[mask[dir]] = 1;
-			}
-		//}
+		}
 	}
 
 	//set cell then mask(s)
@@ -1031,10 +1035,10 @@ function doesMaskProduceSingleWordAlreadyUsed(mask) {
 }
 
 function recursiveWords() {
-//simple vs complex search
-//complex: for a word spot, based on the word mask, it checks all crossing words and picks possible words that satisfies ALL the crossing words
-//simple: for a word spot, it simply picks possible words based on the word mask. Then it tests each word against the crossing words to see if it will fit.
-//recursively try to lay down words in order of next_word_on_board. we will shift off and unshift if required
+	//simple vs complex search
+	//complex: for a word spot, based on the word mask, it checks all crossing words and picks possible words that satisfies ALL the crossing words
+	//simple: for a word spot, it simply picks possible words based on the word mask. Then it tests each word against the crossing words to see if it will fit.
+	//recursively try to lay down words in order of next_word_on_board. we will shift off and unshift if required
 
 	//check if completed
 	if (next_word_on_board.length == 0) {
@@ -1055,20 +1059,24 @@ function recursiveWords() {
 
 	//get all possible words for mask found at word position
 	var mask = all_masks_on_board[dir][word_number]; // get WORD or MASK at this crossword position
-	if (arg_simplewordmasksearch) {
-		//simple is 4x faster to find a word. but it will usually have many more recursions and therefore is slower in most cases.  it is better in puzzles with few cross links
-		if (arg_shuffle) {
-			words_that_fit = shuffle(wordsFromMask(mask));
-		} else {
-			words_that_fit = wordsFromMask(mask).sort();
+	if (mask.includes(unoccupied)) { //mask is not a full word
+		if (arg_simplewordmasksearch) {
+			//simple is 4x faster to find a word. but it will usually have many more recursions and therefore is slower in most cases.  it is better in puzzles with few cross links
+			if (arg_shuffle) {
+				words_that_fit = shuffle(wordsFromMask(mask));
+			} else {
+				words_that_fit = wordsFromMask(mask).sort();
+			}
+		} else { //complex is slower. however it detects errors early so will usually have fewer recursive calls. It works better in puzzles with more crosslinks
+			possibleLetterLists = letterListsFor(dir, word_number);
+			if (arg_shuffle) {
+				words_that_fit = shuffle(wordsFromLetterLists(possibleLetterLists));
+			} else {
+				words_that_fit = wordsFromLetterLists(possibleLetterLists).sort();
+			}
 		}
-	} else {//complex is slower. however it detects errors early so will usually have fewer recursive calls. It works better in puzzles with more crosslinks
-		possibleLetterLists = letterListsFor(dir, word_number);
-		if (arg_shuffle) {
-			words_that_fit = shuffle(wordsFromLetterLists(possibleLetterLists));
-		} else {
-			words_that_fit = wordsFromLetterLists(possibleLetterLists).sort();
-		}
+	} else { //mask is a full word. a slight speed up
+		words_that_fit = [mask];
 	}
 
 	var first_run = true;
@@ -1114,40 +1122,31 @@ function recursiveWords() {
 		popped_word = words_that_fit.shift();
 
 		//tests on what to do with popped_word. order is important
-		//if arg_simplewordmasksearch state: we want to check if all crossing words are ok, or not so we can detect dead ends earlier
-		if (arg_simplewordmasksearch) {
-			if (words_already_on_the_board[popped_word]) {
-				if (mask == popped_word) { //it is the word we are checking. don't worry about it
-					success = recursiveWords();
-				} else { //the word is placed elsewhere. worry about it
-					//loop
-				}
-			} else {
+		if (mask == popped_word) { //the mask on the puzzle already is a full word AND is the word we popped. in effect it has already been laid
+			success = recursiveWords();
+		}
+		else if( ! mask.includes(unoccupied) ){//mask is a full word. This word, and crossing words, 'should' have been verified alreadydy. no need to lay it again
+			success = recursiveWords();
+		}
+		else if (words_already_on_the_board[popped_word]) {} //skip words already used in puzzle
+		else { //place word
+			if (arg_simplewordmasksearch) { //simple
 				placeMaskOnBoard(dir, word_number, popped_word);
-				//quickly see if crossing words fail. if so, backtrack
-				var set_to_win = true;
+				//check dead ends early by quickly seeing if any crossing words fail
+				var no_crossing_words_failed = true;
 				var crossing_positions = letter_positions_of_word[dir][word_number];
 				crossing_positions.forEach(function(letter_postion) {
 					let word_number = this_square_belongs_to_word_number[1 - dir][y][x];
 					let mask = all_masks_on_board[1 - dir][word_number];
 					let words_that_fit = wordsFromMask(mask);
-					if (words_that_fit.length == 0) {
-						set_to_win = false;
+					if (words_that_fit.length != 0) {
+						no_crossing_words_failed = false;
 					}
 				});
-				if (set_to_win) {
+				if (no_crossing_words_failed) {
 					success = recursiveWords();
-				}
-				else{}//loop
-			}
-		} else { //complex
-			if (words_already_on_the_board[popped_word]) {
-				if (mask == popped_word) { //it is the word we are checking. don't worry about it
-					success = recursiveWords();
-				} else { //the word is placed elsewhere. worry about it
-					//loop
-				}
-			} else {
+				} else {} //loop
+			} else { //complex
 				placeMaskOnBoard(dir, word_number, popped_word);
 				success = recursiveWords();
 			}
@@ -1186,16 +1185,11 @@ letter_positions_of_word[dir][word_number].forEach(function(letter_position , in
         y = letter_position[1];
         var letter = mask.charAt(index); //letter from word
         setXY(x,y,letter); //does puzzle letter placement and adds to all_masks_on_board
-	//	if(arg_simplewordmasksearch){ //if using simple word mode then we only add this MASKS as crossing words have not been tested
-			//if( ! mask.includes(unoccupied) ){//full mask add to words_already_on_the_board
-			//words_already_on_the_board[mask] = 1;
-			//}
-		//}
 	});
 	//if(arg_simplewordmasksearch){ //if using simple word mode then we only add this MASKS as crossing words have not been tested
-			if( ! mask.includes(unoccupied) ){//full mask add to words_already_on_the_board
-			words_already_on_the_board[mask] = 1;
-			}
+		//	if( ! mask.includes(unoccupied) ){//full mask add to words_already_on_the_board
+			//words_already_on_the_board[mask] = 1;
+			//}
 		//}
 return;
 }
