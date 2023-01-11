@@ -382,7 +382,7 @@ function loadWordList(arg_wordfile) { //load word lists and set word and letter 
 				mask_pre += letter;
 			});
 
-			//create words_of_length_string strings for word searches. It is also used to verify letter searches, isWordAlreadyUsed, etc...
+			//create words_of_length_string strings for word searches. It is also used to verify letter searches, doesMaskProduceSingleWordAlreadyUsed, etc...
 			words_of_length_string[word_length] = words_of_length_string[word_length] + ',' + word.toUpperCase();
 		});
 	});
@@ -814,24 +814,8 @@ function calculateOptimalBacktracks() {
 }
 
 function recursiveLetters() {
-	//recursive try to lay down letters using @nextLetterPositionsOnBoard, this function will shift off, store and unshift if required
-	//store locally the possible letters in  @possibleLetter
-	//the next index in the list (@nextLetterPositionsOnBoard) is the next letter position we are trying to fill
+	//recursively try to lay down words in order of next_letter_position_on_board. we will shift off and unshift if required
 
-	//recurse if we can't find possible letters (going forward) or run out of possible letters
-	//next / loop if we can't lay a letter (word already used) and we have more possible letters to pick from
-	//anytime we next / loop set to $unoccupied as we are processing (just in case)
-	//anytime we recurse back (can't lay a letter or run out) a square we must unshift @nextLetterPositionsOnBoard , {x => x, y => y}; and return 0
-	//if our recursive calls have returned from a failed letter, set $unoccupied (to try another letter) and next / loop to see if there are anymore possible letters for this square
-
-	//note optimal recursion will not work if upper letter is part of a horizontal word ?????
-	//the reason is that we may be backtracking due to a later letter in the upper horizontal word.
-	//If we wipe that word out without trying ALL the combinations in that upper word we may be missing possible words in the horizontal word we are working on now
-	//an exception is if it is the last letter of a horizontal word
-	//so: only optimal up if:
-	//1. the upper target letter it is not part of a horizontal word
-	//2. the upper target letter is the last letter in a horizontal word
-	//3. the letter that failed is in a single vertical word
 	var x, y, x_y;
 	var cell_position;
 	var letters_that_fit = [];
@@ -900,12 +884,13 @@ function recursiveLetters() {
 		popped_letter = letters_that_fit.shift();
 
 		//try to lay letter on puzzle and respond appropriately
-		if ( setXY(x, y, popped_letter) ){
+		if ( setXY(x, y, popped_letter) ){ //letter was laid
 			success = recursiveLetters(); //we laid a letter in this cell so try and fill the next cell. true means puzzle is complete, false means we are backtracking
 		}
 	 else{ //if words_that_were_laid = false, a horizontal or vertical word was already been laid/used in the puzzle. so backtrack
 			continue;
 		}
+	try_another_loop++;
 	} ////end while loop
 	return true;
 }
@@ -977,12 +962,10 @@ function setXY(x, y, letter) {
 	//set cell, horiz mask , vert mask
 	//return values are, true: if mask laid , false: if mask or word already used
 
-
 	var word_number; // = this_square_belongs_to_word_number;
 	var position;
 	var mask = [];
 	var dir;
-	//var words_laid; //leave undefined and any define if we need to push a mask to return
 
 	//get masks, see if unique mask (equating to a word) or full word is already laid, if so return false
 	for (dir = 0; dir < 2; dir++) {
@@ -993,25 +976,27 @@ function setXY(x, y, letter) {
 		position = position_in_word[dir][y][x];
 		mask[dir] = all_masks_on_board[dir][word_number];
 
-		if( (mode == 'word') && (letter == unoccupied) ) { //remove mask from words_already_on_the_board. It may be full.
+		//if unoccupied we are removing a word or a letter, so always delete the mask in case it is full!!
+		//if( (mode == 'word') && (letter == unoccupied) ) { //remove mask from words_already_on_the_board. It may be full.
+		if( letter == unoccupied ) { //remove mask from words_already_on_the_board. It may be full.
 			delete words_already_on_the_board[mask[dir]]; //remove mask from words_already_on_the_board. It may be full.
 		}
 
 		//add letter to mask
 		mask[dir] = mask[dir].substring(0, position) + letter + mask[dir].substring(position + 1);
 
-		if (mode == 'letter') {//only do isWordAlreadyUsed if we are in letter mode! Word mode is checked in recursive routine
+		if (mode == 'letter') {//only do doesMaskProduceSingleWordAlreadyUsed if we are in letter mode! Word mode is checked in placeMaskOnBoard
 			if (letter != unoccupied) { //no need if we are setting unoccupied
-				if (isWordAlreadyUsed(mask[dir])) { //any word already used return false
+				if (doesMaskProduceSingleWordAlreadyUsed(mask[dir])) { //any word already used return false
 					return false;
 				}
 			}
 		}
-		if( (mode == 'word') && (! arg_simplewordmasksearch) ){ //if not using simple word mode then we can add all MASKS as all full crossing words have been tested
+		//if( (mode == 'word') && (! arg_simplewordmasksearch) ){ //if not using simple word mode then we can add all MASKS as all full crossing words have been tested
 			if( ! mask[dir].includes(unoccupied) ){//full mask add to words_already_on_the_board
 			words_already_on_the_board[mask[dir]] = 1;
 			}
-		}
+		//}
 	}
 
 	//set cell then mask(s)
@@ -1022,46 +1007,14 @@ function setXY(x, y, letter) {
 		} //no word here
 		word_number = this_square_belongs_to_word_number[dir][y][x];
 		all_masks_on_board[dir][word_number] = mask[dir];
-		//is it a full word?
-		/*
-		if (!mask[dir].includes(unoccupied)) { //if mask full word add to words_laid and also to wordsThatAreInserted
-			//words_already_on_the_board[mask[dir]] = 1;
-			if (typeof words_laid === 'undefined') {
-				words_laid = [];
-			}
-			words_laid.push(mask[dir]);
-		}
-		*/
 	}
-
-	//if (typeof words_laid !== 'undefined') {
-		//return words_laid;
-	//}
 	return true;
 }
 
-function isWordAlreadyUsed(mask) {
+function doesMaskProduceSingleWordAlreadyUsed(mask) {
 //input of mask WORooooo
-//check to see if all possible letters 'o' have only one possible letter. If so, only one word can be created. See if this word has been used.
+//check see if word mask produces a single possible word. If so, see if this word has been used.
 //saves us from filling in a whole word on letter fills only to have to backtrack
-
-//WHICH IS FASTER
-/*
-	var next_letters;
-	let pattern =  new RegExp(`${unoccupied}`, 'g'); // /${unoccupied}/g;
-	while ( pattern.test(mask) ) { //see if we get single letters until end of word
-			next_letters = Object.keys(linear_word_search[ mask ]);
-			if (next_letters.length > 1){ //multiple words possible for mask.
-				return 0;
-				}
-			mask = mask.replace( unoccupied , next_letters[0]); //replace first blank with the single letter
-			}
-	//only one word is possible for mask at this point
-	//but has it been used?
-	if (typeof words_already_on_the_board[mask] !== 'undefined') { return 1; }
-	else {return 0;}
-*/
-
 	var list_of_words = wordsFromMask(mask);
 	if(list_of_words.length == 1){//only one word is possible
 		var the_word = list_of_words.pop();
@@ -1076,7 +1029,6 @@ function isWordAlreadyUsed(mask) {
 		return false;
 	}
 }
-
 
 function recursiveWords() {
 //simple vs complex search
@@ -1108,14 +1060,14 @@ function recursiveWords() {
 		if (arg_shuffle) {
 			words_that_fit = shuffle(wordsFromMask(mask));
 		} else {
-			words_that_fit = wordsFromMask(mask);
+			words_that_fit = wordsFromMask(mask).sort();
 		}
 	} else {//complex is slower. however it detects errors early so will usually have fewer recursive calls. It works better in puzzles with more crosslinks
 		possibleLetterLists = letterListsFor(dir, word_number);
 		if (arg_shuffle) {
 			words_that_fit = shuffle(wordsFromLetterLists(possibleLetterLists));
 		} else {
-			words_that_fit = wordsFromLetterLists(possibleLetterLists);
+			words_that_fit = wordsFromLetterLists(possibleLetterLists).sort();
 		}
 	}
 
@@ -1186,6 +1138,7 @@ function recursiveWords() {
 				if (set_to_win) {
 					success = recursiveWords();
 				}
+				else{}//loop
 			}
 		} else { //complex
 			if (words_already_on_the_board[popped_word]) {
@@ -1233,12 +1186,17 @@ letter_positions_of_word[dir][word_number].forEach(function(letter_position , in
         y = letter_position[1];
         var letter = mask.charAt(index); //letter from word
         setXY(x,y,letter); //does puzzle letter placement and adds to all_masks_on_board
-		if(arg_simplewordmasksearch){ //if using simple word mode then we only add this MASKS as crossing words have not been tested
+	//	if(arg_simplewordmasksearch){ //if using simple word mode then we only add this MASKS as crossing words have not been tested
+			//if( ! mask.includes(unoccupied) ){//full mask add to words_already_on_the_board
+			//words_already_on_the_board[mask] = 1;
+			//}
+		//}
+	});
+	//if(arg_simplewordmasksearch){ //if using simple word mode then we only add this MASKS as crossing words have not been tested
 			if( ! mask.includes(unoccupied) ){//full mask add to words_already_on_the_board
 			words_already_on_the_board[mask] = 1;
 			}
-		}
-	});
+		//}
 return;
 }
 
