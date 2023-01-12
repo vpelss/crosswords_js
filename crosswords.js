@@ -1036,9 +1036,11 @@ function doesMaskProduceSingleWordAlreadyUsed(mask) {
 
 function recursiveWords() {
 	//simple vs complex search
-	//complex: for a word spot, based on the word mask, it checks all crossing words and picks possible words that satisfies ALL the crossing words
 	//simple: for a word spot, it simply picks possible words based on the word mask. Then it tests each word against the crossing words to see if it will fit.
+	//complex: for a word spot, based on the word mask, it checks all crossing words and picks possible words that satisfies ALL the crossing words
 	//recursively try to lay down words in order of next_word_on_board. we will shift off and unshift if required
+	//Simple Search: we chose a word quickly, then laid word, then we check if crossing words fail. then we loop through ALL the possible words before backtracking. Most (and possibly all) of the possible words we are trying will fail. Inefficient!
+	//Complex Search: with the complex search, we check all crosswords first and they limit what words will 100% fit, then we lay it. it is slow, but the word chosen will not cause an immediate fail/backtrack. If no words fit, we immediately backtrack. Efficient.
 
 	//check if completed
 	if (next_word_on_board.length == 0) {
@@ -1131,19 +1133,21 @@ function recursiveWords() {
 		else if (words_already_on_the_board[popped_word]) {} //skip words already used in puzzle
 		else { //place word
 			if (arg_simplewordmasksearch) { //simple
-				placeMaskOnBoard(dir, word_number, popped_word);
-				//check dead ends early by quickly seeing if any crossing words fail
-				var no_crossing_words_failed = true;
+					placeMaskOnBoard(dir, word_number, popped_word);
+				//check dead ends early by seeing if any crossing words fail
+				var failed_crossing_word = false;
 				var crossing_positions = letter_positions_of_word[dir][word_number];
 				crossing_positions.forEach(function(letter_postion) {
+					let x = letter_postion[0];
+					let y = letter_postion[1];
 					let word_number = this_square_belongs_to_word_number[1 - dir][y][x];
 					let mask = all_masks_on_board[1 - dir][word_number];
 					let words_that_fit = wordsFromMask(mask);
-					if (words_that_fit.length != 0) {
-						no_crossing_words_failed = false;
+					if (words_that_fit.length == 0) {
+						failed_crossing_word = true;
 					}
 				});
-				if (no_crossing_words_failed) {
+				if( ! failed_crossing_word ){
 					success = recursiveWords();
 				} else {} //loop
 			} else { //complex
