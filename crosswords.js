@@ -7,7 +7,7 @@
 
 //on HTML page only no get....
 
-//redo clue script!!!
+//redo clue/word extraction script!!!
 
 //improve xword walk?
 
@@ -65,6 +65,7 @@ var arg_shuffle;
 var arg_optimalbacktrack;
 var arg_wordfile;
 var arg_simplewordmasksearch;
+var arg_printtoconsole;
 
 function main() {
 	start_time = Date.now();
@@ -76,6 +77,8 @@ function main() {
 	const urlParams = new URLSearchParams(queryString);
 
 	arg_shuffle = urlParams.get('shuffle');
+
+	arg_printtoconsole = urlParams.get('printtoconsole');
 
 	if (!urlParams.has('wordfile')) {
 		setCellsFromCookies();
@@ -833,7 +836,7 @@ function recursiveLetters() {
 	y = cell_position[1];
 
 	recursive_count++;
-	printProcessing();
+	if(arg_printtoconsole){printProcessing();}
 
 	//get possible letters for this cell
 	if (arg_shuffle) {
@@ -1019,6 +1022,16 @@ function doesMaskProduceSingleWordAlreadyUsed(mask) {
 //input of mask WORooooo
 //check see if word mask produces a single possible word. If so, see if this word has been used.
 //saves us from filling in a whole word on letter fills only to have to backtrack
+
+//WTF, very fast
+if (typeof words_already_on_the_board[mask] !== 'undefined') { //it was used
+			return true;
+		}
+		else {
+			return false;
+		}
+
+//obviously slower
 	var list_of_words = wordsFromMask(mask);
 	if(list_of_words.length == 1){//only one word is possible
 		var the_word = list_of_words.pop();
@@ -1057,7 +1070,7 @@ function recursiveWords() {
 	var d_w = '' + dir + '_' + word_number;
 
 	recursive_count++;
-	printProcessing();
+	if(arg_printtoconsole){printProcessing();}
 
 	//get all possible words for mask found at word position
 	var mask = all_masks_on_board[dir][word_number]; // get WORD or MASK at this crossword position
@@ -1110,9 +1123,7 @@ function recursiveWords() {
 			if (arg_optimalbacktrack) {
 				if (typeof word_backtrack_source === 'undefined') { //only set for optimal if we are not already in an optimal backtrack mode
 					if (typeof target_words_for_word_backtrack[d_w] !== 'undefined') { //check to see if there are any backtrack targets possible for dir word_number first
-						word_backtrack_source = d_w; //set source/start cell for optimal bactracking
-						//optimal_backtrack++;
-						//return false; //go back one to see if it is optimal backtrack target
+						word_backtrack_source = d_w; //set source/start cell for optimal backtracking
 					}
 				}
 			}
@@ -1169,11 +1180,7 @@ function wordsFromMask(mask){
 var word_length = mask.length;
 
 var pattern =  new RegExp( unoccupied , 'g');
-//mask = mask.replace(pattern , '.'); //make a mask of 'GO$unoccupiedT' into 'GO.T' for the regexp
 mask = mask.replace(pattern , '\\w'); //make a mask of 'GO$unoccupiedT' into 'GO.T' for the regexp
-
-//need to filter out wordsThatAreInserted{$popWord} == 1 below if ( wordsThatAreInserted{$popWord} == 1 )
-//note that we need to return an empty list if the word is already inserted see:  else {()} If we do not, the map will return an empty word in the middle of the list which will pooch our code later.
 
 pattern =  new RegExp(`${mask}`, 'g'); // /${mask}/g;
 var possible_words_array = words_of_length_string[word_length].match(pattern);
@@ -1190,11 +1197,6 @@ letter_positions_of_word[dir][word_number].forEach(function(letter_position , in
         var letter = mask.charAt(index); //letter from word
         setXY(x,y,letter); //does puzzle letter placement and adds to all_masks_on_board
 	});
-	//if(arg_simplewordmasksearch){ //if using simple word mode then we only add this MASKS as crossing words have not been tested
-		//	if( ! mask.includes(unoccupied) ){//full mask add to words_already_on_the_board
-			//words_already_on_the_board[mask] = 1;
-			//}
-		//}
 return;
 }
 
@@ -1277,32 +1279,24 @@ if (letter_lists.length == 0) {
 	return [];
 	} //required as LetterListsFor will return [] if there are no possible letters!
 
-//regexp version from 2x  up to 20x faster! long lists are fast
+//from given letter list build regexp_string: /[ABC][HGR][OHR]..../
 var regexp_string = '';
 //var impossible_word = false; //assume
 for(var i = 0 ; i < letter_lists.length ; i++){ //for each letter's position
 	letter_list = letter_lists[i];
-        //if(letter_list[0] == pads_either_side) {
-			//letter_list = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
-		//} //it can be ANY letter (no crossing word) [A..Z]
-        //else{
 			if (letter_list.length == 0) {
 				return [];
 			}//no possible letters here, return an empty list of words
-		//}
         regexp_string = regexp_string + '[' + letter_list.join('') + ']'; //regexp_string will be /[ABC][HGR][OHR]..../
 }
 
-// (wordsOfLengthString[wordLength] =~ /$regexpstring/g) returns all possible words
-//look for words already used and ignore using map!
-//@possibleWords = map( { if ( wordsThatAreInserted{$_} == 0 ) {$_} else {()} }   (wordsOfLengthString[wordLength] =~ /$regexpstring/g) );
-//return @possibleWords; # speed up by direct output!
+//apply regexp_string to words_of_length_string[word_length] to get possible_words_array
 var pattern =  new RegExp(`${regexp_string}`, 'g');
 var possible_words_array = words_of_length_string[word_length].match(pattern);
 if(possible_words_array === null){
 	possible_words_array = [];
 }
-return possible_words_array; //just return full array, we check if words are layed in recursive routine
+return possible_words_array; //just return full array, we check if words are laid in recursive routine
 }
 
 function numberClueList() {
@@ -1392,24 +1386,18 @@ return temp;
 
 var console_log_count = 0;
 function printProcessing() {
-//my $message = $_[0];
 var x , y;
 var line;
 var string = '<pre>';
 var time = ( Date.now() - start_time ) / 1000;
 
-//open(my $processing, ">processing.txt") or die "Can't open : $!";
-
-//limit script run time!
-//if (time > timelimit){
-     //&PrintResults( qq| Time limit exceeded | );
-     //&Quit( "Time limit exceeded<br>\n\n" );
-  //   }
-
-string += "\n";
-//string += "Loops per Sec: " . $recursiveCount / (time + 1 - $timeForCrossword); #print time to create crosword
 string += "\n";
 
+string += JSON.stringify(puzzle);
+//var pattern =  new RegExp( "," , 'g');
+string = string.replace( /\],\[/g , "\r\n");
+
+/*
 for (y = 0 ; y < puzzle_height ; y++){
 	line = '';
 	for (x = 0 ; x < puzzle_width ; x++) {
@@ -1419,6 +1407,7 @@ for (y = 0 ; y < puzzle_height ; y++){
 	string += "\n";
 
 }
+*/
 
 string +=  "\n";
 string += "Time: " + time; //#print time to create crossword
@@ -1444,8 +1433,6 @@ if(console_log_count > 10000){
 	console.clear();
 	console_log_count = 0;
 	} //if we don't it can blank out completely
-
-//setTimeout( printProcessing , 1000);
 }
 
 function printPuzzle(){
@@ -1473,15 +1460,12 @@ function printPuzzle(){
                 if (typeof word !== 'undefined'){
                   if (dir == dir_across) {direction = 'Across';}
                   if (dir == dir_down) {direction = 'Down';}
-                  //temp3 += "direction: $clues{word} \n";
-                  //temp3 =~ s/[\'\"]//g; //remove quotes from title s it is in a tag
                 }
             }
 
 		temp4 = 'choose_cell(this.id);'; //new
 
         //lay down table stuff here
-
         //black square
         if(puzzle[y][x] == pad_char){ //make sure our page width is fixed
             temp += "<td CLASS='tdblackclass'><spacer width='20 pt'></td>";
@@ -1665,8 +1649,3 @@ document.getElementById(CurrentFocus).innerHTML = letter;//place keystroke on cr
 setCookie(CurrentFocus , letter , forever , '' , '' , ''); //CurrentFocus = cell_x_y
 HighlightNextBox();//go to next box
 }
-
-//-------------------------------------
-
-
-//SetCellsFromCookies();
