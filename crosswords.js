@@ -143,6 +143,7 @@ if (arg_walkpath == 'GenerateNextLetterPositionsOnBoardSnakeWalk') {
 		calculateOptimalBacktracks();
 	}
 
+	print_limit = 10000;
 	printProcessing();
 
 	if (mode == 'word') {
@@ -153,6 +154,7 @@ if (arg_walkpath == 'GenerateNextLetterPositionsOnBoardSnakeWalk') {
 
 	numberClueList();
 
+	print_limit = 10000;
 	printProcessing();
 
 	document.getElementById('puzzle_place').innerHTML = printPuzzle();
@@ -662,7 +664,7 @@ function generateNextLetterPositionsOnBoardSwitchWalk() {//see thesis.cambon.dk.
 
 	do {
 		if (puzzle[y][x] != pad_char) {
-			next_letter_position_on_board.push([y, x]);
+			next_letter_position_on_board.push([x, y]);
 		}
 		if (x == puzzle_width - 1) {
 			x = xx;
@@ -705,9 +707,9 @@ next_letter_position_on_board = [
 				for (var walk_step = 1; walk_step <= walk_length; walk_step++) {
 					if (puzzle[y][x] != pad_char) {
 						next_letter_position_on_board.push([x, y]);
-						x = x + dx;
-						y = y + dy;
 					}
+				x = x + dx;
+				y = y + dy;
 				}
 				if(walk_length == puzzle_height){
 					return true;
@@ -836,7 +838,6 @@ function recursiveLetters() {
 	y = cell_position[1];
 
 	recursive_count++;
-	if(arg_printtoconsole){printProcessing();}
 
 	//get possible letters for this cell
 	if (arg_shuffle) {
@@ -845,14 +846,11 @@ function recursiveLetters() {
 		letters_that_fit = lettersPossibleAtCell(x, y).sort();
 	}
 
-	var first_run = true;
+	//var first_run = true;
 	var success = 0;
 	while (success == 0) {
 
-		if (!first_run) {
-			setXY(x, y, unoccupied); //failed so reset letter to unoccupied
-		}
-		first_run = false; //we are in the loop and running
+		if(arg_printtoconsole){printProcessing();}
 
 		//exclusively optimal backtrack check and processing
 		if (typeof letter_backtrack_source !== 'undefined') { //we are doing an optimal backtrack
@@ -871,15 +869,13 @@ function recursiveLetters() {
 		//naive backtrack
 		if (letters_that_fit.length == 0) { //there are NO possible letters for this cell left. BACTRACK start
 			next_letter_position_on_board.unshift(cell_position); //always unshift our current position back on to next_letter_position_on_board before backtracking
-			//next_letter_position_on_board.unshift([x, y]); //always unshift our current position back on to next_letter_position_on_board before backtracking
 			if (arg_optimalbacktrack) { //optimal backtrack setup
-				if (typeof letter_backtrack_source === 'undefined') { //only set for optimal if we are not already in an optimal backtrack mode
+				//if (typeof letter_backtrack_source === 'undefined') { //only set for optimal if we are not already in an optimal backtrack mode
 					x_y = '' + x + '_' + y;
-					if (typeof target_cells_for_letter_backtrack[x_y] !== 'undefined') { //check to see if there are any backtrack targets possible for x y first
-						//letter_backtrack_source = [x , y]; //set source/start cell for optimal bactracking
+					//if (typeof target_cells_for_letter_backtrack[x_y] !== 'undefined') { //check to see if there are any backtrack targets possible for x y first
 						letter_backtrack_source = x_y; //set source/start cell for optimal bactracking
-					}
-				}
+					//}
+				//}
 			}
 			naive_backtrack++;
 			return false; //start our backtrack : naive & optimal
@@ -895,6 +891,11 @@ function recursiveLetters() {
 	 else{ //if words_that_were_laid = false, a horizontal or vertical word was already been laid/used in the puzzle. so backtrack
 			continue;
 		}
+
+		if (! success) {
+			setXY(x, y, unoccupied); //failed so reset letter to unoccupied
+		}
+
 	try_another_loop++;
 	} ////end while loop
 	return true;
@@ -916,7 +917,7 @@ function lettersPossibleAtCell(x, y) {
 		mask[dir] = all_masks_on_board[dir][word_number];
 
 		if(typeof linear_word_search[ mask[dir] ] === 'undefined'){//cases where the mask is not linear or word does not exist. if walk is well designed, this should not occur. If it does, puzzle will never complete
-			throw new Error("Illegal mask when it should be a linear word search. Probably and incompatible letter walk.");
+			throw new Error(`Illegal mask , ${mask[dir]} , when it should be a linear word search. Probably and incompatible letter walk.`);
 		}
 		else{
 			possible_letters_HV[dir] = Object.keys(linear_word_search[ mask[dir] ]);
@@ -1070,7 +1071,6 @@ function recursiveWords() {
 	var d_w = '' + dir + '_' + word_number;
 
 	recursive_count++;
-	if(arg_printtoconsole){printProcessing();}
 
 	//get all possible words for mask found at word position
 	var mask = all_masks_on_board[dir][word_number]; // get WORD or MASK at this crossword position
@@ -1094,57 +1094,63 @@ function recursiveWords() {
 		words_that_fit = [mask];
 	}
 
-	var first_run = true;
+	//var first_run = true;
 	var success = 0;
-	while (success == 0) {
+	while (!success) {
 
+		if (arg_printtoconsole) {
+		printProcessing();
+	}
+
+		/*
 		if (!first_run) {
 			//REQUIRED, as setXY will clear words_already_on_the_board
 			//only do this if we have failed to lay a word in this loop
 			placeMaskOnBoard(dir, word_number, mask);
 		} //failed so reset word to previous mask
 		first_run = false; //we are in the loop and running
+*/
 
-		//exclusively optimal backtrack check and processing
-		//note that optimal is supposed to be able to backtrack to a target and not worry about superfluous words_that_fit
-		if (typeof word_backtrack_source !== 'undefined') { //we are doing an optimal backtrack
-			if (target_words_for_word_backtrack[word_backtrack_source][d_w]) { //we have hit the first optimal backtrack target.
-				word_backtrack_source = undefined; //turn off optimal backtrack
-			} else { //we did not find optimal backtrack target yet
-				next_word_on_board.unshift(word_position); //always unshift our current position back on to @nextLetterPositionsOnBoard when we return!
-				optimal_backtrack++;
-				return false; //go back one to see if it is optimal backtrack target
-			}
-		}
-
-		//naive backtrack and test for optimal
-		if (words_that_fit.length == 0) { //are there any possible words? If no start backtrack
-			next_word_on_board.unshift(word_position);
-			if (arg_optimalbacktrack) {
-				if (typeof word_backtrack_source === 'undefined') { //only set for optimal if we are not already in an optimal backtrack mode
-					if (typeof target_words_for_word_backtrack[d_w] !== 'undefined') { //check to see if there are any backtrack targets possible for dir word_number first
-						word_backtrack_source = d_w; //set source/start cell for optimal backtracking
-					}
+				//exclusively optimal backtrack check and processing
+				//it must come before naive check as words_that_fit check is irrelevant if we are in an optimal backtrack. We only stop when we hit optimal backtrack target
+			//note that optimal is supposed to be able to backtrack to a target and not worry about superfluous words_that_fit
+			if (typeof word_backtrack_source !== 'undefined') { //we are doing an optimal backtrack
+				if (target_words_for_word_backtrack[word_backtrack_source][d_w]) { //we have hit the first optimal backtrack target.
+					word_backtrack_source = undefined; //turn off optimal backtrack
+				} else { //we did not find optimal backtrack target yet
+					next_word_on_board.unshift(word_position); //always unshift our current position back on to @nextLetterPositionsOnBoard when we return!
+					optimal_backtrack++;
+					return false; //go back one to see if it is optimal backtrack target
 				}
 			}
-			naive_backtrack++; //really should be called all_backtracks
-			return false;
-		} //no words so fail
+
+			//this where backtracks START. It also does naive backtrack. it also tests for optimal and sets it up
+			if (words_that_fit.length == 0) { //are there any possible words? If no start backtrack
+				if (arg_optimalbacktrack) {//set optimal backtrack via word_backtrack_source
+					//if (typeof word_backtrack_source === 'undefined') { //only set for optimal if we are not already in an optimal backtrack mode
+						//if (typeof target_words_for_word_backtrack[d_w] !== 'undefined') { //check to see if there are any backtrack targets possible for dir word_number first
+							word_backtrack_source = d_w; //set source/start cell for optimal backtracking
+						//}
+					//}
+				}
+				next_word_on_board.unshift(word_position);
+				naive_backtrack++; //really should be called all_backtracks
+				return false;
+			} //no words so fail
 
 		//try the next word that fit in this location
 		popped_word = words_that_fit.shift();
 
 		//tests on what to do with popped_word. order is important
-		if (mask == popped_word) { //the mask on the puzzle already is a full word AND is the word we popped. in effect it has already been laid
+		//if (mask == popped_word) { //the mask on the puzzle already is a full word AND is the word we popped. in effect it has already been laid
+			//success = recursiveWords();
+		//} else if
+		if (!mask.includes(unoccupied)) { //mask is a full word. There could only be ONE words_that_fit. This word, and crossing words, 'should' have been verified already. no need to lay it again
 			success = recursiveWords();
-		}
-		else if( ! mask.includes(unoccupied) ){//mask is a full word. This word, and crossing words, 'should' have been verified alreadydy. no need to lay it again
-			success = recursiveWords();
-		}
-		else if (words_already_on_the_board[popped_word]) {} //skip words already used in puzzle
+		} else if (words_already_on_the_board[popped_word]) {} //skip words already used in puzzle
 		else { //place word
 			if (arg_simplewordmasksearch) { //simple
-					placeMaskOnBoard(dir, word_number, popped_word);
+				placeMaskOnBoard(dir, word_number, popped_word);
 				//check dead ends early by seeing if any crossing words fail
 				var failed_crossing_word = false;
 				var crossing_positions = letter_positions_of_word[dir][word_number];
@@ -1158,7 +1164,7 @@ function recursiveWords() {
 						failed_crossing_word = true;
 					}
 				});
-				if( ! failed_crossing_word ){
+				if (!failed_crossing_word) {
 					success = recursiveWords();
 				} else {} //loop
 			} else { //complex
@@ -1166,6 +1172,13 @@ function recursiveWords() {
 				success = recursiveWords();
 			}
 		}
+
+		if (!success) { //this word led to a dead end
+			//REQUIRED, as setXY will clear words_already_on_the_board
+			//only do this if we have failed to lay a word in this loop
+			placeMaskOnBoard(dir, word_number, mask); //failed so reset word to previous mask
+		}
+
 
 		try_another_loop++;
 	} //end while loop
@@ -1385,19 +1398,32 @@ return temp;
 }
 
 var console_log_count = 0;
+var print_limit = 0;
 function printProcessing() {
 var x , y;
 var line;
 var string = '<pre>';
 var time = ( Date.now() - start_time ) / 1000;
 
+//limit console update
+print_limit++;
+if(print_limit<1000){
+	return;
+}
+print_limit = 0;
+
+//limit # console records
+console_log_count++;
+if(console_log_count > 100){
+	console.clear();
+	console_log_count = 0;
+	} //if we don't it can blank out completely
+
 string += "\n";
 
-string += JSON.stringify(puzzle);
-//var pattern =  new RegExp( "," , 'g');
-string = string.replace( /\],\[/g , "\r\n");
+//string += JSON.stringify(puzzle);
+//string = string.replace( /\],\[/g , "\r\n");
 
-/*
 for (y = 0 ; y < puzzle_height ; y++){
 	line = '';
 	for (x = 0 ; x < puzzle_width ; x++) {
@@ -1407,7 +1433,6 @@ for (y = 0 ; y < puzzle_height ; y++){
 	string += "\n";
 
 }
-*/
 
 string +=  "\n";
 string += "Time: " + time; //#print time to create crossword
@@ -1422,17 +1447,14 @@ string += "optimalBacktrack:" + optimal_backtrack ;
 string += "\n";
 string += "naive_backtrack:" + naive_backtrack;
 string += "\n";
-string += "try_another_loop:" + try_another_loop;
+string += "try another letter/word per second:" + (try_another_loop / time);
+string += "\n";
+string += "try another letter/word:" + try_another_loop;
 string += "\n";
 string += "</pre>";
 
 document.getElementById('workspace').innerHTML = string;
 console.log(string);
-console_log_count++;
-if(console_log_count > 10000){
-	console.clear();
-	console_log_count = 0;
-	} //if we don't it can blank out completely
 }
 
 function printPuzzle(){
