@@ -11,6 +11,13 @@
 
 //improve xword walk?
 
+//counters
+//items_laid
+//items_removed
+//recursive_calls
+//dupliacte_word_found
+//dead_end
+
 //"use strict";
 
 var start_time;
@@ -751,12 +758,14 @@ function getCrossingWords(dir , word_number) {
 function calculateOptimalBacktracks() {
 	//to get to optimal backtrack targets, we use the naive backtrack until we hit the target
 	//letter optimum backtrack
-	//for each cell, optimal backtrack targets are all n,e,w,s cells
+	//for each cell, optimal backtrack targets are all n,e,w,s cells that have already been used in the walk
 	//word backtrack
-	//for each word, optimal backtrack targets are all crossing words, AND their crossing words
+	//for each word, optimal backtrack targets are all crossing words, AND their crossing words that have already been used in the walk
 	var x, y, xx, yy;
 	var word_letter_positions;
 	var cell_position;
+	var next_letter_position_on_board_shifted_string = [];
+	var next_word_on_board_shifted_string = [];
 
 	var next_letter_position_on_board_temp = JSON.parse(JSON.stringify(next_letter_position_on_board)); //backup as we are going to tear it up
 	var next_word_on_board_temp = JSON.parse(JSON.stringify(next_word_on_board)); //backup as we are going to tear it up
@@ -766,6 +775,7 @@ function calculateOptimalBacktracks() {
 			cell_position = next_letter_position_on_board_temp.shift(); //remove next letter position
 			x = cell_position[0];
 			y = cell_position[1];
+			next_letter_position_on_board_shifted_string.unshift('' + x + '_' + y); //cells that have been in the walk up to this point
 
 			for (dir = 0; dir < 2; dir++) {
 				if (typeof this_square_belongs_to_word_number[dir][y][x] === 'undefined') {
@@ -782,10 +792,12 @@ function calculateOptimalBacktracks() {
 						return;
 					} //skip current cell as it should not be a backtrack destination
 					//add to target_cells_for_letter_backtrack
-					if (typeof target_cells_for_letter_backtrack[x_y] === 'undefined') {//create if it doesn't exist
-						target_cells_for_letter_backtrack[x_y] = {};
+					if (next_letter_position_on_board_shifted_string.includes(xx_yy)) { //only allow cells that have been in the walk up to this point
+						if (typeof target_cells_for_letter_backtrack[x_y] === 'undefined') { //create if it doesn't exist
+							target_cells_for_letter_backtrack[x_y] = {};
+						}
+						target_cells_for_letter_backtrack[x_y][xx_yy] = true; //x_y is this cell and target _cells are stored in keys xx_yy!
 					}
-					target_cells_for_letter_backtrack[x_y][xx_yy] = true; //x_y is this cell and target _cells are stored in keys xx_yy!
 				});
 			}
 		}
@@ -798,22 +810,30 @@ function calculateOptimalBacktracks() {
 			let dir = word_position[0];
 			let word_number = word_position[1];
 			var d_w = '' + dir + '_' + word_number;
-			if (typeof target_words_for_word_backtrack[d_w] === 'undefined') {
-				target_words_for_word_backtrack[d_w] = {};
-			}
+			next_word_on_board_shifted_string.unshift(d_w); //words that have been in the walk up to this point
 			let word_positions = getCrossingWords(dir, word_number);
 			word_positions.forEach(function(word_position) {
 				let dir = word_position[0];
 				let word_number = word_position[1];
 				let d_w_temp = '' + dir + '_' + word_number;
-				target_words_for_word_backtrack[d_w][d_w_temp] = 1; //add 1st set of crossing words
+				if (next_word_on_board_shifted_string.includes(d_w_temp)) { //only allow words that have been in the walk up to this point
+					if (typeof target_words_for_word_backtrack[d_w] === 'undefined') { //create if it does not exist
+						target_words_for_word_backtrack[d_w] = {};
+					}
+					target_words_for_word_backtrack[d_w][d_w_temp] = true; //add 1st set of crossing words
+				}
 				//do 2nd level of crossing words
 				let word_positions = getCrossingWords(dir, word_number);
 				word_positions.forEach(function(word_position) {
 					let dir = word_position[0];
 					let word_number = word_position[1];
 					let d_w_temp = '' + dir + '_' + word_number;
-					target_words_for_word_backtrack[d_w][d_w_temp] = 1; //add 2st set of crossing words
+					if (next_word_on_board_shifted_string.includes(d_w_temp)) { //only allow words that have been in the walk up to this point
+						if (typeof target_words_for_word_backtrack[d_w] === 'undefined') { //create if it does not exist
+							target_words_for_word_backtrack[d_w] = {};
+						}
+						target_words_for_word_backtrack[d_w][d_w_temp] = true; //add 2st set of crossing words
+					}
 				});
 			});
 		} //while end
@@ -822,7 +842,6 @@ function calculateOptimalBacktracks() {
 
 function recursiveLetters() {
 	//recursively try to lay down words in order of next_letter_position_on_board. we will shift off and unshift if required
-
 	var x, y, x_y;
 	var cell_position;
 	var letters_that_fit = [];
@@ -862,6 +881,9 @@ function recursiveLetters() {
 				next_letter_position_on_board.unshift(cell_position); //always unshift our current position back on to @nextLetterPositionsOnBoard when we return!
 				//next_letter_position_on_board.unshift([x, y]); //always unshift our current position back on to @nextLetterPositionsOnBoard when we return!
 				optimal_backtrack++;
+				if((x == 0) && (y == 0)){
+				bigfail = 9;
+			}
 				return false; //go back one to see if it is optimal backtrack target
 			}
 		}
@@ -872,12 +894,17 @@ function recursiveLetters() {
 			if (arg_optimalbacktrack) { //optimal backtrack setup
 				//if (typeof letter_backtrack_source === 'undefined') { //only set for optimal if we are not already in an optimal backtrack mode
 					x_y = '' + x + '_' + y;
+					if(typeof target_cells_for_letter_backtrack[x_y] !== 'undefined'){ //only set optimal backtrack if there are actually optimal targets
 					//if (typeof target_cells_for_letter_backtrack[x_y] !== 'undefined') { //check to see if there are any backtrack targets possible for x y first
 						letter_backtrack_source = x_y; //set source/start cell for optimal bactracking
 					//}
+					}
 				//}
 			}
 			naive_backtrack++;
+			if((x == 0) && (y == 0)){
+				bigfail = 9;
+			}
 			return false; //start our backtrack : naive & optimal
 		}
 
@@ -1129,7 +1156,9 @@ function recursiveWords() {
 				if (arg_optimalbacktrack) {//set optimal backtrack via word_backtrack_source
 					//if (typeof word_backtrack_source === 'undefined') { //only set for optimal if we are not already in an optimal backtrack mode
 						//if (typeof target_words_for_word_backtrack[d_w] !== 'undefined') { //check to see if there are any backtrack targets possible for dir word_number first
-							word_backtrack_source = d_w; //set source/start cell for optimal backtracking
+					if(typeof target_words_for_word_backtrack[d_w] !== 'undefined'){// only set optimal backtrack if their are optimal backtrack targets
+						word_backtrack_source = d_w; //set source/start cell for optimal backtracking
+					}
 						//}
 					//}
 				}
@@ -1407,7 +1436,7 @@ var time = ( Date.now() - start_time ) / 1000;
 
 //limit console update
 print_limit++;
-if(print_limit<1000){
+if(print_limit<10000){
 	return;
 }
 print_limit = 0;
