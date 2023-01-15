@@ -11,12 +11,6 @@
 
 //improve xword walk?
 
-//counters
-//items_laid
-//items_removed
-//recursive_calls
-//dupliacte_word_found
-//dead_end
 
 //"use strict";
 
@@ -41,10 +35,6 @@ var mode = ''; //search/walk letter or word
 var next_letter_position_on_board = []; //the letter walk [[x0,y0] , [x1,y1] ...]
 var next_word_on_board = []; //the word walk [ [word_number , dir] , [] , ... ]
 //optimal search variables
-var try_another_loop = 0;
-var recursive_count = 0;
-var naive_backtrack = 0; //a counter
-var optimal_backtrack = 0; //a counter
 var letter_backtrack_source; //set to [] to stop an OPTIMAL backtrack and set to [x,y] to start  OPTIMAL backtrack
 var target_cells_for_letter_backtrack = {}; //global as we need to backtrack to the first  member of it we encounter. if $targetLettersForBackTrack{x failed letter}{y failed letter} == undef there are NO targets!
 //eg: for cell x,y there is a backtrack cell xx,yy (there may be others) target_cells_for_letter_backtrack['x_y']['xx_yy'] = 1;
@@ -54,6 +44,16 @@ var target_words_for_word_backtrack = {}; //global as we need to backtrack to th
 //eg: for word dir,word_number there is a backtrack word dir1,word_number1 (there may be others) target_words_for_word_backtrack['dir_word_number']['dir1_word_number1'] = 1;
 //dir_word_number is this word and possible target words are stored in keys dir1_word_number1
 var words_already_on_the_board = {}; //keep track of words successfully laid on puzzle so we don't lay duplicate words
+
+//counters
+var items_laid = 0;
+var items_removed = 0;
+var recursive_calls = 0;
+var dupliacte_word_found = 0;
+var dead_ends = 0;
+var try_another_loop = 0;
+var naive_backtrack = 0;
+var optimal_backtrack = 0;
 
 //vars used in html navigation
 var startx ; //based on word #1 across or down
@@ -302,6 +302,23 @@ function readStringFromFileAtPath(pathOfFileToReadFrom) {
 								});
 							}
 						}
+						else{//not a word, just a unoccupied square
+								//must do this to avoid having to check for existence of this_square_belongs_to_word_number[dir] , this_square_belongs_to_word_number[dir][yy][xx] , and this_square_belongs_to_word_number[dir][yy][xx]
+								if (typeof this_square_belongs_to_word_number[dir] === 'undefined') {
+										this_square_belongs_to_word_number[dir] = [];
+								}
+								if (typeof this_square_belongs_to_word_number[dir][y] === 'undefined') {
+										this_square_belongs_to_word_number[dir][y] = [];
+								}
+								this_square_belongs_to_word_number[dir][y][x] = undefined;
+								if (typeof position_in_word[dir] === 'undefined') {
+										position_in_word[dir] = [];
+									}
+									if (typeof position_in_word[dir][y] === 'undefined') {
+										position_in_word[dir][y] = [];
+									}
+									position_in_word[dir][y][x] = undefined;
+						}
 					}
 				}
 			}
@@ -321,8 +338,10 @@ function readStringFromFileAtPath(pathOfFileToReadFrom) {
 					if (puzzle[y][x] == unoccupied) {
 						white_cells++;
 					}
-					if ((typeof this_square_belongs_to_word_number[0][y][x] !== 'undefined') && (typeof this_square_belongs_to_word_number[1][y][x] !== 'undefined')) {
-						crossing_cells++;
+					if (typeof this_square_belongs_to_word_number[0][y] !== 'undefined'){
+						if ((typeof this_square_belongs_to_word_number[0][y][x] !== 'undefined') && (typeof this_square_belongs_to_word_number[1][y][x] !== 'undefined')) {
+							crossing_cells++;
+						}
 					}
 				}
 			}
@@ -778,9 +797,11 @@ function calculateOptimalBacktracks() {
 			next_letter_position_on_board_shifted_string.unshift('' + x + '_' + y); //cells that have been in the walk up to this point
 
 			for (dir = 0; dir < 2; dir++) {
-				if (typeof this_square_belongs_to_word_number[dir][y][x] === 'undefined') {
-					continue;
-				} //no word
+			//	if (typeof this_square_belongs_to_word_number[dir][y] === 'undefined'){
+					if (typeof this_square_belongs_to_word_number[dir][y][x] === 'undefined') {
+						continue;
+					} //no word
+			//}
 				let tsbtwn = this_square_belongs_to_word_number[dir][y][x];
 				word_letter_positions = letter_positions_of_word[dir][tsbtwn];
 				word_letter_positions.forEach(function(word_position) {
@@ -856,7 +877,7 @@ function recursiveLetters() {
 	x = cell_position[0];
 	y = cell_position[1];
 
-	recursive_count++;
+	recursive_calls++;
 
 	//get possible letters for this cell
 	if (arg_shuffle) {
@@ -876,6 +897,9 @@ function recursiveLetters() {
 			//xx_yy = '' + letter_backtrack_source[0] + '_' + letter_backtrack_source[1];
 			x_y = '' + x + '_' + y;
 			if (target_cells_for_letter_backtrack[letter_backtrack_source][x_y]) { //we have hit the first optimal backtrack target.
+				if((x == 0) && (y == 0)){
+						bigfail = 9;
+				}
 				letter_backtrack_source = undefined; //turn off optimal backtrack
 			} else { //we did not find optimal backtrack target yet
 				next_letter_position_on_board.unshift(cell_position); //always unshift our current position back on to @nextLetterPositionsOnBoard when we return!
@@ -912,7 +936,9 @@ function recursiveLetters() {
 		popped_letter = letters_that_fit.shift();
 
 		//try to lay letter on puzzle and respond appropriately
-		if ( setXY(x, y, popped_letter) ){ //letter was laid
+		var try_letter = setXY(x, y, popped_letter);
+		if (try_letter){ //letter was laid
+			items_laid++;
 			success = recursiveLetters(); //we laid a letter in this cell so try and fill the next cell. true means puzzle is complete, false means we are backtracking
 		}
 	 else{ //if words_that_were_laid = false, a horizontal or vertical word was already been laid/used in the puzzle. so backtrack
@@ -920,6 +946,7 @@ function recursiveLetters() {
 		}
 
 		if (! success) {
+			items_removed++;
 			setXY(x, y, unoccupied); //failed so reset letter to unoccupied
 		}
 
@@ -1005,6 +1032,7 @@ function setXY(x, y, letter) {
 	//get masks, see if unique mask (equating to a word) or full word is already laid, if so return false
 	for (dir = 0; dir < 2; dir++) {
 		if (typeof this_square_belongs_to_word_number[dir][y][x] === 'undefined') {
+				//mask[dir] = undefined;
 			continue;
 		} //no word here
 		word_number = this_square_belongs_to_word_number[dir][y][x];
@@ -1015,12 +1043,13 @@ function setXY(x, y, letter) {
 			delete words_already_on_the_board[mask[dir]]; //remove mask from words_already_on_the_board. It may be full.
 		}
 
-		//add letter to mask
+		//add letter or unoccupied to mask
 		mask[dir] = mask[dir].substring(0, position) + letter + mask[dir].substring(position + 1);
 
 		if (mode == 'letter') { //only do doesMaskProduceSingleWordAlreadyUsed if we are in letter mode! crosswords for word mode are checked in recursiveWords , etc
 			if (letter != unoccupied) { //no need if we are setting unoccupied
 				if (doesMaskProduceSingleWordAlreadyUsed(mask[dir])) { //mask produces unique word already used so return false
+					dupliacte_word_found++;
 					return false;
 				}
 			}
@@ -1029,8 +1058,10 @@ function setXY(x, y, letter) {
 
 	//if we found a full masks add to words_already_on_the_board
 	for (dir = 0; dir < 2; dir++) {
+		if(typeof mask[dir] !== 'undefined'){
 				if (!mask[dir].includes(unoccupied)) {
-			words_already_on_the_board[mask[dir]] = 1;
+					words_already_on_the_board[mask[dir]] = 1;
+				}
 		}
 	}
 
@@ -1097,7 +1128,7 @@ function recursiveWords() {
 	var word_number = word_position[1];
 	var d_w = '' + dir + '_' + word_number;
 
-	recursive_count++;
+	recursive_calls++;
 
 	//get all possible words for mask found at word position
 	var mask = all_masks_on_board[dir][word_number]; // get WORD or MASK at this crossword position
@@ -1176,7 +1207,9 @@ function recursiveWords() {
 		//} else if
 		if (!mask.includes(unoccupied)) { //mask is a full word. There could only be ONE words_that_fit. This word, and crossing words, 'should' have been verified already. no need to lay it again
 			success = recursiveWords();
-		} else if (words_already_on_the_board[popped_word]) {} //skip words already used in puzzle
+		} else if (words_already_on_the_board[popped_word]) {
+			dupliacte_word_found++;
+			} //skip words already used in puzzle
 		else { //place word
 			if (arg_simplewordmasksearch) { //simple
 				placeMaskOnBoard(dir, word_number, popped_word);
@@ -1194,9 +1227,11 @@ function recursiveWords() {
 					}
 				});
 				if (!failed_crossing_word) {
+					items_laid++;
 					success = recursiveWords();
 				} else {} //loop
 			} else { //complex
+				items_laid++;
 				placeMaskOnBoard(dir, word_number, popped_word);
 				success = recursiveWords();
 			}
@@ -1205,9 +1240,9 @@ function recursiveWords() {
 		if (!success) { //this word led to a dead end
 			//REQUIRED, as setXY will clear words_already_on_the_board
 			//only do this if we have failed to lay a word in this loop
+			items_removed++;
 			placeMaskOnBoard(dir, word_number, mask); //failed so reset word to previous mask
 		}
-
 
 		try_another_loop++;
 	} //end while loop
@@ -1249,36 +1284,48 @@ function letterListsFor(dir , word_number){
 //var word_length = all_masks_on_board[dir][word_number].length;
 var word_letter_positions = letter_positions_of_word[dir][word_number];
 var letter_lists = [];
-var nTh_letters;
+//var nTh_letters;
+var mask = all_masks_on_board[dir][word_number];
 
 for(var i = 0 ; i < word_letter_positions.length ; i++){
 //word_letter_positions.forEach(function(letter_position){
+	let nTh_letters = [];
+	var current_letter = mask.charAt(i);
+
+	//if a letter is already in the crossing spot, use it.
+		var pattern =  new RegExp('[A-Z]' , 'g');
+	if ( current_letter.search(pattern) == 0 ) {
+       nTh_letters = [current_letter];
+							letter_lists.push(nTh_letters);
+							continue;
+ }
+
 	letter_position = word_letter_positions[i];
 	var x = letter_position[0];
 	var y = letter_position[1];
 	var crossing_word_dir =  1 - dir;
-
 	var crossing_word_number = this_square_belongs_to_word_number[crossing_word_dir][y][x];
+
+//there is no crossing word at this letter location so any letter can go here!
+	if (typeof crossing_word_number === 'undefined') {
+			 nTh_letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+							letter_lists.push(nTh_letters);
+							continue;
+	}
+
 	var crossing_word_mask = all_masks_on_board[crossing_word_dir][crossing_word_number];
-
 	var  nTh_letter_position = position_in_word[crossing_word_dir][y][x];
-	var current_letter = crossing_word_mask.charAt(nTh_letter_position);
+	//var current_letter = crossing_word_mask.charAt(nTh_letter_position);
 
-	nTh_letters = [];
-	var pattern =  new RegExp('[A-Z]' , 'g');
-	if ( current_letter.search(pattern) == 0 ) { //if a letter is already in the crossing spot, use it.
-       nTh_letters = [current_letter];
-    }
+//	var pattern =  new RegExp('[A-Z]' , 'g');
+//	if ( current_letter.search(pattern) == 0 ) { //if a letter is already in the crossing spot, use it.
+  //     nTh_letters = [current_letter];
+    //}
 	if (current_letter == unoccupied){
        var words_from_mask = wordsFromMask(crossing_word_mask);
        nTh_letters = nThLettersFromListOfWords(nTh_letter_position , words_from_mask);
 	}
-	if (crossing_word_number === 'undefined') { //there is no crossing word at this letter location so return a single $unoccupied 'o' to indicate that a word can still be made as any letter can go here!
-       //@nThLetters = ($unoccupied);
-       //nTh_letters = [pads_either_side];
-			 nTh_letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
-    }
-	if( nTh_letters.length == 0) //used to break out earlier for small speed increase. If a letter position has no letters, WordsFromLetterList will fail anyway. Just return empty list
+	if( nTh_letters.length == 0) //If a letter position has no letters, WordsFromLetterList will fail anyway. Just return empty list
         {
         letter_lists = [];
         return letter_lists;
@@ -1465,20 +1512,38 @@ for (y = 0 ; y < puzzle_height ; y++){
 
 string +=  "\n";
 string += "Time: " + time; //#print time to create crossword
+
 string += "\n";
-string += "Recursive calls: " + recursive_count; //print time to create crossword
+string += "Items laid: " + items_laid;
+
 string += "\n";
-string += "Sec per Recursive call: " + (time / recursive_count); //print time to create crossword
+string += "Recursive calls: " + recursive_calls; //print time to create crossword
 string += "\n";
-string +=  "Recursive calls per Sec: " + (recursive_count / time); //print time to create crossword
+string += "Sec per Recursive call: " + (time / recursive_calls); //print time to create crossword
 string += "\n";
-string += "optimalBacktrack:" + optimal_backtrack ;
+string +=  "Recursive calls per Sec: " + (recursive_calls / time); //print time to create crossword
+
 string += "\n";
-string += "naive_backtrack:" + naive_backtrack;
+string += "try another item:" + try_another_loop;
 string += "\n";
-string += "try another letter/word per second:" + (try_another_loop / time);
+string += "try another item per second:" + (try_another_loop / time);
+
 string += "\n";
-string += "try another letter/word:" + try_another_loop;
+string += "Duplicate word found: " + dupliacte_word_found;
+
+string += "\n";
+string += "Dead ends: " + naive_backtrack;
+
+string += "\n";
+string += "Items removed: " + items_removed;
+
+
+string += "\n";
+string += "Naive backtrack:" + naive_backtrack;
+string += "\n";
+string += "Optimal backtrack:" + optimal_backtrack ;
+
+
 string += "\n";
 string += "</pre>";
 
@@ -1618,7 +1683,6 @@ function HighlightClue(id){
 if (OldClue != ""){
 	document.getElementById(OldClue).className = 'cluesCleared';
 	} //clear old clue
-
 document.getElementById(id).className = 'cluesSelected'; //select/focus the clue
 OldClue = id;
 }
@@ -1661,6 +1725,12 @@ function choose_cell(id){ //id is '[x,y]'
 
 	ClearBox();//clear old box
 	var word_number = this_square_belongs_to_word_number[dir][y][x];
+	if (typeof word_number === 'undefined'){//no word, but there must be a crossword
+		ToggleHV();
+		dir = horizvert;
+		word_number = this_square_belongs_to_word_number[dir][y][x];
+		//return false;
+	}
 	//var word = all_masks_on_board[dir][word_number];
 	id_str = '[' + dir + ',' + word_number + ',"cell"]';
 	HighlightClue(id_str);
