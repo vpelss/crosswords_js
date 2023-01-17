@@ -45,6 +45,8 @@ var target_words_for_word_backtrack = {}; //global as we need to backtrack to th
 //dir_word_number is this word and possible target words are stored in keys dir1_word_number1
 var words_already_on_the_board = {}; //keep track of words successfully laid on puzzle so we don't lay duplicate words
 
+var clues = [];
+
 //counters
 var items_laid = 0;
 var items_removed = 0;
@@ -56,12 +58,12 @@ var naive_backtrack = 0;
 var optimal_backtrack = 0;
 
 //vars used in html navigation
-var startx ; //based on word #1 across or down
-var starty ;
+var startx; //based on word #1 across or down
+var starty;
 var LetterPosArray;
 var OldLetterPosArray;
 var horizvert = 0;
-var OldClue = [1,1,'cell'];
+var OldClue = [1, 1, 'cell'];
 var CurrentFocus;
 var CurrentClass;
 var NthPosition;
@@ -122,7 +124,7 @@ function main() {
 	if (arg_walkpath == 'acrossthendown') {
 		generateNextWordPositionsOnBoardAcrossThenDown();
 	}
-if (arg_walkpath == 'random') {
+	if (arg_walkpath == 'random') {
 		generateNextWordPositionsOnBoardRandom();
 	}
 
@@ -139,11 +141,11 @@ if (arg_walkpath == 'random') {
 	if (arg_walkpath == 'GenerateNextLetterPositionsOnBoardSwitchWalk') {
 		generateNextLetterPositionsOnBoardSwitchWalk();
 	}
-if (arg_walkpath == 'GenerateNextLetterPositionsOnBoardSnakeWalk') {
+	if (arg_walkpath == 'GenerateNextLetterPositionsOnBoardSnakeWalk') {
 		generateNextLetterPositionsOnBoardSnakeWalk();
 	}
 
- arg_simplewordmasksearch = urlParams.get('simplewordmasksearch');
+	arg_simplewordmasksearch = urlParams.get('simplewordmasksearch');
 
 	arg_optimalbacktrack = urlParams.get('optimalbacktrack');
 	if (arg_optimalbacktrack) {
@@ -167,23 +169,26 @@ if (arg_walkpath == 'GenerateNextLetterPositionsOnBoardSnakeWalk') {
 	document.getElementById('puzzle_place').innerHTML = printPuzzle();
 	document.getElementById('Answers').innerHTML = printSolvedPuzzle();
 
-//prep html navigation
-if(typeof letter_positions_of_word[dir_across][1]){
-	starty = letter_positions_of_word[dir_across][1][0][0];
-	startx = letter_positions_of_word[dir_across][1][0][1];
-}
-else{
-	starty = letter_positions_of_word[dir_down][1][0][0];
-	startx = letter_positions_of_word[dir_down][1][0][1];
-}
-LetterPosArray = [[startx,starty]];
-OldLetterPosArray = [[startx,starty]];
-horiz_vert = 0; //0 is  horiz 1 is vert
-OldClue = '';
-CurrentFocus = ''; //ID Name  where letters will be inserted
-CurrentClass = 'tdwhiteclass'; //for remembering the class to return the square too
-NthPosition = 0; //so we can find the next square to type a letter into
-CurrentPos = new Array(startx,starty); //CURRENTLY HIGLIGHTED BOX COORDINATES
+	//prep html navigation
+	if (typeof letter_positions_of_word[dir_across][1]) {
+		starty = letter_positions_of_word[dir_across][1][0][0];
+		startx = letter_positions_of_word[dir_across][1][0][1];
+	} else {
+		starty = letter_positions_of_word[dir_down][1][0][0];
+		startx = letter_positions_of_word[dir_down][1][0][1];
+	}
+	LetterPosArray = [
+		[startx, starty]
+	];
+	OldLetterPosArray = [
+		[startx, starty]
+	];
+	horiz_vert = 0; //0 is  horiz 1 is vert
+	OldClue = '';
+	CurrentFocus = ''; //ID Name  where letters will be inserted
+	CurrentClass = 'tdwhiteclass'; //for remembering the class to return the square too
+	NthPosition = 0; //so we can find the next square to type a letter into
+	CurrentPos = new Array(startx, starty); //CURRENTLY HIGLIGHTED BOX COORDINATES
 }
 
 function grid_change(file_name) {
@@ -234,133 +239,132 @@ function readStringFromFileAtPath(pathOfFileToReadFrom) {
 	return returnValue;
 }
 
-		function numberBlankSquares() {
-			//this does a lot of global variable setups
-			//also associates all squares with words and word # , get word lengths on grid ,
-			//this_square_belongs_to_word_number[dir][y][x]
-			//position_in_word[dir][y][x]
-			//letter_positions_of_word[dir][word_number]
-			//all_masks_on_board[dir][word_number]
-			var x;
-			var y;
-			var word_length;
-			var word_number = 0;
-			var was_there_an_across_word = 0; //
-			var blank_word = '';
-			var dir;
-			var word_letter_positions_array = [];
+function numberBlankSquares() {
+	//this does a lot of global variable setups
+	//also associates all squares with words and word # , get word lengths on grid ,
+	//this_square_belongs_to_word_number[dir][y][x]
+	//position_in_word[dir][y][x]
+	//letter_positions_of_word[dir][word_number]
+	//all_masks_on_board[dir][word_number]
+	var x;
+	var y;
+	var word_length;
+	var word_number = 0;
+	var was_there_an_across_word = 0; //
+	var blank_word = '';
+	var dir;
+	var word_letter_positions_array = [];
 
-			//label all grid squares with data
-			for (y = 0; y < puzzle_height; y++) {
-				for (x = 0; x < puzzle_width; x++) {
-					was_there_an_across_word = 0; //assume not
-					for (dir = 0; dir < 2; dir++) { //#for both across 0 and down 1 words
-						if (puzzle[y][x] == pad_char) {
-							continue;
+	//label all grid squares with data
+	for (y = 0; y < puzzle_height; y++) {
+		for (x = 0; x < puzzle_width; x++) {
+			was_there_an_across_word = 0; //assume not
+			for (dir = 0; dir < 2; dir++) { //#for both across 0 and down 1 words
+				if (puzzle[y][x] == pad_char) {
+					continue;
+				}
+				word_letter_positions_array = calculateWordLetterPositions(x, y, dir);
+				if (word_letter_positions_array) {
+					if ((word_letter_positions_array[0][0] == x) && (word_letter_positions_array[0][1] == y)) { //first letter in word?
+						word_length = word_letter_positions_array.length;
+						word_lengths[word_length] = 1; //mark globally that there is a word of this length
+						if (!was_there_an_across_word) { //allows us to not increase count if across and down share first letter pos
+							word_number++;
 						}
-						word_letter_positions_array = calculateWordLetterPositions(x, y, dir);
-						if (word_letter_positions_array) {
-							if ((word_letter_positions_array[0][0] == x) && (word_letter_positions_array[0][1] == y)) { //first letter in word?
-								word_length = word_letter_positions_array.length;
-								word_lengths[word_length] = 1; //mark globally that there is a word of this length
-								if (!was_there_an_across_word) { //allows us to not increase count if across and down share first letter pos
-									word_number++;
-								}
-								was_there_an_across_word = 1;
-								//set letter_positions_of_word[$numberCount][dir] = [TempLetterPositions];
-								if (typeof letter_positions_of_word[dir] === 'undefined') {
-									letter_positions_of_word[dir] = [];
-								}
-								letter_positions_of_word[dir][word_number] = JSON.parse(JSON.stringify(word_letter_positions_array)); //deep copy multi dim array
-								//set all_masks_on_board[dir][word_number] = 'ooooooooo';
-								blank_word = ''; // must do to ensure we get the right word/mask length
-								blank_word = blank_word.padEnd(word_length, unoccupied);
-								if (typeof all_masks_on_board[dir] === 'undefined') {
-									all_masks_on_board[dir] = [];
-								}
-								all_masks_on_board[dir][word_number] = blank_word;
-								//set position_in_word , this_square_belongs_to_word_number
-								word_letter_positions_array.forEach(function(currentValue, index) {
-									//set position_in_word for all word_letter_positions_array in this word
-									var xx = currentValue[0];
-									var yy = currentValue[1];
-									if (typeof position_in_word[dir] === 'undefined') {
-										position_in_word[dir] = [];
-									}
-									if (typeof position_in_word[dir][yy] === 'undefined') {
-										position_in_word[dir][yy] = [];
-									}
-									position_in_word[dir][yy][xx] = index;
-									//set this_square_belongs_to_word_number[dir][yy][xx] for all word_letter_positions_array in this word
-									if (typeof this_square_belongs_to_word_number[dir] === 'undefined') {
-										this_square_belongs_to_word_number[dir] = [];
-									}
-									if (typeof this_square_belongs_to_word_number[dir][yy] === 'undefined') {
-										this_square_belongs_to_word_number[dir][yy] = [];
-									}
-									this_square_belongs_to_word_number[dir][yy][xx] = word_number;
-								});
+						was_there_an_across_word = 1;
+						//set letter_positions_of_word[$numberCount][dir] = [TempLetterPositions];
+						if (typeof letter_positions_of_word[dir] === 'undefined') {
+							letter_positions_of_word[dir] = [];
+						}
+						letter_positions_of_word[dir][word_number] = JSON.parse(JSON.stringify(word_letter_positions_array)); //deep copy multi dim array
+						//set all_masks_on_board[dir][word_number] = 'ooooooooo';
+						blank_word = ''; // must do to ensure we get the right word/mask length
+						blank_word = blank_word.padEnd(word_length, unoccupied);
+						if (typeof all_masks_on_board[dir] === 'undefined') {
+							all_masks_on_board[dir] = [];
+						}
+						all_masks_on_board[dir][word_number] = blank_word;
+						//set position_in_word , this_square_belongs_to_word_number
+						word_letter_positions_array.forEach(function(currentValue, index) {
+							//set position_in_word for all word_letter_positions_array in this word
+							var xx = currentValue[0];
+							var yy = currentValue[1];
+							if (typeof position_in_word[dir] === 'undefined') {
+								position_in_word[dir] = [];
 							}
-						}
-						else{//not a word, just a unoccupied square
-								//must do this to avoid having to check for existence of this_square_belongs_to_word_number[dir] , this_square_belongs_to_word_number[dir][yy][xx] , and this_square_belongs_to_word_number[dir][yy][xx]
-								if (typeof this_square_belongs_to_word_number[dir] === 'undefined') {
-										this_square_belongs_to_word_number[dir] = [];
-								}
-								if (typeof this_square_belongs_to_word_number[dir][y] === 'undefined') {
-										this_square_belongs_to_word_number[dir][y] = [];
-								}
-								this_square_belongs_to_word_number[dir][y][x] = undefined;
-								if (typeof position_in_word[dir] === 'undefined') {
-										position_in_word[dir] = [];
-									}
-									if (typeof position_in_word[dir][y] === 'undefined') {
-										position_in_word[dir][y] = [];
-									}
-									position_in_word[dir][y][x] = undefined;
-						}
+							if (typeof position_in_word[dir][yy] === 'undefined') {
+								position_in_word[dir][yy] = [];
+							}
+							position_in_word[dir][yy][xx] = index;
+							//set this_square_belongs_to_word_number[dir][yy][xx] for all word_letter_positions_array in this word
+							if (typeof this_square_belongs_to_word_number[dir] === 'undefined') {
+								this_square_belongs_to_word_number[dir] = [];
+							}
+							if (typeof this_square_belongs_to_word_number[dir][yy] === 'undefined') {
+								this_square_belongs_to_word_number[dir][yy] = [];
+							}
+							this_square_belongs_to_word_number[dir][yy][xx] = word_number;
+						});
 					}
+				} else { //not a word, just a unoccupied square
+					//must do this to avoid having to check for existence of this_square_belongs_to_word_number[dir] , this_square_belongs_to_word_number[dir][yy][xx] , and this_square_belongs_to_word_number[dir][yy][xx]
+					if (typeof this_square_belongs_to_word_number[dir] === 'undefined') {
+						this_square_belongs_to_word_number[dir] = [];
+					}
+					if (typeof this_square_belongs_to_word_number[dir][y] === 'undefined') {
+						this_square_belongs_to_word_number[dir][y] = [];
+					}
+					this_square_belongs_to_word_number[dir][y][x] = undefined;
+					if (typeof position_in_word[dir] === 'undefined') {
+						position_in_word[dir] = [];
+					}
+					if (typeof position_in_word[dir][y] === 'undefined') {
+						position_in_word[dir][y] = [];
+					}
+					position_in_word[dir][y][x] = undefined;
 				}
 			}
-
-			// biggest_word_number = word_number;
-			var crossing_cells = 0;
-			var total_cells = 0;
-			var white_cells = 0;
-			var pad_cells = 0;
-
-			//calculate interlock and density
-			for (y = 0; y < puzzle_height; y++) {
-				for (x = 0; x < puzzle_width; x++) {
-					if (puzzle[y][x] == pad_char) {
-						pad_cells++;
-					}
-					if (puzzle[y][x] == unoccupied) {
-						white_cells++;
-					}
-					if (typeof this_square_belongs_to_word_number[0][y] !== 'undefined'){
-						if ((typeof this_square_belongs_to_word_number[0][y][x] !== 'undefined') && (typeof this_square_belongs_to_word_number[1][y][x] !== 'undefined')) {
-							crossing_cells++;
-						}
-					}
-				}
-			}
-
-			total_cells = puzzle_height * puzzle_width;
-			var interlock = 100 * crossing_cells / total_cells;
-			var density = 100 * white_cells / total_cells;
-
-			console.log("Total Cells: " + total_cells);
-			console.log("White Cells: " + white_cells);
-			console.log("Pad Cells: " + pad_cells);
-			console.log("Interlock: " + interlock);
-			console.log("Density: " + density);
-			console.log("Grid has words of lengths :");
-			var wl = Object.keys(word_lengths);
-			wl.forEach(function(currentValue) {
-				console.log(currentValue);
-			});
 		}
+	}
+
+	// biggest_word_number = word_number;
+	var crossing_cells = 0;
+	var total_cells = 0;
+	var white_cells = 0;
+	var pad_cells = 0;
+
+	//calculate interlock and density
+	for (y = 0; y < puzzle_height; y++) {
+		for (x = 0; x < puzzle_width; x++) {
+			if (puzzle[y][x] == pad_char) {
+				pad_cells++;
+			}
+			if (puzzle[y][x] == unoccupied) {
+				white_cells++;
+			}
+			if (typeof this_square_belongs_to_word_number[0][y] !== 'undefined') {
+				if ((typeof this_square_belongs_to_word_number[0][y][x] !== 'undefined') && (typeof this_square_belongs_to_word_number[1][y][x] !== 'undefined')) {
+					crossing_cells++;
+				}
+			}
+		}
+	}
+
+	total_cells = puzzle_height * puzzle_width;
+	var interlock = 100 * crossing_cells / total_cells;
+	var density = 100 * white_cells / total_cells;
+
+	console.log("Total Cells: " + total_cells);
+	console.log("White Cells: " + white_cells);
+	console.log("Pad Cells: " + pad_cells);
+	console.log("Interlock: " + interlock);
+	console.log("Density: " + density);
+	console.log("Grid has words of lengths :");
+	var wl = Object.keys(word_lengths);
+	wl.forEach(function(currentValue) {
+		console.log(currentValue);
+	});
+}
 
 function calculateWordLetterPositions(x, y, dir) {
 	var dx = 1 - dir;
@@ -582,59 +586,65 @@ function generateNextWordPositionsOnBoardAcrossThenDown() { //do all horiz words
 	}
 }
 
-function generateNextWordPositionsOnBoardRandom() {//random order
+function generateNextWordPositionsOnBoardRandom() { //random order
 	generateNextWordPositionsOnBoardCrossing();
 	next_word_on_board = shuffle(next_word_on_board);
 }
 
-function generateNextLetterPositionOnBoardZigzag(){//start at 0,0 , moving diag top right to bottom left then alternate bottom left to top right, etc
-		var x = 1;
-		var y = -1;
-		var divX = -1;
-		var divY = 1;
+function generateNextLetterPositionOnBoardZigzag() { //start at 0,0 , moving diag top right to bottom left then alternate bottom left to top right, etc
+	var x = 1;
+	var y = -1;
+	var divX = -1;
+	var divY = 1;
 
-		next_letter_position_on_board = [];
-		do {
-				//move cursor
-				x = x + divX;
-				y = y + divY;
-				//test cursor position
-				if ( (x < 0) && (y >= puzzle_height) ) {//bottom left corner
-						divX = -divX; divY = -divY; //change directions
-						x = 1;
-						y = puzzle_height - 1;
-				}
-				if ( (x >= puzzle_width) && (y < 0) ) {//top right corner
-						divX = -divX; divY = -divY; //change directions
-						x = puzzle_width - 1;
-						y = 1;
-				}
-				if (x < 0){//off left
-						divX = -divX; divY = -divY; //change directions
-						x = 0;
-				}
-				if (y < 0){//off top
-						divX = -divX; divY = -divY; //change directions
-						y = 0;
-				}
-				if (x >=  puzzle_width){//off right
-						divX = -divX; divY = -divY; //change directions
-						x =  puzzle_width - 1;
-						y = y + 2;
-				}
-				if (y >=  puzzle_height){//off bottom
-									divX = -divX; divY = -divY; //change directions
-									x =  x + 2;
-									y = puzzle_height - 1;
-									}
-				//process cursor position
-				if (puzzle[y][x] != pad_char){
-						next_letter_position_on_board.push([x,y]);
-				}
-  } 	while( (x != puzzle_width - 1) || (y != puzzle_height - 1) );
+	next_letter_position_on_board = [];
+	do {
+		//move cursor
+		x = x + divX;
+		y = y + divY;
+		//test cursor position
+		if ((x < 0) && (y >= puzzle_height)) { //bottom left corner
+			divX = -divX;
+			divY = -divY; //change directions
+			x = 1;
+			y = puzzle_height - 1;
+		}
+		if ((x >= puzzle_width) && (y < 0)) { //top right corner
+			divX = -divX;
+			divY = -divY; //change directions
+			x = puzzle_width - 1;
+			y = 1;
+		}
+		if (x < 0) { //off left
+			divX = -divX;
+			divY = -divY; //change directions
+			x = 0;
+		}
+		if (y < 0) { //off top
+			divX = -divX;
+			divY = -divY; //change directions
+			y = 0;
+		}
+		if (x >= puzzle_width) { //off right
+			divX = -divX;
+			divY = -divY; //change directions
+			x = puzzle_width - 1;
+			y = y + 2;
+		}
+		if (y >= puzzle_height) { //off bottom
+			divX = -divX;
+			divY = -divY; //change directions
+			x = x + 2;
+			y = puzzle_height - 1;
+		}
+		//process cursor position
+		if (puzzle[y][x] != pad_char) {
+			next_letter_position_on_board.push([x, y]);
+		}
+	} while ((x != puzzle_width - 1) || (y != puzzle_height - 1));
 }
 
-function generateNextLetterPositionsOnBoardDiag() {//start at 0,0 , moving diag top right to bottom left then top right to bottom left, etc
+function generateNextLetterPositionsOnBoardDiag() { //start at 0,0 , moving diag top right to bottom left then top right to bottom left, etc
 	var x = 0;
 	var y = 0;
 	var divX = -1;
@@ -646,7 +656,7 @@ function generateNextLetterPositionsOnBoardDiag() {//start at 0,0 , moving diag 
 	do {
 		//process cursor position
 		if (puzzle[y][x] != pad_char) {
-				next_letter_position_on_board.push([x, y]);
+			next_letter_position_on_board.push([x, y]);
 		}
 
 		x = x + divX;
@@ -681,7 +691,7 @@ function generateNextLetterPositionOnBoardFlat() { //all first row, then second,
 	}
 }
 
-function generateNextLetterPositionsOnBoardSwitchWalk() {//see thesis.cambon.dk.pdf on github
+function generateNextLetterPositionsOnBoardSwitchWalk() { //see thesis.cambon.dk.pdf on github
 	var x = 0;
 	var y = 0;
 	var xx = 0; //last starting run
@@ -710,15 +720,15 @@ function generateNextLetterPositionsOnBoardSwitchWalk() {//see thesis.cambon.dk.
 	while ((x + y + 2) <= (puzzle_height + puzzle_width));
 }
 
-function generateNextLetterPositionsOnBoardSnakeWalk() {	//see thesis.cambon.dk.pdf on github
+function generateNextLetterPositionsOnBoardSnakeWalk() { //see thesis.cambon.dk.pdf on github
 	var dx = 1;
 	var dy = 0;
 	var walk_length = 2;
 	//var walk_step;
 	var x = 0;
 	var y = 1;
-counter = 1;
-next_letter_position_on_board = [
+	counter = 1;
+	next_letter_position_on_board = [
 		[0, 0],
 		[1, 0]
 	];
@@ -727,31 +737,31 @@ next_letter_position_on_board = [
 		throw new Error("The grid is not square. Snake walk failed.");
 	}
 
-		while(1) {
-			counter++;
-			for (var dir = 0; dir < 2; dir++) {
-				for (var walk_step = 1; walk_step <= walk_length; walk_step++) {
-					if (puzzle[y][x] != pad_char) {
-						next_letter_position_on_board.push([x, y]);
-					}
+	while (1) {
+		counter++;
+		for (var dir = 0; dir < 2; dir++) {
+			for (var walk_step = 1; walk_step <= walk_length; walk_step++) {
+				if (puzzle[y][x] != pad_char) {
+					next_letter_position_on_board.push([x, y]);
+				}
 				x = x + dx;
 				y = y + dy;
-				}
-				if(walk_length == puzzle_height){
-					return true;
-				}
-				dx = 1 - dx; //change dir
-				dy = 1 - dy;
-				x = counter;
-				y = 0;
 			}
-			x = 0;
-			y = counter;
-			walk_length++;
+			if (walk_length == puzzle_height) {
+				return true;
+			}
+			dx = 1 - dx; //change dir
+			dy = 1 - dy;
+			x = counter;
+			y = 0;
 		}
+		x = 0;
+		y = counter;
+		walk_length++;
+	}
 }
 
-function getCrossingWords(dir , word_number) {
+function getCrossingWords(dir, word_number) {
 	//input: word number and direction
 	//output: [[crossing_word_dir0,crossing_word_number0],[crossing_word_dir1,crossing_word_number1], ...]
 	var crossing_words = [];
@@ -768,7 +778,7 @@ function getCrossingWords(dir , word_number) {
 		//find and mark crossing words
 		crossing_word_number = this_square_belongs_to_word_number[crossing_word_dir][y][x];
 		if (crossing_word_number > 0) {
-			crossing_words.push([crossing_word_dir , crossing_word_number]);
+			crossing_words.push([crossing_word_dir, crossing_word_number]);
 		}
 	});
 	return crossing_words;
@@ -797,11 +807,11 @@ function calculateOptimalBacktracks() {
 			next_letter_position_on_board_shifted_string.unshift('' + x + '_' + y); //cells that have been in the walk up to this point
 
 			for (dir = 0; dir < 2; dir++) {
-			//	if (typeof this_square_belongs_to_word_number[dir][y] === 'undefined'){
-					if (typeof this_square_belongs_to_word_number[dir][y][x] === 'undefined') {
-						continue;
-					} //no word
-			//}
+				//	if (typeof this_square_belongs_to_word_number[dir][y] === 'undefined'){
+				if (typeof this_square_belongs_to_word_number[dir][y][x] === 'undefined') {
+					continue;
+				} //no word
+				//}
 				let tsbtwn = this_square_belongs_to_word_number[dir][y][x];
 				word_letter_positions = letter_positions_of_word[dir][tsbtwn];
 				word_letter_positions.forEach(function(word_position) {
@@ -890,24 +900,24 @@ function recursiveLetters() {
 	var success = 0;
 	while (success == 0) {
 
-		if(arg_printtoconsole){printProcessing();}
+		printProcessing();
 
 		//exclusively optimal backtrack check and processing
 		if (typeof letter_backtrack_source !== 'undefined') { //we are doing an optimal backtrack
 			//xx_yy = '' + letter_backtrack_source[0] + '_' + letter_backtrack_source[1];
 			x_y = '' + x + '_' + y;
 			if (target_cells_for_letter_backtrack[letter_backtrack_source][x_y]) { //we have hit the first optimal backtrack target.
-				if((x == 0) && (y == 0)){
-						bigfail = 9;
+				if ((x == 0) && (y == 1)) {
+					bigfail = 9;
 				}
 				letter_backtrack_source = undefined; //turn off optimal backtrack
 			} else { //we did not find optimal backtrack target yet
 				next_letter_position_on_board.unshift(cell_position); //always unshift our current position back on to @nextLetterPositionsOnBoard when we return!
 				//next_letter_position_on_board.unshift([x, y]); //always unshift our current position back on to @nextLetterPositionsOnBoard when we return!
 				optimal_backtrack++;
-				if((x == 0) && (y == 0)){
-				bigfail = 9;
-			}
+				if ((x == 0) && (y == 1)) {
+					bigfail = 9;
+				}
 				return false; //go back one to see if it is optimal backtrack target
 			}
 		}
@@ -917,16 +927,16 @@ function recursiveLetters() {
 			next_letter_position_on_board.unshift(cell_position); //always unshift our current position back on to next_letter_position_on_board before backtracking
 			if (arg_optimalbacktrack) { //optimal backtrack setup
 				//if (typeof letter_backtrack_source === 'undefined') { //only set for optimal if we are not already in an optimal backtrack mode
-					x_y = '' + x + '_' + y;
-					if(typeof target_cells_for_letter_backtrack[x_y] !== 'undefined'){ //only set optimal backtrack if there are actually optimal targets
+				x_y = '' + x + '_' + y;
+				if (typeof target_cells_for_letter_backtrack[x_y] !== 'undefined') { //only set optimal backtrack if there are actually optimal targets
 					//if (typeof target_cells_for_letter_backtrack[x_y] !== 'undefined') { //check to see if there are any backtrack targets possible for x y first
-						letter_backtrack_source = x_y; //set source/start cell for optimal bactracking
+					letter_backtrack_source = x_y; //set source/start cell for optimal bactracking
 					//}
-					}
+				}
 				//}
 			}
 			naive_backtrack++;
-			if((x == 0) && (y == 0)){
+			if ((x == 0) && (y == 1)) {
 				bigfail = 9;
 			}
 			return false; //start our backtrack : naive & optimal
@@ -937,20 +947,19 @@ function recursiveLetters() {
 
 		//try to lay letter on puzzle and respond appropriately
 		var try_letter = setXY(x, y, popped_letter);
-		if (try_letter){ //letter was laid
+		if (try_letter) { //letter was laid
 			items_laid++;
 			success = recursiveLetters(); //we laid a letter in this cell so try and fill the next cell. true means puzzle is complete, false means we are backtracking
-		}
-	 else{ //if words_that_were_laid = false, a horizontal or vertical word was already been laid/used in the puzzle. so backtrack
+		} else { //if words_that_were_laid = false, a horizontal or vertical word was already been laid/used in the puzzle. so backtrack
 			continue;
 		}
 
-		if (! success) {
+		if (!success) {
 			items_removed++;
 			setXY(x, y, unoccupied); //failed so reset letter to unoccupied
 		}
 
-	try_another_loop++;
+		try_another_loop++;
 	} ////end while loop
 	return true;
 }
@@ -970,14 +979,13 @@ function lettersPossibleAtCell(x, y) {
 		word_number = this_square_belongs_to_word_number[dir][y][x];
 		mask[dir] = all_masks_on_board[dir][word_number];
 
-		if(typeof linear_word_search[ mask[dir] ] === 'undefined'){//cases where the mask is not linear or word does not exist. if walk is well designed, this should not occur. If it does, puzzle will never complete
-			throw new Error(`Illegal mask , ${mask[dir]} , when it should be a linear word search. Probably and incompatible letter walk.`);
+		if (typeof linear_word_search[mask[dir]] === 'undefined') { //cases where the mask is not linear or word does not exist. if walk is well designed, this should not occur. If it does, puzzle will never complete
+			throw new Error( "Illegal mask, " +	mask[dir] + ", when it should be a linear word search.Probably and incompatible letter walk.");
+		} else {
+			possible_letters_HV[dir] = Object.keys(linear_word_search[mask[dir]]);
 		}
-		else{
-			possible_letters_HV[dir] = Object.keys(linear_word_search[ mask[dir] ]);
-		}
-	//OR using full word code it is half as fast
-	/*
+		//OR using full word code it is half as fast
+		/*
 	var words = wordsFromMask(mask[dir]);
 	var nTh = position_in_word[dir][y][x];
 	possible_letters_HV[dir] = nThLettersFromListOfWords(nTh , words);
@@ -991,10 +999,9 @@ function lettersPossibleAtCell(x, y) {
 			}
 		});
 	} else { //one of these might have letters
-		if(possible_letters_HV[0].length){
+		if (possible_letters_HV[0].length) {
 			letters_that_fit = possible_letters_HV[0];
-		}
-		else{
+		} else {
 			letters_that_fit = possible_letters_HV[1];
 		}
 	}
@@ -1005,7 +1012,8 @@ function shuffle(array) {
 	//array is passed by reference and will be shuffled directly
 	//returning and array is also by reference
 	//so if you need a new copy, use myNewArray = JSON.parse(JSON.stringify( myArray )) to make a new array
-	var m = array.length , t , i;
+	var m = array.length,
+		t, i;
 	while (m) { //while there remain elements to shuffle
 		// Pick a remaining element
 		i = Math.floor(Math.random() * m--);
@@ -1032,7 +1040,7 @@ function setXY(x, y, letter) {
 	//get masks, see if unique mask (equating to a word) or full word is already laid, if so return false
 	for (dir = 0; dir < 2; dir++) {
 		if (typeof this_square_belongs_to_word_number[dir][y][x] === 'undefined') {
-				//mask[dir] = undefined;
+			//mask[dir] = undefined;
 			continue;
 		} //no word here
 		word_number = this_square_belongs_to_word_number[dir][y][x];
@@ -1058,10 +1066,10 @@ function setXY(x, y, letter) {
 
 	//if we found a full masks add to words_already_on_the_board
 	for (dir = 0; dir < 2; dir++) {
-		if(typeof mask[dir] !== 'undefined'){
-				if (!mask[dir].includes(unoccupied)) {
-					words_already_on_the_board[mask[dir]] = 1;
-				}
+		if (typeof mask[dir] !== 'undefined') {
+			if (!mask[dir].includes(unoccupied)) {
+				words_already_on_the_board[mask[dir]] = 1;
+			}
 		}
 	}
 
@@ -1078,30 +1086,27 @@ function setXY(x, y, letter) {
 }
 
 function doesMaskProduceSingleWordAlreadyUsed(mask) {
-//input of mask WORooooo
-//check see if word mask produces a single possible word. If so, see if this word has been used.
-//saves us from filling in a whole word on letter fills only to have to backtrack
+	//input of mask WORooooo
+	//check see if word mask produces a single possible word. If so, see if this word has been used.
+	//saves us from filling in a whole word on letter fills only to have to backtrack
 
-//WTF, very fast
-if (typeof words_already_on_the_board[mask] !== 'undefined') { //it was used
-			return true;
-		}
-		else {
-			return false;
-		}
+	//WTF, very fast
+	if (typeof words_already_on_the_board[mask] !== 'undefined') { //it was used
+		return true;
+	} else {
+		return false;
+	}
 
-//obviously slower
+	//obviously slower
 	var list_of_words = wordsFromMask(mask);
-	if(list_of_words.length == 1){//only one word is possible
+	if (list_of_words.length == 1) { //only one word is possible
 		var the_word = list_of_words.pop();
 		if (typeof words_already_on_the_board[the_word] !== 'undefined') { //it was used
 			return true;
-		}
-		else {
+		} else {
 			return false;
 		}
-	}
-	else{
+	} else {
 		return false;
 	}
 }
@@ -1157,8 +1162,8 @@ function recursiveWords() {
 	while (!success) {
 
 		if (arg_printtoconsole) {
-		printProcessing();
-	}
+			printProcessing();
+		}
 
 		/*
 		if (!first_run) {
@@ -1169,47 +1174,47 @@ function recursiveWords() {
 		first_run = false; //we are in the loop and running
 */
 
-				//exclusively optimal backtrack check and processing
-				//it must come before naive check as words_that_fit check is irrelevant if we are in an optimal backtrack. We only stop when we hit optimal backtrack target
-			//note that optimal is supposed to be able to backtrack to a target and not worry about superfluous words_that_fit
-			if (typeof word_backtrack_source !== 'undefined') { //we are doing an optimal backtrack
-				if (target_words_for_word_backtrack[word_backtrack_source][d_w]) { //we have hit the first optimal backtrack target.
-					word_backtrack_source = undefined; //turn off optimal backtrack
-				} else { //we did not find optimal backtrack target yet
-					next_word_on_board.unshift(word_position); //always unshift our current position back on to @nextLetterPositionsOnBoard when we return!
-					optimal_backtrack++;
-					return false; //go back one to see if it is optimal backtrack target
-				}
+		//exclusively optimal backtrack check and processing
+		//it must come before naive check as words_that_fit check is irrelevant if we are in an optimal backtrack. We only stop when we hit optimal backtrack target
+		//note that optimal is supposed to be able to backtrack to a target and not worry about superfluous words_that_fit
+		if (typeof word_backtrack_source !== 'undefined') { //we are doing an optimal backtrack
+			if (target_words_for_word_backtrack[word_backtrack_source][d_w]) { //we have hit the first optimal backtrack target.
+				word_backtrack_source = undefined; //turn off optimal backtrack
+			} else { //we did not find optimal backtrack target yet
+				next_word_on_board.unshift(word_position); //always unshift our current position back on to @nextLetterPositionsOnBoard when we return!
+				optimal_backtrack++;
+				return false; //go back one to see if it is optimal backtrack target
 			}
+		}
 
-			//this where backtracks START. It also does naive backtrack. it also tests for optimal and sets it up
-			if (words_that_fit.length == 0) { //are there any possible words? If no start backtrack
-				if (arg_optimalbacktrack) {//set optimal backtrack via word_backtrack_source
-					//if (typeof word_backtrack_source === 'undefined') { //only set for optimal if we are not already in an optimal backtrack mode
-						//if (typeof target_words_for_word_backtrack[d_w] !== 'undefined') { //check to see if there are any backtrack targets possible for dir word_number first
-					if(typeof target_words_for_word_backtrack[d_w] !== 'undefined'){// only set optimal backtrack if their are optimal backtrack targets
-						word_backtrack_source = d_w; //set source/start cell for optimal backtracking
-					}
-						//}
-					//}
+		//this where backtracks START. It also does naive backtrack. it also tests for optimal and sets it up
+		if (words_that_fit.length == 0) { //are there any possible words? If no start backtrack
+			if (arg_optimalbacktrack) { //set optimal backtrack via word_backtrack_source
+				//if (typeof word_backtrack_source === 'undefined') { //only set for optimal if we are not already in an optimal backtrack mode
+				//if (typeof target_words_for_word_backtrack[d_w] !== 'undefined') { //check to see if there are any backtrack targets possible for dir word_number first
+				if (typeof target_words_for_word_backtrack[d_w] !== 'undefined') { // only set optimal backtrack if their are optimal backtrack targets
+					word_backtrack_source = d_w; //set source/start cell for optimal backtracking
 				}
-				next_word_on_board.unshift(word_position);
-				naive_backtrack++; //really should be called all_backtracks
-				return false;
-			} //no words so fail
+				//}
+				//}
+			}
+			next_word_on_board.unshift(word_position);
+			naive_backtrack++; //really should be called all_backtracks
+			return false;
+		} //no words so fail
 
 		//try the next word that fit in this location
 		popped_word = words_that_fit.shift();
 
 		//tests on what to do with popped_word. order is important
 		//if (mask == popped_word) { //the mask on the puzzle already is a full word AND is the word we popped. in effect it has already been laid
-			//success = recursiveWords();
+		//success = recursiveWords();
 		//} else if
 		if (!mask.includes(unoccupied)) { //mask is a full word. There could only be ONE words_that_fit. This word, and crossing words, 'should' have been verified already. no need to lay it again
 			success = recursiveWords();
 		} else if (words_already_on_the_board[popped_word]) {
 			dupliacte_word_found++;
-			} //skip words already used in puzzle
+		} //skip words already used in puzzle
 		else { //place word
 			if (arg_simplewordmasksearch) { //simple
 				placeMaskOnBoard(dir, word_number, popped_word);
@@ -1249,226 +1254,219 @@ function recursiveWords() {
 	return true;
 }
 
-function wordsFromMask(mask){
-//mask letters should be capitalized
-//input: A_PL_ where _ will be whatever $unoccupied is
-//output list of words that match the input mask
-//var word_list;
-var word_length = mask.length;
+function wordsFromMask(mask) {
+	//mask letters should be capitalized
+	//input: A_PL_ where _ will be whatever $unoccupied is
+	//output list of words that match the input mask
+	//var word_list;
+	var word_length = mask.length;
 
-var pattern =  new RegExp( unoccupied , 'g');
-mask = mask.replace(pattern , '\\w'); //make a mask of 'GO$unoccupiedT' into 'GO.T' for the regexp
+	var pattern = new RegExp(unoccupied, 'g');
+	mask = mask.replace(pattern, '\\w'); //make a mask of 'GO$unoccupiedT' into 'GO.T' for the regexp
 
-pattern =  new RegExp(`${mask}`, 'g'); // /${mask}/g;
-var possible_words_array = words_of_length_string[word_length].match(pattern);
-if(possible_words_array === null){
-	possible_words_array = [];
+	pattern = new RegExp(	mask , 'g'); // /${mask}/g;
+	var possible_words_array = words_of_length_string[word_length].match(pattern);
+	if (possible_words_array === null) {
+		possible_words_array = [];
+	}
+	return possible_words_array;
 }
-return possible_words_array;
-}
 
-function placeMaskOnBoard(dir , word_number , mask){ //place mask, add letters and update crossing masks
-letter_positions_of_word[dir][word_number].forEach(function(letter_position , index){
-        x = letter_position[0];
-        y = letter_position[1];
-        var letter = mask.charAt(index); //letter from word
-        setXY(x,y,letter); //does puzzle letter placement and adds to all_masks_on_board
+function placeMaskOnBoard(dir, word_number, mask) { //place mask, add letters and update crossing masks
+	letter_positions_of_word[dir][word_number].forEach(function(letter_position, index) {
+		x = letter_position[0];
+		y = letter_position[1];
+		var letter = mask.charAt(index); //letter from word
+		setXY(x, y, letter); //does puzzle letter placement and adds to all_masks_on_board
 	});
-return;
+	return;
 }
 
-function letterListsFor(dir , word_number){
-//input: word number and direction
-//output: list of possible letters for each position in word based on crossing word masks
-//if a letter position has no members, so what. keep going but make sure that the list for that letter = ()
-//var word_length = all_masks_on_board[dir][word_number].length;
-var word_letter_positions = letter_positions_of_word[dir][word_number];
-var letter_lists = [];
-//var nTh_letters;
-var mask = all_masks_on_board[dir][word_number];
+function letterListsFor(dir, word_number) {
+	//input: word number and direction
+	//output: list of possible letters for each position in word based on crossing word masks
+	//if a letter position has no members, so what. keep going but make sure that the list for that letter = ()
+	//var word_length = all_masks_on_board[dir][word_number].length;
+	var word_letter_positions = letter_positions_of_word[dir][word_number];
+	var letter_lists = [];
+	//var nTh_letters;
+	var mask = all_masks_on_board[dir][word_number];
 
-for(var i = 0 ; i < word_letter_positions.length ; i++){
-//word_letter_positions.forEach(function(letter_position){
-	let nTh_letters = [];
-	var current_letter = mask.charAt(i);
+	for (var i = 0; i < word_letter_positions.length; i++) {
+		//word_letter_positions.forEach(function(letter_position){
+		let nTh_letters = [];
+		var current_letter = mask.charAt(i);
 
-	//if a letter is already in the crossing spot, use it.
-		var pattern =  new RegExp('[A-Z]' , 'g');
-	if ( current_letter.search(pattern) == 0 ) {
-       nTh_letters = [current_letter];
-							letter_lists.push(nTh_letters);
-							continue;
- }
+		//if a letter is already in the crossing spot, use it.
+		var pattern = new RegExp('[A-Z]', 'g');
+		if (current_letter.search(pattern) == 0) {
+			nTh_letters = [current_letter];
+			letter_lists.push(nTh_letters);
+			continue;
+		}
 
-	letter_position = word_letter_positions[i];
-	var x = letter_position[0];
-	var y = letter_position[1];
-	var crossing_word_dir =  1 - dir;
-	var crossing_word_number = this_square_belongs_to_word_number[crossing_word_dir][y][x];
+		letter_position = word_letter_positions[i];
+		var x = letter_position[0];
+		var y = letter_position[1];
+		var crossing_word_dir = 1 - dir;
+		var crossing_word_number = this_square_belongs_to_word_number[crossing_word_dir][y][x];
 
-//there is no crossing word at this letter location so any letter can go here!
-	if (typeof crossing_word_number === 'undefined') {
-			 nTh_letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
-							letter_lists.push(nTh_letters);
-							continue;
+		//there is no crossing word at this letter location so any letter can go here!
+		if (typeof crossing_word_number === 'undefined') {
+			nTh_letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+			letter_lists.push(nTh_letters);
+			continue;
+		}
+
+		var crossing_word_mask = all_masks_on_board[crossing_word_dir][crossing_word_number];
+		var nTh_letter_position = position_in_word[crossing_word_dir][y][x];
+		//var current_letter = crossing_word_mask.charAt(nTh_letter_position);
+
+		//	var pattern =  new RegExp('[A-Z]' , 'g');
+		//	if ( current_letter.search(pattern) == 0 ) { //if a letter is already in the crossing spot, use it.
+		//     nTh_letters = [current_letter];
+		//}
+		if (current_letter == unoccupied) {
+			var words_from_mask = wordsFromMask(crossing_word_mask);
+			nTh_letters = nThLettersFromListOfWords(nTh_letter_position, words_from_mask);
+		}
+		if (nTh_letters.length == 0) //If a letter position has no letters, WordsFromLetterList will fail anyway. Just return empty list
+		{
+			letter_lists = [];
+			return letter_lists;
+		}
+		letter_lists.push(nTh_letters);
+		//});
 	}
-
-	var crossing_word_mask = all_masks_on_board[crossing_word_dir][crossing_word_number];
-	var  nTh_letter_position = position_in_word[crossing_word_dir][y][x];
-	//var current_letter = crossing_word_mask.charAt(nTh_letter_position);
-
-//	var pattern =  new RegExp('[A-Z]' , 'g');
-//	if ( current_letter.search(pattern) == 0 ) { //if a letter is already in the crossing spot, use it.
-  //     nTh_letters = [current_letter];
-    //}
-	if (current_letter == unoccupied){
-       var words_from_mask = wordsFromMask(crossing_word_mask);
-       nTh_letters = nThLettersFromListOfWords(nTh_letter_position , words_from_mask);
-	}
-	if( nTh_letters.length == 0) //If a letter position has no letters, WordsFromLetterList will fail anyway. Just return empty list
-        {
-        letter_lists = [];
-        return letter_lists;
-    }
-	letter_lists.push(nTh_letters);
-	//});
-	}
-return letter_lists;
+	return letter_lists;
 }
 
-function nThLettersFromListOfWords(nTh , words){ //tested
-//input:
-//a number representing a letter position in words
-//reference to an array of words all the same length
-//output an array of all letters at the requested position from each word (no duplicates!)
+function nThLettersFromListOfWords(nTh, words) { //tested
+	//input:
+	//a number representing a letter position in words
+	//reference to an array of words all the same length
+	//output an array of all letters at the requested position from each word (no duplicates!)
 
-var letters = {};
-var letter;
+	var letters = {};
+	var letter;
 
-words.forEach(function(word){
-	//if(word.length <= nth ) {die("@words $count word word of length  too short nth $nth")}
-	letter = word.charAt(nTh);
-	letters[letter] = 1; //no duplicates so associative array
+	words.forEach(function(word) {
+		//if(word.length <= nth ) {die("@words $count word word of length  too short nth $nth")}
+		letter = word.charAt(nTh);
+		letters[letter] = 1; //no duplicates so associative array
 	});
-return Object.keys(letters);
+	return Object.keys(letters);
 }
 
-function wordsFromLetterLists(letter_lists){
-//input list of referenced lists containing possible letters for each position in a word
-//(['C','D','F','T','Z'] , ['E','R','T','Y','O', 'A'] , ['T','R','E','W','Q','Z'])
-//(['C','D','F','T','Z'] , [$padsEitherSide] , ['T','R','E','W','Q','Z'])
-//if input is () no letters were available from LetterListFor so return ()
-//if a letter position has no potential letters (it == ()) return () unless it has a pad on either side!
-//$padsEitherSide note in this case, there will be no letters returned, BUT words still can be made as there is no crossing word to block it. So we assume all letters are possible here [A-Z]
-//output list of words that can be made with said letters
+function wordsFromLetterLists(letter_lists) {
+	//input list of referenced lists containing possible letters for each position in a word
+	//(['C','D','F','T','Z'] , ['E','R','T','Y','O', 'A'] , ['T','R','E','W','Q','Z'])
+	//(['C','D','F','T','Z'] , [$padsEitherSide] , ['T','R','E','W','Q','Z'])
+	//if input is () no letters were available from LetterListFor so return ()
+	//if a letter position has no potential letters (it == ()) return () unless it has a pad on either side!
+	//$padsEitherSide note in this case, there will be no letters returned, BUT words still can be made as there is no crossing word to block it. So we assume all letters are possible here [A-Z]
+	//output list of words that can be made with said letters
 
-var word_length = letter_lists.length;
+	var word_length = letter_lists.length;
 
-if (letter_lists.length == 0) {
-	return [];
+	if (letter_lists.length == 0) {
+		return [];
 	} //required as LetterListsFor will return [] if there are no possible letters!
 
-//from given letter list build regexp_string: /[ABC][HGR][OHR]..../
-var regexp_string = '';
-//var impossible_word = false; //assume
-for(var i = 0 ; i < letter_lists.length ; i++){ //for each letter's position
-	letter_list = letter_lists[i];
-			if (letter_list.length == 0) {
-				return [];
-			}//no possible letters here, return an empty list of words
-        regexp_string = regexp_string + '[' + letter_list.join('') + ']'; //regexp_string will be /[ABC][HGR][OHR]..../
-}
+	//from given letter list build regexp_string: /[ABC][HGR][OHR]..../
+	var regexp_string = '';
+	//var impossible_word = false; //assume
+	for (var i = 0; i < letter_lists.length; i++) { //for each letter's position
+		letter_list = letter_lists[i];
+		if (letter_list.length == 0) {
+			return [];
+		} //no possible letters here, return an empty list of words
+		regexp_string = regexp_string + '[' + letter_list.join('') + ']'; //regexp_string will be /[ABC][HGR][OHR]..../
+	}
 
-//apply regexp_string to words_of_length_string[word_length] to get possible_words_array
-var pattern =  new RegExp(`${regexp_string}`, 'g');
-var possible_words_array = words_of_length_string[word_length].match(pattern);
-if(possible_words_array === null){
-	possible_words_array = [];
-}
-return possible_words_array; //just return full array, we check if words are laid in recursive routine
+	//apply regexp_string to words_of_length_string[word_length] to get possible_words_array
+	var pattern = new RegExp( regexp_string , 'g');
+	var possible_words_array = words_of_length_string[word_length].match(pattern);
+	if (possible_words_array === null) {
+		possible_words_array = [];
+	}
+	return possible_words_array; //just return full array, we check if words are laid in recursive routine
 }
 
 function numberClueList() {
-var x = -1;
-var y = -1;
-//var word;
-var hints;
-var clues = [];
+	var x = -1;
+	var y = -1;
+	//var word;
+	var hints;
 
-all_masks_on_board.forEach(function(item , dir){
-	hints = '';
-	all_masks_on_board[dir].forEach(function(word , word_number){ //for all our words on the board
-		//get clue(s) for this word
-		var first_2_leters = word.substring(0, 2);
-		var directory = "./wordlists/" + arg_wordfile + "/clues/";
-		var filename = directory + "_" + first_2_leters + ".clu";
-		var clue_list_text = readStringFromFileAtPath(filename);
-		var clue_list_array = clue_list_text.split(/\r?\n|\r|\n/g); //split on lines into array
-		if (clue_list_array[clue_list_array.length - 1].trim() == '') {
-			clue_list_array.pop();
-		} //remove last line if empty
-		clues = [];//
-		clue_list_array.forEach(function(line){
-			var clue_temp = line.split('|');
-			if(clue_temp[0] == word){
-				clues.push(clue_temp[1]);
+	all_masks_on_board.forEach(function(item, dir) {
+		hints = '';
+		all_masks_on_board[dir].forEach(function(word, word_number) { //for all our words on the board
+			//get clue(s) for this word
+			var first_2_leters = word.substring(0, 2);
+			var directory = "./wordlists/" + arg_wordfile + "/clues/";
+			var filename = directory + "_" + first_2_leters + ".clu";
+			var clue_list_text = readStringFromFileAtPath(filename);
+			var clue_list_array = clue_list_text.split(/\r?\n|\r|\n/g); //split on lines into array
+			if (clue_list_array[clue_list_array.length - 1].trim() == '') {
+				clue_list_array.pop();
+			} //remove last line if empty
+			clues = []; //
+			clue_list_array.forEach(function(line) {
+				var clue_temp = line.split('|');
+				if (clue_temp[0] == word) {
+					clues.push(clue_temp[1]);
+				}
+			});
+			//choose a random clue
+			var clue = clues[Math.floor(Math.random() * clues.length)];
+			//place it is global associative array
+			clues[word] = clue;
+
+			x = letter_positions_of_word[dir][word_number][0][0];
+			y = letter_positions_of_word[dir][word_number][0][1];
+
+			hints += word_number + ". <a href='#self' id='[" + dir + "," + word_number + "," + 99 + "]' class='clues'";
+			hints += "ONCLICK='choose_clue(this.id);'>" + clues[word] + "</a>&nbsp;<font size=-2>";
+			hints += "<a href='http://www.google.ca/search?q=" + clues[word] + " target='_blank'>google</a></font>&nbsp;&nbsp;&nbsp;&nbsp;";
+			hints += "<font><i><span id='show" + word + "' ONCLICK='hide2(show" + word + ");show2(clue" + word + ");show2(google" + word + ");>";
+			hints += "<a href='#' ONCLICK='return false'>show</a></span>";
+			hints += "<span id='clue" + word + "' ONCLICK='hide2(clue" + word + ");hide2(google" + word + "');show2(show" + word + ");' style='display:none;'>";
+			hints += "<a href='#' ONCLICK='return false'>" + word + "</a></span><span id='google" + word + "' style='display:none;'>";
+			hints += "<font size=-2><a href='http://www.google.ca/search?q=" + word + "' target='_blank'>google</a></font></span><i></font></br>";
+			hints += "<script>hide2('clue" + word + "');hide2('google" + word + "');</script>";
+			if (dir == 0) {
+				document.getElementById('across').innerHTML = hints;
+			}
+			if (dir == 1) {
+				document.getElementById('down').innerHTML = hints;
 			}
 		});
-		//choose a random clue
-		var clue = clues[ Math.floor(Math.random() * clues.length) ];
-		//place it is global associative array
-        clues[word] = clue;
-
-		x = letter_positions_of_word[dir][word_number][0][0];
-		y = letter_positions_of_word[dir][word_number][0][1];
-
-		hints += `
-			${word_number}. <a href="#self" id='[${dir},${word_number},"cell"]' class="clues" ONCLICK="choose_clue(this.id);">${clues[word]}</a>
-			&nbsp;<font size=-2><a href="http://www.google.ca/search?q=${clues[word]}" target="_blank">google</a></font>
-			&nbsp;&nbsp;&nbsp;&nbsp;
-
-			<font><i>
-			<span id='show${word}' ONCLICK="hide2('show${word}');show2('clue${word}');show2('google${word}');" >
-			 <a href="#" ONCLICK="return false">show</a>
-			 </span>
-			<span id='clue${word}' ONCLICK="hide2('clue${word}');hide2('google${word}');show2('show${word}');" style="display:none;">
-			 <a href="#" ONCLICK="return false">${word}</a>
-			 </span>
-			<span id='google${word}'  style="display:none;">
-			 <font size=-2><a href="http://www.google.ca/search?q=${word}" target="_blank">google</a></font>
-			 </span>
-			<i></font>
-			</br>
-			<script>hide2('clue${word}');hide2('google${word}');</script>
-			`;
-		if (dir == 0) {document.getElementById('across').innerHTML = hints;}
-		if (dir == 1) {document.getElementById('down').innerHTML = hints;}
 	});
-});
 }
 
-function printSolvedPuzzle(){
-var temp;
-var y;
-var x;
+function printSolvedPuzzle() {
+	var temp;
+	var y;
+	var x;
 
-temp = "<table cellspacing='0' CLASS='tableclass'>";
-for (y = 0; y < puzzle_height; y++){
-    temp += "<tr>";
-	for (x = 0; x < puzzle_width; x++){
-		if(puzzle[y][x] == pad_char){
-			temp += "<td CLASS='tdblackclass'></td>";
-			continue;
+	temp = "<table cellspacing='0' CLASS='tableclass'>";
+	for (y = 0; y < puzzle_height; y++) {
+		temp += "<tr>";
+		for (x = 0; x < puzzle_width; x++) {
+			if (puzzle[y][x] == pad_char) {
+				temp += "<td CLASS='tdblackclass'></td>";
+				continue;
 			}
-        if (puzzle[y][x] == unoccupied){
-			temp += "<td CLASS='tdwhiteclass'>&nbsp</td>";
+			if (puzzle[y][x] == unoccupied) {
+				temp += "<td CLASS='tdwhiteclass'>&nbsp</td>";
 			}
-        if( puzzle[y][x].search(/[A-Z1-9]/) >= 0){
-			temp += `<td CLASS='tdwhiteclass'>${puzzle[y][x]}</td>`;
+			if (puzzle[y][x].search(/[A-Z1-9]/) >= 0) {
+				temp += "<td CLASS='tdwhiteclass'>" + puzzle[y][x] + "</td>";
 			}
-    }
-    temp += "</tr>\n";
-        }
+	}
+	temp += "</tr>\n";
+		}
 temp += "</table>\n";
 return temp;
 }
@@ -1479,294 +1477,311 @@ function printProcessing() {
 var x , y;
 var line;
 var string = '<pre>';
-var time = ( Date.now() - start_time ) / 1000;
+var time = ( Date.now() - start_time ) /
+				1000;
 
-//limit console update
-print_limit++;
-if(print_limit<10000){
-	return;
-}
-print_limit = 0;
+				if (!arg_printtoconsole) {
+					//limit console update
+					print_limit++;
+					if (print_limit < 10000) {
+						return;
+					}
+				}
+				print_limit = 0;
 
-//limit # console records
-console_log_count++;
-if(console_log_count > 100){
-	console.clear();
-	console_log_count = 0;
-	} //if we don't it can blank out completely
+				//limit # console records
+				console_log_count++;
+				if (console_log_count > 1000) {
+					console.clear();
+					console_log_count = 0;
+				} //if we don't it can blank out completely
 
-string += "\n";
+				string += "\n";
 
-//string += JSON.stringify(puzzle);
-//string = string.replace( /\],\[/g , "\r\n");
+				//string += JSON.stringify(puzzle);
+				//string = string.replace( /\],\[/g , "\r\n");
 
-for (y = 0 ; y < puzzle_height ; y++){
-	line = '';
-	for (x = 0 ; x < puzzle_width ; x++) {
-        line = line + puzzle[y][x];
-    }
-	string +=  line;
-	string += "\n";
+				for (y = 0; y < puzzle_height; y++) {
+					line = '';
+					for (x = 0; x < puzzle_width; x++) {
+						line = line + puzzle[y][x];
+					}
+					string += line;
+					string += "\n";
 
-}
+				}
 
-string +=  "\n";
-string += "Time: " + time; //#print time to create crossword
+				string += "\n";
+				string += "Time: " + time; //#print time to create crossword
 
-string += "\n";
-string += "Items laid: " + items_laid;
+				string += "\n";
+				string += "Items laid: " + items_laid;
 
-string += "\n";
-string += "Recursive calls: " + recursive_calls; //print time to create crossword
-string += "\n";
-string += "Sec per Recursive call: " + (time / recursive_calls); //print time to create crossword
-string += "\n";
-string +=  "Recursive calls per Sec: " + (recursive_calls / time); //print time to create crossword
+				string += "\n";
+				string += "Recursive calls: " + recursive_calls; //print time to create crossword
+				string += "\n";
+				string += "Sec per Recursive call: " + (time / recursive_calls); //print time to create crossword
+				string += "\n";
+				string += "Recursive calls per Sec: " + (recursive_calls / time); //print time to create crossword
 
-string += "\n";
-string += "try another item:" + try_another_loop;
-string += "\n";
-string += "try another item per second:" + (try_another_loop / time);
+				string += "\n";
+				string += "try another item:" + try_another_loop;
+				string += "\n";
+				string += "try another item per second:" + (try_another_loop / time);
 
-string += "\n";
-string += "Duplicate word found: " + dupliacte_word_found;
+				string += "\n";
+				string += "Duplicate word found: " + dupliacte_word_found;
 
-string += "\n";
-string += "Dead ends: " + naive_backtrack;
+				string += "\n";
+				string += "Dead ends: " + naive_backtrack;
 
-string += "\n";
-string += "Items removed: " + items_removed;
-
-
-string += "\n";
-string += "Naive backtrack:" + naive_backtrack;
-string += "\n";
-string += "Optimal backtrack:" + optimal_backtrack ;
+				string += "\n";
+				string += "Items removed: " + items_removed;
 
 
-string += "\n";
-string += "</pre>";
+				string += "\n";
+				string += "Naive backtrack:" + naive_backtrack;
+				string += "\n";
+				string += "Optimal backtrack:" + optimal_backtrack;
 
-document.getElementById('workspace').innerHTML = string;
-console.log(string);
-}
 
-function printPuzzle(){
-  var temp , temp3 , temp4;
-  var x , y , dir;
-  var temp_puzzle = [];
-  var word;
-  var direction;
+				string += "\n";
+				string += "</pre>";
 
-  temp = "<table cellspacing='0' cellpadding='0' CLASS='tableclass'>";
-    for(y = 0; y < puzzle_height; y++){
-        temp += "<tr>";
-        for (x = 0; x < puzzle_width; x++){
-            temp3 = '';
-            if(typeof temp_puzzle[y] === 'undefined'){temp_puzzle[y] = [];}
-            temp_puzzle[y][x] = puzzle[y][x]; //mimic filled in puzzle
-            for (dir = 0 ; dir < 2 ; dir++){
-                if (typeof position_in_word[dir][y][x] === 'undefined'){continue;} //not a word.
-                if (position_in_word[dir][y][x] == 0){  //we are at start of word so there will be a number here. place that number
-                    temp_puzzle[y][x] = this_square_belongs_to_word_number[dir][y][x];
-                }
+				document.getElementById('workspace').innerHTML = string;
+				console.log(string);
+			}
 
-                //build a hover clue text for each square
-                word = all_masks_on_board[dir][ this_square_belongs_to_word_number[dir][y][x] ];
-                if (typeof word !== 'undefined'){
-                  if (dir == dir_across) {direction = 'Across';}
-                  if (dir == dir_down) {direction = 'Down';}
-                }
-            }
+			function printPuzzle() {
+				var temp, temp3, temp4;
+				var x, y, dir;
+				var temp_puzzle = [];
+				var word;
+				var direction;
 
-		temp4 = 'choose_cell(this.id);'; //new
+				temp = "<table cellspacing='0' cellpadding='0' CLASS='tableclass'>";
+				for (y = 0; y < puzzle_height; y++) {
+					temp += "<tr>";
+					for (x = 0; x < puzzle_width; x++) {
+						temp3 = '';
+						if (typeof temp_puzzle[y] === 'undefined') {
+							temp_puzzle[y] = [];
+						}
+						temp_puzzle[y][x] = puzzle[y][x]; //mimic filled in puzzle
+						for (dir = 0; dir < 2; dir++) {
+							if (typeof position_in_word[dir][y][x] === 'undefined') {
+								continue;
+							} //not a word.
+							if (position_in_word[dir][y][x] == 0) { //we are at start of word so there will be a number here. place that number
+								temp_puzzle[y][x] = this_square_belongs_to_word_number[dir][y][x];
+							}
 
-        //lay down table stuff here
-        //black square
-        if(puzzle[y][x] == pad_char){ //make sure our page width is fixed
-            temp += "<td CLASS='tdblackclass'><spacer width='20 pt'></td>";
-        }
+							//build a hover clue text for each square
+							word = all_masks_on_board[dir][this_square_belongs_to_word_number[dir][y][x]];
+							if (typeof word !== 'undefined') {
+								if (dir == dir_across) {
+									direction = 'Across';
+								}
+								if (dir == dir_down) {
+									direction = 'Down';
+								}
+								//temp3 += "direction: " + clues[word] + "\n";
+        //$temp3 =~ s/[\'\"]//g; //remove quotes from title s it is in a tag
+							}
+						}
 
-          //number square
-          if(typeof temp_puzzle[y][x] === 'number'){
-            temp += ` <TD VALIGN='TOP' ALIGN='LEFT' CLASS='tdnumberclass'>
-            <DIV  style='position: absolute; z-index: 2;'>${temp_puzzle[y][x]}</DIV>
-            <TABLE CELLPADDING="0" CELLSPACING="0">
-              <TBODY>
-                <TR>
-                <TD title='${temp3}' CLASS='tdwhiteclass' ID='[${x},${y}]'
-                ONCLICK='${temp4}' VALIGN='middle' WIDTH='20' ALIGN='center'
-                HEIGHT='25'>&nbsp;</TD>
-                </TR>
-              </TBODY>
-            </TABLE>
-            </TD> `;
-          }
+						temp4 = 'choose_cell(this.id);'; //new
 
-          //unoccupied square, but not a pad_char
-          if( (typeof temp_puzzle[y][x] === 'string') && (temp_puzzle[y][x] != pad_char) ){
-            temp += ` <td title='${temp3}' ID='[${x},${y}]' CLASS='tdwhiteclass' ONCLICK='${temp4}'>&nbsp;</td> `;
-            }
-        }
-    temp += "</tr>\n";
-    }
+						//lay down table stuff here
+						//black square
+						if (puzzle[y][x] == pad_char) { //make sure our page width is fixed
+							temp += "<td CLASS='tdblackclass'><spacer width='20 pt'></td>";
+						}
+
+						//number square
+						if (typeof temp_puzzle[y][x] === 'number') {
+							temp += "<TD VALIGN ='TOP'	ALIGN='LEFT'	CLASS='tdnumberclass'> <DIV style='position: absolute; z-index: 2;'>" + temp_puzzle[y][x] + "</DIV>";
+							temp += "<TABLE CELLPADDING='0' CELLSPACING='0'> <TBODY>	<TR>	<TD title='" + temp3;
+							temp += "' CLASS='tdwhiteclass' ID='[" + x + "," + y +  "]'	ONCLICK='" + temp4 + "' VALIGN='middle' WIDTH='20' ALIGN='center'	HEIGHT='25'>&nbsp;";
+							temp += "</TD></TR></TBODY ></TABLE></TD>";
+						}
+
+						//unoccupied square, but not a pad_char
+						if ((typeof temp_puzzle[y][x] === 'string') && (temp_puzzle[y][x] != pad_char)) {
+							temp += "<td title='" + temp3 + "' ID='[" + x + "," + y + "]'	CLASS = 'tdwhiteclass'	ONCLICK='" + temp4 + "'>&nbsp;</td>";
+			}
+		}
+	temp += "</tr> \n";
+	}
 temp += "</table>\n";
 return temp;
 }
 
-//--------------------------------------
-//puzzle navigation functions
-//---------------------------------------
+// navigation
 
-var forever = new Date('October 17, 2030 03:24:00'); //use in cookies
-//var isAClickableClass['tdwordselectedclass'] = 1;
-//isAClickableClass['tdwhiteclass'] = 1;
-var isAClickableClass = {tdwordselectedclass:1 , tdwhiteclass:1 , tdselectedclass:1};
+							var forever = new Date('October 17, 2030 03:24:00'); // use in cookies
+							//var isAClickableClass['tdwordselectedclass'] = 1;
+							//isAClickableClass['tdwhiteclass'] = 1;
+							var isAClickableClass = {
+								tdwordselectedclass: 1,
+								tdwhiteclass: 1,
+								tdselectedclass: 1
+							};
 
-function setCellsFromCookies(){
-	var theCookies = document.cookie.split(';');
-    //var aString = '';
-    for (var i = 0 ; i < theCookies.length ; i++) {
-		var mycookie = theCookies[i].split('=');
-		var theletter = mycookie[1];
-		theletter = theletter.trim();
-		var thecell = mycookie[0];
-		thecell = thecell.trim();
-		//is it a cell???
-		if (mycookie[0].indexOf("cell") != -1) {
-			document.getElementById(thecell).innerHTML = theletter;
-			}
-   }
-}
+							function setCellsFromCookies() {
+								var theCookies = document.cookie.split(';');
+								//var aString = '';
+								for (var i = 0; i < theCookies.length; i++) {
+									var mycookie = theCookies[i].split('=');
+									var theletter = mycookie[1];
+									theletter = theletter.trim();
+									var thecell = mycookie[0];
+									thecell = thecell.trim();
+									//is it a cell???
+									if (mycookie[0].indexOf("cell") != -1) {
+										document.getElementById(thecell).innerHTML = theletter;
+									}
+								}
+							}
 
-function hide2(szDivID)
-{
-document.getElementById(szDivID).style.display =  "none";
-}
+							function hide2(szDivID) {
+								document.getElementById(szDivID).style.display = "none";
+							}
 
-function show2(szDivID)
-{
-document.getElementById(szDivID).style.display = "inline";
-}
+							function show2(szDivID) {
+								document.getElementById(szDivID).style.display = "inline";
+							}
 
-function ToggleHV(){
-	horizvert = 1 - horizvert;
-}
+							function ToggleHV() {
+								horizvert = 1 - horizvert;
+							}
 
-function ClearBox()
-{
-if (CurrentFocus != "") {document.getElementById(CurrentFocus).className = CurrentClass;} //restore the class name to white
-}
+							function ClearBox() {
+								if (CurrentFocus != "") {
+									document.getElementById(CurrentFocus).className = CurrentClass;
+								} //restore the class name to white
+							}
 
-function HighlightBox(cell)
-{
-CurrentClass = document.getElementById(cell).className; //store the class name of the square in the process of being focused
-document.getElementById(cell).className = 'tdselectedclass'; //select/focus the square
-CurrentFocus = document.getElementById(cell).getAttribute('ID');
-}
+							function HighlightBox(cell) {
+								CurrentClass = document.getElementById(cell).className; //store the class name of the square in the process of being focused
+								document.getElementById(cell).className = 'tdselectedclass'; //select/focus the square
+								CurrentFocus = document.getElementById(cell).getAttribute('ID');
+							}
 
-function HighlightNextBox(){
-var xpos = CurrentPos[0];
-var ypos = CurrentPos[1];
-var cell = "[" + xpos + "," + ypos + "]";
+							function HighlightNextBox() {
+								var xpos = CurrentPos[0];
+								var ypos = CurrentPos[1];
+								var cell = "[" + xpos + "," + ypos + "]";
 
-ClearBox(cell);
-NthPosition++;
-if (NthPosition >= LetterPosArray.length) {NthPosition = 0;}
-xpos = LetterPosArray[NthPosition][0];
-ypos = LetterPosArray[NthPosition][1];
-cell = "[" + xpos + "," + ypos + "]";
-HighlightBox(cell);
-}
+								ClearBox(cell);
+								NthPosition++;
+								if (NthPosition >= LetterPosArray.length) {
+									NthPosition = 0;
+								}
+								xpos = LetterPosArray[NthPosition][0];
+								ypos = LetterPosArray[NthPosition][1];
+								cell = "[" + xpos + "," + ypos + "]";
+								HighlightBox(cell);
+							}
 
-function HighlightClue(id){
-if (OldClue != ""){
-	document.getElementById(OldClue).className = 'cluesCleared';
-	} //clear old clue
-document.getElementById(id).className = 'cluesSelected'; //select/focus the clue
-OldClue = id;
-}
+							function HighlightClue(id) {
+								if (OldClue != "") {
+									document.getElementById(OldClue).className = 'cluesCleared';
+								} //clear old clue
+								document.getElementById(id).className = 'cluesSelected'; //select/focus the clue
+								OldClue = id;
+							}
 
-function HighlightWord(LetterPosArrayArg){
-	OldLetterPosArray.forEach(function(cell_pos){
-		var x = cell_pos[0];
-		var y = cell_pos[1];
-		var id = '[' + x + ',' + y + ']';
-		document.getElementById(id).className = 'tdwhiteclass';
-		});
+							function HighlightWord(LetterPosArrayArg) {
+								OldLetterPosArray.forEach(function(cell_pos) {
+									var x = cell_pos[0];
+									var y = cell_pos[1];
+									var id = '[' + x + ',' + y + ']';
+									document.getElementById(id).className = 'tdwhiteclass';
+								});
 
-	LetterPosArrayArg.forEach(function(cell_pos){
-		var x = cell_pos[0];
-		var y = cell_pos[1];
-		var id = '[' + x + ',' + y + ']';
-		document.getElementById(id).className = 'tdwordselectedclass';
-		});
-	OldLetterPosArray = JSON.parse(JSON.stringify(LetterPosArrayArg)); //copy array
-}
+								LetterPosArrayArg.forEach(function(cell_pos) {
+									var x = cell_pos[0];
+									var y = cell_pos[1];
+									var id = '[' + x + ',' + y + ']';
+									document.getElementById(id).className = 'tdwordselectedclass';
+								});
+								OldLetterPosArray = JSON.parse(JSON.stringify(LetterPosArrayArg)); //copy array
+							}
 
-function choose_clue( id ){//id is [dir,word_number]
-	var id_array = JSON.parse(id);
-	var dir = id_array[0];
-	var word_number =   id_array[1];
-	HighlightClue(id);
-	LetterPosArray = letter_positions_of_word[dir][word_number];
-	HighlightWord(LetterPosArray);
-	//1st cell
-	NthPosition = 0;
-	cell_id = '[' + LetterPosArray[0][0] + ',' + LetterPosArray[0][1] + ']';
-	HighlightBox(cell_id);
-}
+							function choose_clue(id) { //id is [dir,word_number]
+								var id_array = JSON.parse(id);
+								var dir = id_array[0];
+								var word_number = id_array[1];
+								HighlightClue(id);
+								LetterPosArray = letter_positions_of_word[dir][word_number];
+								HighlightWord(LetterPosArray);
+								//1st cell
+								NthPosition = 0;
+								cell_id = '[' + LetterPosArray[0][0] + ',' + LetterPosArray[0][1] + ']';
+								HighlightBox(cell_id);
+							}
 
-function choose_cell(id){ //id is '[x,y]'
-	var id_array = JSON.parse(id);
-	var x = id_array[0];
-	var y = id_array[1];
-	var dir = horizvert;
+							function choose_cell(id) { //id is '[x,y]'
+								var id_array = JSON.parse(id);
+								var x = id_array[0];
+								var y = id_array[1];
+								var dir = horizvert;
 
-	ClearBox();//clear old box
-	var word_number = this_square_belongs_to_word_number[dir][y][x];
-	if (typeof word_number === 'undefined'){//no word, but there must be a crossword
-		ToggleHV();
-		dir = horizvert;
-		word_number = this_square_belongs_to_word_number[dir][y][x];
-		//return false;
-	}
-	//var word = all_masks_on_board[dir][word_number];
-	id_str = '[' + dir + ',' + word_number + ',"cell"]';
-	HighlightClue(id_str);
-	LetterPosArray = letter_positions_of_word[dir][word_number];
-	HighlightWord(LetterPosArray);
-	HighlightBox(id);
-	NthPosition = position_in_word[dir][y][x];
-	ToggleHV();
-	CurrentPos = [x,y];
-}
+								ClearBox(); //clear old box
+								var word_number = this_square_belongs_to_word_number[dir][y][x];
+								if (typeof word_number === 'undefined') { //no word, but there must be a crossword
+									ToggleHV();
+									dir = horizvert;
+									word_number = this_square_belongs_to_word_number[dir][y][x];
+									//return false;
+								}
+								//var word = all_masks_on_board[dir][word_number];
+								id_str = '[' + dir + ',' + word_number + ',' + 99 + ']';
+								//id_str = '' + dir + ',' + word_number;
+								HighlightClue(id_str);
+								LetterPosArray = letter_positions_of_word[dir][word_number];
+								HighlightWord(LetterPosArray);
+								HighlightBox(id);
+								NthPosition = position_in_word[dir][y][x];
+								ToggleHV();
+								CurrentPos = [x, y];
+							}
 
-//---------------------------------------
+							//---------------------------------------
 
-function send_cell_update(k){
-//first see if it is an arrow key
-var xpos = CurrentPos[0];
-var ypos = CurrentPos[1];
-//move cell. if square is clickable run document.getElementById(cell).onclick() and return, else,return
-if (k == 37) { xpos-- ;} //left
-if (k == 38) { ypos-- ;} //up
-if (k == 39) { xpos++ ;} //right
-if (k == 40) { ypos++ ;} //down
-if (k == 191) {  } // forward slash. just change horiz and vert
-if ( (k == 37) || (k == 38) || (k == 39) || (k == 40) || (k == 191) ) { //arrow keys
-	 cell = "[" + xpos + "," + ypos + "]";
-	 if (isAClickableClass[document.getElementById(cell).className] == 1) {
-		ToggleHV(); //double toggle so it doesn't change
-	 	document.getElementById(cell).onclick();
-		return false;
-		}
-    else {return false;}
-	 }
+							function send_cell_update(k) {
+								//first see if it is an arrow key
+								var xpos = CurrentPos[0];
+								var ypos = CurrentPos[1];
+								//move cell. if square is clickable run document.getElementById(cell).onclick() and return, else,return
+								if (k == 37) {
+									xpos--;
+								} //left
+								if (k == 38) {
+									ypos--;
+								} //up
+								if (k == 39) {
+									xpos++;
+								} //right
+								if (k == 40) {
+									ypos++;
+								} //down
+								if (k == 191) {} // forward slash. just change horiz and vert
+								if ((k == 37) || (k == 38) || (k == 39) || (k == 40) || (k == 191)) { //arrow keys
+									cell = "[" + xpos + "," + ypos + "]";
+									if (isAClickableClass[document.getElementById(cell).className] == 1) {
+										ToggleHV(); //double toggle so it doesn't change
+										document.getElementById(cell).onclick();
+										return false;
+									} else {
+										return false;
+									}
+								}
 
-//no arrow keys. lay the letter
-var letter = String.fromCharCode(k);
-document.getElementById(CurrentFocus).innerHTML = letter;//place keystroke on crossword
-setCookie(CurrentFocus , letter , forever , '' , '' , ''); //CurrentFocus = cell_x_y
-HighlightNextBox();//go to next box
-}
+								//no arrow keys. lay the letter
+								var letter = String.fromCharCode(k);
+								document.getElementById(CurrentFocus).innerHTML = letter; //place keystroke on crossword
+								setCookie(CurrentFocus, letter, forever, '', '', ''); //CurrentFocus = cell_x_y
+								HighlightNextBox(); //go to next box
+							}
