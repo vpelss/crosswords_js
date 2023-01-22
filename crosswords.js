@@ -202,8 +202,6 @@ function main() {
 	CurrentClass = 'tdwhiteclass'; //for remembering the class to return the square too
 	NthPosition = 0; //so we can find the next square to type a letter into
 	CurrentPos = new Array(startx, starty); //CURRENTLY HIGLIGHTED BOX COORDINATES
-
-	console.log( JSON.stringify(visited) );
 }
 
 function grid_change(file_name) {
@@ -253,6 +251,208 @@ function readStringFromFileAtPath(pathOfFileToReadFrom) {
 	var returnValue = request.responseText;
 	return returnValue;
 }
+
+/*
+function GenerateGridDoubleSpaced()
+{
+#input width (which gives height) and oddEven style
+#output a text array of width and height and create full double space pattern
+#also set globals $in{width} and $in{height}
+
+my $width = $_[0];
+my $oddEven = $_[1] | 0;
+
+$in{width} = $width;
+$in{height} = $width;
+
+#build a basic double spaced grid
+for (my $y = 0 ; $y < $width ; $y++)
+     {
+     for (my $x = 0 ; $x < $width ; $x++)
+          {
+          $puzzle[$x][$y]->{Letter} = $unoccupied; # assume, then change as required
+          if ( ( ($y % 2) != $oddEven) and ( ($x % 2) != $oddEven) )
+              {
+              $puzzle[$x][$y]->{Letter} = $padChar;
+              }
+          }
+     }
+}
+
+my %breadCrumbs;
+sub GenerateGridDoubleSpaced2()
+{#random british grid generator
+#fill with whitespace and pads then add pads one at a time. If pad separates any area, undo and try again.
+#fill all joining squares with breadcrumbs using recursion. If all surrounding whitespace has a breadcrumb then there are no islads of white
+#if words nsew are > 2 try again
+
+my $width = $_[0];
+my $oddEven = $_[1] | 0;
+my ($x , $xx , $y , $yy);
+my @unoccupiedNSEWWhitespace;
+my $wordSizeH;
+my $wordSizeV;
+
+$in{width} = $width;
+$in{height} = $width;
+
+&GenerateGridDoubleSpaced($width,$oddEven);
+
+my $padCells;
+my $whiteCells;
+#calculate  density
+for ($y = 0 ; $y < $in{height} ; $y++)
+      {
+      for ($x = 0 ; $x < $in{width} ; $x++) {
+            if ($puzzle[$x][$y]->{Letter} eq $padChar)
+                       {$padCells++;}
+            if ($puzzle[$x][$y]->{Letter} eq $unoccupied)
+                       {$whiteCells++;}
+            }
+      }
+my $totalCells = $in{height} * $in{width};
+my $time_to_quit = time() + 3; #5 seconds!
+MAINLOOP: while (time() < $time_to_quit)
+       {
+       $x = int(rand( $in{width} ));
+       $y = int(rand( $in{height} ));
+
+       if ( $in{doublespacedpercentage} > int(100 * ($totalCells - $padCells) / $totalCells) )
+            {
+            last; #we have reached black pad percentage quota
+            }
+
+       #already is a pad
+       if ( $puzzle[$x][$y]->{Letter} eq $padChar )
+             {
+             next;
+             }
+
+       #place pad first so we can calculate word sizes, remove if fail!
+       $puzzle[$x][$y]->{Letter} = $padChar;
+       $padCells++;
+
+       #get first whitespace around proposed pad space
+       %breadCrumbs = (); #start fresh
+       @unoccupiedNSEWWhitespace = &ReturnLocalWhiteSquares($x,$y);
+
+       #see if surrounded by pads - next!
+       if (scalar @unoccupiedNSEWWhitespace == 0)
+           {
+           $puzzle[$x][$y]->{Letter} = $unoccupied;
+           $padCells--;
+           next;
+           }
+
+       #take 1st local whitespace and run with it
+       $xx = $unoccupiedNSEWWhitespace[0][0];
+       $yy = $unoccupiedNSEWWhitespace[0][1];
+
+       &BreadCrumbAllWhiteFromHere($xx,$yy); #mark all touching whitespace starting from either NSEW
+
+       #check each local surrounding whitespace for a breadcrumb  and check for legal word sizes
+       foreach my $item (@unoccupiedNSEWWhitespace)
+                {
+                $xx = $item->[0];
+                $yy = $item->[1];
+
+                #check to see if both horiz and vert word size are valid
+                $wordSizeH = &calcWordSize( $xx ,$yy , 0);
+                $wordSizeV = &calcWordSize( $xx ,$yy , 1);
+                if ( $wordSizeH == 1 and $wordSizeV == 1 )
+                     {
+                     $puzzle[$x][$y]->{Letter} = $unoccupied;
+                     $padCells--;
+                     next MAINLOOP;
+                     }
+                if ( not($wordSizeH == 1) and ($wordSizeH < 3) )
+                     {
+                     $puzzle[$x][$y]->{Letter} = $unoccupied;
+                     $padCells--;
+                     next MAINLOOP;
+                     }
+                if ( not($wordSizeV == 1) and ($wordSizeV < 3) )
+                     {
+                     $puzzle[$x][$y]->{Letter} = $unoccupied;
+                     $padCells--;
+                     next MAINLOOP;
+                     }
+                #check to see if bread crumb exists for all surrounding whitespace or next
+                if ( $breadCrumbs{$xx}{$yy} != 1 )
+                      {
+                      $puzzle[$x][$y]->{Letter} = $unoccupied;
+                      $padCells--;
+                      next MAINLOOP;
+                      }
+                }
+       }
+};
+
+sub BreadCrumbAllWhiteFromHere()
+{
+#given a starting location $unoccupied, mark all adjoining whitespace with breadcrumbs and when done, return
+my $x = $_[0];
+my $y = $_[1];
+my @unoccupiedNSEWWhitespace = ();
+
+$breadCrumbs{$x}{$y} = 1; #mark visited
+
+#get all $unoccupied and unvisited local pads around x y and push to a list
+@unoccupiedNSEWWhitespace = &ReturnLocalWhiteSquares($x,$y);
+
+if ( (scalar @unoccupiedNSEWWhitespace) == 0) #surrounded by pads or already visited
+            {
+            return;  #start of the end
+            }
+
+foreach my $item (@unoccupiedNSEWWhitespace)
+        {
+         #choose next adjoining white space
+         $x = $item->[0];
+         $y = $item->[1];
+         #continue recursive journey
+         &BreadCrumbAllWhiteFromHere($x,$y);
+        }
+};
+
+sub ReturnLocalWhiteSquares()
+{
+#give a sqare and return a list of ([x y] [x y] [x y] ....) of NSEW white squares
+my @unoccupiedNSEWWhitespace;
+my ($x , $y);
+
+#check N
+$x = $_[0];
+$y = $_[1] - 1;
+if ( not &outsideCrossword($x,$y) and ($puzzle[$x][$y]->{Letter} eq $unoccupied) and ($breadCrumbs{$x}{$y} != 1))
+     {
+     push @unoccupiedNSEWWhitespace , [$x,$y];
+     }
+#check S
+$x = $_[0];
+$y = $_[1] + 1;
+if ( not &outsideCrossword($x,$y) and ($puzzle[$x][$y]->{Letter} eq $unoccupied) and ($breadCrumbs{$x}{$y} != 1))
+     {
+     push @unoccupiedNSEWWhitespace , [$x,$y];
+     }
+#check E
+$x = $_[0] + 1;
+$y = $_[1];
+if ( not &outsideCrossword($x,$y) and ($puzzle[$x][$y]->{Letter} eq $unoccupied) and ($breadCrumbs{$x}{$y} != 1))
+     {
+     push @unoccupiedNSEWWhitespace , [$x,$y];
+     }
+#check W
+$x = $_[0] - 1;
+$y = $_[1];
+if ( not &outsideCrossword($x,$y) and ($puzzle[$x][$y]->{Letter} eq $unoccupied) and ($breadCrumbs{$x}{$y} != 1))
+     {
+     push @unoccupiedNSEWWhitespace , [$x,$y];
+     }
+
+return @unoccupiedNSEWWhitespace;
+};
+*/
 
 function numberBlankSquares() {
 	//this does a lot of global variable setups
@@ -876,7 +1076,6 @@ function calculateOptimalBacktracks() {
 		}
 	}
 
-
 	//MUST backtrack to all crossing words, and all crossing words of those...
 	if (mode == 'word') {
 		while (next_word_on_board_temp.length != 0) { //for each word position
@@ -914,19 +1113,15 @@ function calculateOptimalBacktracks() {
 	}
 }
 
-var visited = {};
 var current_target_cells_for_letter_backtrack;
 var letter_backtrack_source;
-var optimum_backtrack_count = 0;
-//IMPORTANT
-//if we are in an optimal backtrack, if the next encountered target has NO possible options, then remove that target from theis current working backtrack list and go to the next one
 function recursiveLetters() {
 	//recursively try to lay down words in order of next_letter_position_on_board. we will shift off and unshift if required
 	var x, y, x_y;
 	var cell_position;
 	var letters_that_fit = [];
 	var popped_letter;
-	//letter_backtrack_source = undefined; //clear global indicating that we are moving forward again, and have cleared the backtrack state
+	letter_backtrack_source = undefined; //clear global indicating that we are moving forward again, and have cleared the backtrack state
 
 	if (arg_printtoconsole) {console.log('-------------');}
 	if (arg_printtoconsole) {console.log('Start Recursive');}
@@ -935,59 +1130,41 @@ function recursiveLetters() {
 		return true;
 	} //we have filled all the possible letter positions, we are done. This breaks us out of all recursive  success loops
 
+	recursive_calls++;
 	cell_position = next_letter_position_on_board.shift(); //keep cell_position in subroutine unchanged as we may need to unshift on a recursive return
 	x = cell_position[0];
 	y = cell_position[1];
-	visited[next_letter_position_on_board.length] = ''+x+','+y;
 	if (arg_printtoconsole) {console.log('Cell:' + cell_position);}
-
-	recursive_calls++;
 
 	//get possible letters for this cell
 	if (arg_shuffle) {
 		letters_that_fit = shuffle(lettersPossibleAtCell(x, y));
-		//letters_that_fit = JSON.parse(JSON.stringify( shuffle(lettersPossibleAtCell(x, y)) )) ;
 	} else {
-		letters_that_fit = lettersPossibleAtCell(x, y).sort();
-		//letters_that_fit = lettersPossibleAtCell(x, y).reverse();
-		//letters_that_fit = lettersPossibleAtCell(x, y);
+		letters_that_fit = lettersPossibleAtCell(x, y);
 	}
 
-	//var first_run = true;
 	var success = 0;
 	while (success == 0) {
 		if (arg_printtoconsole) {console.log('Start loop');}
 
-		/*
-		//exclusively optimal backtrack check and processing
-		if (typeof letter_backtrack_source !== 'undefined') { //we are doing an optimal backtrack
-			//xx_yy = '' + letter_backtrack_source[0] + '_' + letter_backtrack_source[1];
-			x_y = '' + x + '_' + y;
-			if (target_cells_for_letter_backtrack[letter_backtrack_source][x_y]) { //we have hit the first optimal backtrack target.
-				if (arg_printtoconsole) {console.log('Found Optimal backtrack target: ' + x_y);}
-				letter_backtrack_source = undefined; //turn off optimal backtrack
-			} else { //we did not find optimal backtrack target yet
-				next_letter_position_on_board.unshift(cell_position); //always unshift our current position back on to @nextLetterPositionsOnBoard when we return!
-				//next_letter_position_on_board.unshift([x, y]); //always unshift our current position back on to @nextLetterPositionsOnBoard when we return!
-				optimal_backtrack++;
-				if (arg_printtoconsole) {console.log('Doing Optimal backtrack: Return false and Restoring ' + cell_position);}
-				return false; //go back one to see if it is optimal backtrack target
-			}
-		}
-		*/
-
 			if (typeof letter_backtrack_source !== 'undefined') { //we are doing an optimal backtrack
 			if (Object.keys(current_target_cells_for_letter_backtrack).length > 0) { //there are optimal backtracks
 				x_y = '' + x + '_' + y;
+				//if we hit a cell where x < x_source AND y < y_source switch to naive as these cells contribute to the state of our optimal backtrack targets
+				//it may never occur, but it could
+				var letter_backtrack_source_array = letter_backtrack_source.split('_');
+				if((letter_backtrack_source_array[0]<x) && (letter_backtrack_source_array[1]<y)){
+					letter_backtrack_source = undefined; //turn off optimal backtrack
+					current_target_cells_for_letter_backtrack = undefined;
+					console.log('We have hit a cell that is above AND left of the failed cell. Revert to naive.');
+				}
 				if (current_target_cells_for_letter_backtrack[x_y]) { //we have hit an optimal backtrack target.
-					//optimum_backtrack_count++;
 					if (arg_printtoconsole) {
 						console.log('Found Optimal backtrack target: ' + x_y);
 					}
 					if (letters_that_fit.length > 0) { // this optimal backtrack target has letter options, so turn off optimal backtrack
 						letter_backtrack_source = undefined; //turn off optimal backtrack
 						current_target_cells_for_letter_backtrack = undefined;
-						//optimum_backtrack_count = 0;
 						if (arg_printtoconsole) {
 							console.log('This Optimal backtrack target has letter options: Turning off optimal backtrack ' + cell_position);
 						}
@@ -1002,7 +1179,6 @@ function recursiveLetters() {
 					}
 				} else { //we did not find optimal backtrack target yet. keep going
 					next_letter_position_on_board.unshift(cell_position); //always unshift our current position back on to @nextLetterPositionsOnBoard when we return!
-					//next_letter_position_on_board.unshift([x, y]); //always unshift our current position back on to @nextLetterPositionsOnBoard when we return!
 					optimal_backtrack++;
 					if (arg_printtoconsole) {
 						console.log('This is not an Optimal backtrack target: Return false ' + cell_position);
@@ -1012,13 +1188,11 @@ function recursiveLetters() {
 			} else { //there are no more optimal backtrack targets. turn optimal backtrack off
 				letter_backtrack_source = undefined; //turn off optimal backtrack
 				current_target_cells_for_letter_backtrack = undefined;
-				//optimum_backtrack_count = 0;
 				if (arg_printtoconsole) {
 						console.log('We are out of Optimal backtrack targets: Turn off and turn on naive ' + cell_position);
 					}
 			}
 		}
-
 
 		if (arg_printtoconsole) {console.log('Letters that fit: ' + letters_that_fit.length);}
 		if (arg_printtoconsole) {console.log('Letters that fit: ' + letters_that_fit);}
@@ -1040,9 +1214,6 @@ function recursiveLetters() {
 				//}
 			}
 			naive_backtrack++;
-			if ((x == 12) && (y == 6)) {
-				bigfail = 9;
-			}
 			if (arg_printtoconsole) {console.log('Return false');}
 			return false; //start our backtrack : naive & optimal
 		}
@@ -1098,8 +1269,7 @@ function lettersPossibleAtCell(x, y) {
 		}
 	}
 
-	//if (possible_letters_HV[0].length && possible_letters_HV[1].length) { //intersect horiz and vert letters
-	if (possible_letters_HV.length == 2) { //intersect horiz and vert letters
+	if ( (typeof possible_letters_HV[0] !== 'undefined') && (typeof possible_letters_HV[1] !== 'undefined') ){ //intersect horiz and vert letters
 		letters_that_fit = possible_letters_HV[0].filter(function(item) {
 			if (possible_letters_HV[1].includes(item)) {
 				return true;
@@ -1268,7 +1438,8 @@ function recursiveWords() {
 	//complex: for a word spot, based on the word mask, it checks all crossing words and picks possible words that satisfies ALL the crossing words
 	//recursively try to lay down words in order of next_word_on_board. we will shift off and unshift if required
 	//Simple Search: we chose a word quickly, then laid word, then we check if crossing words fail. then we loop through ALL the possible words before backtracking. Most (and possibly all) of the possible words we are trying will fail. Inefficient!
-	//Complex Search: with the complex search, we check all crosswords first and they limit what words will 100% fit, then we lay it. it is slow, but the word chosen will not cause an immediate fail/backtrack. If no words fit, we immediately backtrack. Efficient.
+	//Complex Search: with the complex search, we check all crosswords first and they limit what words will 100% fit, then we lay it. it is slow, but the word chosen will not cause an immediate fail/backtrack.
+	//If no words fit, we immediately backtrack. Efficient.
 
 	//check if completed
 	if (next_word_on_board.length == 0) {
