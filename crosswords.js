@@ -20,6 +20,8 @@
 //improve xword walk?
 //other walks
 
+//reverse diag!!! better for optimal
+
 
 //"use strict";
 
@@ -805,6 +807,7 @@ function calculateOptimalBacktracks() {
 	//word backtrack
 	//for each word, optimal backtrack targets are all crossing words, AND their crossing words that have already been used in the walk
 	var x, y, xx, yy;
+	//var xx_yy;
 	var dir;
 	var word_letter_positions;
 	var cell_position;
@@ -819,7 +822,28 @@ function calculateOptimalBacktracks() {
 			cell_position = next_letter_position_on_board_temp.shift(); //remove next letter position
 			x = cell_position[0];
 			y = cell_position[1];
-			next_letter_position_on_board_shifted_string.unshift('' + x + '_' + y); //cells that have been in the walk up to this point
+			var x_y = '' + x + '_' + y;
+			next_letter_position_on_board_shifted_string.unshift(x_y); //cells that have been in the walk up to this point
+
+			/*
+			//only allow one cell up and one cell left
+			var x_temp = x - 1;
+			if (x_temp > -1){
+				if (typeof target_cells_for_letter_backtrack[x_y] === 'undefined') { //create if it doesn't exist
+							target_cells_for_letter_backtrack[x_y] = {};
+						}
+				xx_yy = '' + x_temp + '_' + y;
+				target_cells_for_letter_backtrack[x_y][xx_yy] = true;
+			}
+			var y_temp = y - 1;
+			if (y_temp > -1){
+				if (typeof target_cells_for_letter_backtrack[x_y] === 'undefined') { //create if it doesn't exist
+							target_cells_for_letter_backtrack[x_y] = {};
+						}
+				xx_yy = '' + x + '_' + y_temp;
+				target_cells_for_letter_backtrack[x_y][xx_yy] = true;
+			}
+			*/
 
 			for (dir = 0; dir < 2; dir++) {
 				//	if (typeof this_square_belongs_to_word_number[dir][y] === 'undefined'){
@@ -845,9 +869,12 @@ function calculateOptimalBacktracks() {
 						target_cells_for_letter_backtrack[x_y][xx_yy] = true; //x_y is this cell and target _cells are stored in keys xx_yy!
 					}
 				});
+
+
 			}
 		}
 	}
+
 
 	//MUST backtrack to all crossing words, and all crossing words of those...
 	if (mode == 'word') {
@@ -887,7 +914,9 @@ function calculateOptimalBacktracks() {
 }
 
 var visited = {};
-var current_target_cells_for_letter_backtrack = {};
+var current_target_cells_for_letter_backtrack;
+var letter_backtrack_source;
+var optimum_backtrack_count = 0;
 //IMPORTANT
 //if we are in an optimal backtrack, if the next encountered target has NO possible options, then remove that target from theis current working backtrack list and go to the next one
 function recursiveLetters() {
@@ -896,7 +925,7 @@ function recursiveLetters() {
 	var cell_position;
 	var letters_that_fit = [];
 	var popped_letter;
-	letter_backtrack_source = undefined; //clear global indicating that we are moving forward again, and have cleared the backtrack state
+	//letter_backtrack_source = undefined; //clear global indicating that we are moving forward again, and have cleared the backtrack state
 
 	if (arg_printtoconsole) {console.log('-------------');}
 	if (arg_printtoconsole) {console.log('Start Recursive');}
@@ -926,14 +955,9 @@ function recursiveLetters() {
 	//var first_run = true;
 	var success = 0;
 	while (success == 0) {
-
-		//printProcessing();
-if ((x == 0) && (y == 0)) {
-					bigfail = 9;
-				}
-
 		if (arg_printtoconsole) {console.log('Start loop');}
 
+		/*
 		//exclusively optimal backtrack check and processing
 		if (typeof letter_backtrack_source !== 'undefined') { //we are doing an optimal backtrack
 			//xx_yy = '' + letter_backtrack_source[0] + '_' + letter_backtrack_source[1];
@@ -949,6 +973,51 @@ if ((x == 0) && (y == 0)) {
 				return false; //go back one to see if it is optimal backtrack target
 			}
 		}
+		*/
+
+			if (typeof letter_backtrack_source !== 'undefined') { //we are doing an optimal backtrack
+			if (Object.keys(current_target_cells_for_letter_backtrack).length > 0) { //there are optimal backtracks
+				x_y = '' + x + '_' + y;
+				if (current_target_cells_for_letter_backtrack[x_y]) { //we have hit an optimal backtrack target.
+					//optimum_backtrack_count++;
+					if (arg_printtoconsole) {
+						console.log('Found Optimal backtrack target: ' + x_y);
+					}
+					if (letters_that_fit.length > 0) { // this optimal backtrack target has letter options, so turn off optimal backtrack
+						letter_backtrack_source = undefined; //turn off optimal backtrack
+						current_target_cells_for_letter_backtrack = undefined;
+						//optimum_backtrack_count = 0;
+						if (arg_printtoconsole) {
+							console.log('This Optimal backtrack target has letter options: Turning off optimal backtrack ' + cell_position);
+						}
+					} else { //this optimal backtrack target has NO letter options. so go to the next optimal backtrack target AND remove this option
+						delete current_target_cells_for_letter_backtrack[x_y]; //so we can tell if we run out of optimal backtrack targets!
+						next_letter_position_on_board.unshift(cell_position); //always unshift our current position back on to @nextLetterPositionsOnBoard when we return!
+						optimal_backtrack++;
+						if (arg_printtoconsole) {
+							console.log('This Optimal backtrack target has no letter options: Return false ' + cell_position);
+						}
+						return false; //go back one to see if it is optimal backtrack target
+					}
+				} else { //we did not find optimal backtrack target yet. keep going
+					next_letter_position_on_board.unshift(cell_position); //always unshift our current position back on to @nextLetterPositionsOnBoard when we return!
+					//next_letter_position_on_board.unshift([x, y]); //always unshift our current position back on to @nextLetterPositionsOnBoard when we return!
+					optimal_backtrack++;
+					if (arg_printtoconsole) {
+						console.log('This is not an Optimal backtrack target: Return false ' + cell_position);
+					}
+					return false; //go back one to see if it is optimal backtrack target
+				}
+			} else { //there are no more optimal backtrack targets. turn optimal backtrack off
+				letter_backtrack_source = undefined; //turn off optimal backtrack
+				current_target_cells_for_letter_backtrack = undefined;
+				//optimum_backtrack_count = 0;
+				if (arg_printtoconsole) {
+						console.log('We are out of Optimal backtrack targets: Turn off and turn on naive ' + cell_position);
+					}
+			}
+		}
+
 
 		if (arg_printtoconsole) {console.log('Letters that fit: ' + letters_that_fit.length);}
 		if (arg_printtoconsole) {console.log('Letters that fit: ' + letters_that_fit);}
@@ -961,8 +1030,9 @@ if ((x == 0) && (y == 0)) {
 				//if (typeof letter_backtrack_source === 'undefined') { //only set for optimal if we are not already in an optimal backtrack mode
 				x_y = '' + x + '_' + y;
 				if (typeof target_cells_for_letter_backtrack[x_y] !== 'undefined') { //only set optimal backtrack if there are actually optimal targets
-					//if (typeof target_cells_for_letter_backtrack[x_y] !== 'undefined') { //check to see if there are any backtrack targets possible for x y first
 					letter_backtrack_source = x_y; //set source/start cell for optimal bactracking
+					current_target_cells_for_letter_backtrack = JSON.parse( JSON.stringify( target_cells_for_letter_backtrack[letter_backtrack_source] ) ); //STARTING OPTIMAL BACKTRACK
+					//current_target_cells_for_letter_backtrack[keys are optimalbacktrack targets]
 					if (arg_printtoconsole) {console.log('Setting Optimal backtrack: Source ' + x_y);}
 					//}
 				}
@@ -1557,8 +1627,7 @@ var print_limit = 0;
 function printProcessing() {
 	var x, y;
 	var line;
-	//var string = '<pre>';
-	var string = '';
+	var string = '<pre>';
 	var time = (Date.now() - start_time) /
 		1000;
 
@@ -1629,7 +1698,7 @@ function printProcessing() {
 */
 
 	string += "\n";
-	//string += "</pre>";
+	string += "</pre>";
 
 	document.getElementById('workspace').innerHTML = string;
 	console.log(string);

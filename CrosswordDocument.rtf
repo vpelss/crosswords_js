@@ -330,10 +330,15 @@ After much thought I have simplified the many rules for choosing an optimized ba
 Since we could be using any walk (that allows us to lay words first letter to last letter):\cf0\f1\fs24\par
 \cf2\f0\fs20\par
 Rule:\cf0\f1\fs24\par
-\cf2\f0\fs20 1. All letters in the horizontal and vertical words (up to the failed letter) can effect the failure of laying a letter, so mark it as an optimal backtrack target\cf0\f1\fs24\par
-\cf2\f0\fs20 2. All crossing words of both the horizontal and vertical words of the failed letter can effect the failure of laying a letter, so mark it as an optimal backtrack target\cf0\f1\fs24\par
+\cf2\f0\fs20 1. All letters in the horizontal and vertical words (up to the failed letter) can effect the failure of laying a letter, so mark it as an optimal backtrack target.\par
+UPDATED: no, just N and W cell. If we go back further and a cell has NO possible letters left to lay, it will trigger an optimum backtrack wich will prune possible solutions.\par
+\cf0\f1\fs24\par
+\cf2\f0\fs20 2. All crossing words of both the horizontal and vertical words of the failed letter can effect the failure of laying a letter, so mark it as an optimal backtrack target. \par
+UPDATE: I think I was wrong....\par
+\cf0\f1\fs24\par
 \cf2\f0\fs20 3. \kerning0 Remove 'shadows' by only keeping the intersection set results of rule \cf4 1\cf2  and \cf4 2\cf0\kerning1\f1\fs24\par
-\cf2\f0\fs20\par
+\cf2\f0\fs20 ??? shadows?? WTF was I thinking????????\par
+\par
 Note that # 2 can seem non intuitive. But I assure you they can. If we backtracked from the center letter (see below) and we are out of letters to lay at the 2nd row 1st column, we cannot go directly to C and try another letter. If we do, we miss words like CAR that might allow another solution in the second row that would be missed. \cf0\f1\fs24\par
 \cf2\f0\fs20\par
 Rule 3 also breaks certain grid backtracks, most notably British style crosswords. The reason is that since we are double spaced, there many shadows (rule 3) that should not be shadows. So I feel if we leave rule 3 out, the extra optimum back tracks we might miss are worth it to keep our optimum target rules simple. \cf0\f1\fs24\par
