@@ -83,6 +83,7 @@ var CurrentPos;
 //main();
 var arg_shuffle;
 var arg_optimalbacktrack;
+var arg_walkpath;
 var arg_wordfile;
 var arg_simplewordmasksearch;
 var arg_printtoconsole;
@@ -111,7 +112,7 @@ function main() {
 	numberBlankSquares();
 
 	arg_wordfile = urlParams.get('wordfile');
-	var arg_walkpath = urlParams.get('walkpath');
+	arg_walkpath = urlParams.get('walkpath');
 	if (arg_walkpath.includes('Letter')) {
 		mode = 'letter';
 	} else {
@@ -1579,9 +1580,9 @@ function numberClueList() {
 			hints += word_number + ". <a href='#self' id='[" + dir + "," + word_number + "," + 99 + "]' class='clues'";
 			hints += "ONCLICK='choose_clue(this.id);'>" + clues[word] + "</a>&nbsp;<font size=-2>";
 			hints += "<a href='http://www.google.ca/search?q=" + clues[word] + " target='_blank'>google</a></font>&nbsp;&nbsp;&nbsp;&nbsp;";
-			hints += "<font><i><span id='show" + word + "' ONCLICK='hide2(show" + word + ");show2(clue" + word + ");show2(google" + word + ");>";
+			hints += "<font><i><span id=\"show" + word + "\" ONCLICK=\"hide2(\'show" + word + "\');show2(\'clue" + word + "\');show2(\'google" + word + "\');\">";
 			hints += "<a href='#' ONCLICK='return false'>show</a></span>";
-			hints += "<span id='clue" + word + "' ONCLICK='hide2(clue" + word + ");hide2(google" + word + "');show2(show" + word + ");' style='display:none;'>";
+			hints += "<span id=\"clue" + word + "\" ONCLICK=\"hide2(\'clue" + word + "\');hide2(\'google" + word + "\');show2(\'show" + word + "\');\" style=\"display:none;\">";
 			hints += "<a href='#' ONCLICK='return false'>" + word + "</a></span><span id='google" + word + "' style='display:none;'>";
 			hints += "<font size=-2><a href='http://www.google.ca/search?q=" + word + "' target='_blank'>google</a></font></span><i></font></br>";
 			hints += "<script>hide2('clue" + word + "');hide2('google" + word + "');</script>";
@@ -1662,7 +1663,12 @@ function printProcessing() {
 
 	}
 
-	/*
+	string += "\n";
+	string += arg_walkpath; //#print time to create crossword
+
+	string += "\n";
+	string += arg_wordfile; //#print time to create crossword
+
 	string += "\n";
 	string += "Time: " + time; //#print time to create crossword
 
@@ -1695,7 +1701,7 @@ function printProcessing() {
 	string += "Naive backtrack:" + naive_backtrack;
 	string += "\n";
 	string += "Optimal backtrack:" + optimal_backtrack;
-*/
+
 
 	string += "\n";
 	string += "</pre>";

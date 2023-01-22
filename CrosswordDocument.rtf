@@ -319,22 +319,38 @@ Length of word \tab XW Express\tab Extra\tab\tab Clues\cf0\f1\fs24\par
 \cf2\f0\fs20\par
 \ul Walks for Letter by Letter\cf0\ulnone\f1\fs24\par
 \cf2\f0\fs20\par
-These walks must ensure that we are always building both the horizontal and vertical words from the first letter to the last letter. \cf0\f1\fs24\par
+My letter walks are always building both the horizontal and vertical words from the first letter to the last letter. \cf0\f1\fs24\par
 \cf2\f0\fs20\par
 \ul Optimum Backtrack : for letter by letter builds\cf0\ulnone\f1\fs24\par
 \cf2\f0\fs20\par
-These are tricky as the optimal backtrack is dependent on the walk we have chosen and the grid structures and pads around the failed letter.\cf0\f1\fs24\par
+These are tricky as the optimal backtrack can be dependent on the walk we have chosen and the grid structures and pads around the failed letter.\par
+\par
+\par
+\par
+After much thought I have simplified the many rules for choosing an optimized backtrack target to a few simple rules that work with most walks and grids. \cf0\f1\fs24\par
 \cf2\f0\fs20\par
-After much thought I have simplified the many rules for choosing an optimized backtrack target to two simple rules that work with all walks and all grids. \cf0\f1\fs24\par
-\cf2\f0\fs20\par
+\par
 Since we could be using any walk (that allows us to lay words first letter to last letter):\cf0\f1\fs24\par
 \cf2\f0\fs20\par
-Rule:\cf0\f1\fs24\par
-\cf2\f0\fs20 1. All letters in the horizontal and vertical words (up to the failed letter) can effect the failure of laying a letter, so mark it as an optimal backtrack target.\par
-UPDATED: no, just N and W cell. If we go back further and a cell has NO possible letters left to lay, it will trigger an optimum backtrack wich will prune possible solutions.\par
+Rule:\par
+\par
+Master:\par
+\par
+All horiz and vert letters can be opimum backtrack targets if they are imediately to the left and immediately above the failing cell. They obviously contribute immediately and directly to the failing cell.\par
+\par
+On the reverse walk, stop at the first optimum backtrack target that still has possible letters to lay. If we stop on ones that do not have letters to lay, then it will attempt an optimal backtrack possibly pruning viable options\par
+\par
+On our optimal backtrack, if we hit a cell, that is not an optimal backtrack target AND it is both to the left AND above the failed cell, then we must revert to the naive backtrack mode.\par
+We can ONLY optimum backtrack over cells that are to the right and below the failed cell. If we bactrack over cells to the left and above the failed cells, these cells contribute to the possible letters in the optimum backtrack targets. Ignoring them may prune valid puzzle layouts.\par
+\par
+\par
+\par
+---------------------------------\par
 \cf0\f1\fs24\par
-\cf2\f0\fs20 2. All crossing words of both the horizontal and vertical words of the failed letter can effect the failure of laying a letter, so mark it as an optimal backtrack target. \par
-UPDATE: I think I was wrong....\par
+\cf2\f0\fs20 1. All letters in the horizontal and vertical words (up to the failed letter) can effect the failure of laying a letter, so mark it as an optimal backtrack target.\par
+\par
+\par
+2. On the reverse walk, if we hit an optimum target and there are no possible letters left, go to next optimum found in reverse walk.\par
 \cf0\f1\fs24\par
 \cf2\f0\fs20 3. \kerning0 Remove 'shadows' by only keeping the intersection set results of rule \cf4 1\cf2  and \cf4 2\cf0\kerning1\f1\fs24\par
 \cf2\f0\fs20 ??? shadows?? WTF was I thinking????????\par
