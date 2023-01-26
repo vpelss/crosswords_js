@@ -352,7 +352,7 @@ All horiz and vert letters can be optimum backtrack targets if they are imediate
 \par
 On the backtrack, stop at the first optimum backtrack target that still has possible letters to lay. Important: If we stop at optimal backtrack targets that do not have letters to lay, then our script would treat it as a failed cell and start another optimal backtrack (which attempts to skip naive backtrack cells) possibly pruning viable puzzle layouts.\par
 \par
-On our optimal backtrack, if we hit a cell, that is not an optimal backtrack target AND it is both to the left AND above the failed cell, then we must revert to the naive backtrack mode.\par
+On our optimal backtrack, if we hit a cell, that is not an optimal backtrack target AND it is both to the left AND above the failed cell (optimum backtrack target contributor), then we must revert to the naive backtrack mode.\par
 We can ONLY optimum backtrack over cells that are to the right and below the failed cell. If we bactrack over cells to the left and above the failed cells, these cells contribute to the possible letters in the optimum backtrack targets. Ignoring them may prune valid puzzle layouts.\par
 \par
 \par
