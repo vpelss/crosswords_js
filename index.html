@@ -186,58 +186,62 @@
 
 														<tr>
 															<td align="center">
-																<select name="walkpath" size="6" id="walkpath">
-																	<option value="crossingwords" class="gridOption">
-																		Word Walks
-																	</option>
+																<select name="walkpath" size="10" id="walkpath">
 
-																	<option value="crossingwords" selected="selected">
-																		Crossing Words (best)
-																	</option>
-
-																	<option value="zigzag">
-																		Zig Zag Words
-																	</option>
-
-																	<option value="diagonal">
-																		Diagonal Words
-																	</option>
-
-																	<option value="numerical">
-																		Numerical Words
-																	</option>
-
-																	<option value="acrossthendown">
-																		Across then Down Words
-																	</option>
-
-																	<option value="random">
-																		Random Words (worst)
-																	</option>
-
-																	<option value="GenerateNextLetterPositionsOnBoardFlat" class="gridOption">
+																		<option value="LetterWalkStraight" class="gridOption">
 																		Letter Walks
 																	</option>
 
-																	<option value="GenerateNextLetterPositionsOnBoardZigZag">
-																		ZigZag Letters
+																<option value="LetterWalkStraight">
+																		Straight
 																	</option>
 
-																	<option value="GenerateNextLetterPositionsOnBoardDiag">
-																		Diag Letters
+																	<option value="LetterWalkSikSak">
+																		Sik Sak
 																	</option>
 
-																	<option value="GenerateNextLetterPositionsOnBoardFlat">
-																		Flat Letters
+																	<option value="LetterWalkSlalom">
+																		Slalom
 																	</option>
 
-																	<option value="GenerateNextLetterPositionsOnBoardSwitchWalk">
-																		Switch Letters
+																	<option value="LetterWalkSwitch">
+																		Switch
 																	</option>
 
-																	<option value="GenerateNextLetterPositionsOnBoardSnakeWalk">
-																		Snake Letters
+																	<option value="LetterWalkSnake">
+																		Snake
 																	</option>
+
+
+																<option value="crossingwords" class="gridOption">
+																		Word Walks
+																	</option>
+
+																	<option value="WordWalkCrossingwords" selected="selected">
+																		Crossing Words (best)
+																	</option>
+
+																	<option value="WordWalkNumerical">
+																		Numerical Words
+																	</option>
+
+																	<option value="WordWalkAcrossThenDown">
+																		Across then Down Words
+																	</option>
+
+																	<option value="WordWalkSikSak">
+																		Sik Sak Words
+																	</option>
+
+																	<option value="WordWalkSlalom">
+																		Slalom Words
+																	</option>
+
+																	<option value="WordWalkRandom">
+																		Random Words (worst)
+																	</option>
+
+
 																</select><br>
 																<input type="checkbox" name="simplewordmasksearch"> <a href="#" onclick="alert(simplewordmaskvar);return false;">Simple Word Mask Search</a>
 																<hr>

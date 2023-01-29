@@ -139,40 +139,40 @@ function main() {
 	loadWordList(arg_wordfile);
 
 	//word walks
-	if (arg_walkpath == 'crossingwords') {
-		generateNextWordPositionsOnBoardCrossing();
+	if (arg_walkpath == 'WordWalkCrossingwords') {
+		wordWalkCrossing();
 	}
-	if (arg_walkpath == 'zigzag') {
-		generateNextWordPositionsOnBoardZigZag();
+	if (arg_walkpath == 'WordWalkNumerical') {
+		wordWalkNumerical();
 	}
-	if (arg_walkpath == 'diagonal') {
-		generateNextWordPositionsOnBoardDiag();
+	if (arg_walkpath == 'WordWalkAcrossThenDown') {
+		wordWalkAcrossThenDown();
 	}
-	if (arg_walkpath == 'numerical') {
-		generateNextWordPositionsOnBoardNumerical();
+	if (arg_walkpath == 'WordWalkSlalom') {
+		wordWalkSlalom();
 	}
-	if (arg_walkpath == 'acrossthendown') {
-		generateNextWordPositionsOnBoardAcrossThenDown();
+	if (arg_walkpath == 'WordWalkSikSak') {
+		wordWalkSikSak();
 	}
-	if (arg_walkpath == 'random') {
-		generateNextWordPositionsOnBoardRandom();
+	if (arg_walkpath == 'WordWalkRandom') {
+		wordWalkRandom();
 	}
 
 	//letter walks
-	if (arg_walkpath == 'GenerateNextLetterPositionsOnBoardFlat') {
-		generateNextLetterPositionOnBoardFlat();
+	if (arg_walkpath == 'LetterWalkStraight') {
+		letterWalkStraight();
 	}
-	if (arg_walkpath == 'GenerateNextLetterPositionsOnBoardZigZag') {
-		generateNextLetterPositionOnBoardZigzag();
+	if (arg_walkpath == 'LetterWalkSikSak') {
+		letterWalkSikSak();
 	}
-	if (arg_walkpath == 'GenerateNextLetterPositionsOnBoardDiag') {
-		generateNextLetterPositionsOnBoardDiag();
+	if (arg_walkpath == 'letterWalkSlalom') {
+		letterWalkSlalom();
 	}
-	if (arg_walkpath == 'GenerateNextLetterPositionsOnBoardSwitchWalk') {
-		generateNextLetterPositionsOnBoardSwitchWalk();
+	if (arg_walkpath == 'LetterWalkSwitch') {
+		letterWalkSwitch();
 	}
-	if (arg_walkpath == 'GenerateNextLetterPositionsOnBoardSnakeWalk') {
-		generateNextLetterPositionsOnBoardSnakeWalk();
+	if (arg_walkpath == 'LetterWalkSnake') {
+		letterWalkSnake();
 	}
 
 	arg_simplewordmasksearch = urlParams.get('simplewordmasksearch');
@@ -648,7 +648,7 @@ function loadWordList(arg_wordfile) { //load word lists and set word and letter 
 	word_list_text = ''; //cleanup
 }
 
-function generateNextWordPositionsOnBoardCrossing() { //start with 1 horiz. find all crossing words find all their crossing words. add word # and direction only once
+function wordWalkCrossing() { //start with 1 horiz. find all crossing words find all their crossing words. add word # and direction only once
 	var already_in_list = {}; // already_in_list[direction][number] = 1 if [direction][number] already in list
 	already_in_list[dir_across] = {};
 	already_in_list[dir_down] = {};
@@ -680,7 +680,31 @@ function generateNextWordPositionsOnBoardCrossing() { //start with 1 horiz. find
 	}
 }
 
-function generateNextWordPositionsOnBoardZigZag() { //start at 0,0 , moving diag top right to bottom left then alternate bottom left to top right, etc
+function wordWalkNumerical() { //increase numerically alternating horiz and vert
+	for (var word_number = 1; word_number < 300; word_number++) { //loop through all word numbers even if they don't exist
+		for (var dir = 0; dir < 2; dir++) {
+			var word = all_masks_on_board[dir][word_number]; // get WORD or MASK at this crossword position
+			if (typeof word === 'undefined') {
+				continue;
+			}
+			next_word_on_board.push([dir, word_number]);
+		}
+	}
+}
+
+function wordWalkAcrossThenDown() { //do all horiz words then all vert words
+	for (var dir = 0; dir < 2; dir++) {
+		for (var word_number = 1; word_number < 300; word_number++) { //loop through all word numbers even if they don't exist
+			var word = all_masks_on_board[dir][word_number]; // get WORD or MASK at this crossword position
+			if (typeof word === 'undefined') {
+				continue;
+			}
+			next_word_on_board.push([dir, word_number]);
+		}
+	}
+}
+
+function wordWalkSlalom() { //start at 0,0 , moving diag top right to bottom left then alternate bottom left to top right, etc
 	var x = 0;
 	var y = 0;
 	var divX = -1;
@@ -747,7 +771,7 @@ function generateNextWordPositionsOnBoardZigZag() { //start at 0,0 , moving diag
 	while ((x != puzzle_width - 1) || (y != puzzle_height - 1));
 }
 
-function generateNextWordPositionsOnBoardDiag() { //start at 0,0 , moving diag top right to bottom left then top right to bottom left, etc
+function wordWalkSikSak() { //start at 0,0 , moving diag top right to bottom left then top right to bottom left, etc
 	var x = 0;
 	var y = 0;
 	var divX = -1;
@@ -784,36 +808,61 @@ function generateNextWordPositionsOnBoardDiag() { //start at 0,0 , moving diag t
 	} while ((x != puzzle_width - 1) || (y != puzzle_height - 1));
 }
 
-function generateNextWordPositionsOnBoardNumerical() { //increase numerically alternating horiz and vert
-	for (var word_number = 1; word_number < 300; word_number++) { //loop through all word numbers even if they don't exist
-		for (var dir = 0; dir < 2; dir++) {
-			var word = all_masks_on_board[dir][word_number]; // get WORD or MASK at this crossword position
-			if (typeof word === 'undefined') {
-				continue;
-			}
-			next_word_on_board.push([dir, word_number]);
-		}
-	}
-}
-
-function generateNextWordPositionsOnBoardAcrossThenDown() { //do all horiz words then all vert words
-	for (var dir = 0; dir < 2; dir++) {
-		for (var word_number = 1; word_number < 300; word_number++) { //loop through all word numbers even if they don't exist
-			var word = all_masks_on_board[dir][word_number]; // get WORD or MASK at this crossword position
-			if (typeof word === 'undefined') {
-				continue;
-			}
-			next_word_on_board.push([dir, word_number]);
-		}
-	}
-}
-
-function generateNextWordPositionsOnBoardRandom() { //random order
-	generateNextWordPositionsOnBoardCrossing();
+function wordWalkRandom() { //random order
+	wordWalkCrossing();
 	next_word_on_board = shuffle(next_word_on_board);
 }
 
-function generateNextLetterPositionOnBoardZigzag() { //start at 0,0 , moving diag top right to bottom left then alternate bottom left to top right, etc
+function letterWalkStraight() { //all first row, then second, etc
+	var x = 0;
+	var y = 0;
+
+	next_letter_position_on_board = [];
+	for (y = 0; y < puzzle_height; y++) {
+		for (x = 0; x < puzzle_width; x++) {
+			if (puzzle[y][x] != pad_char) {
+				next_letter_position_on_board.push([x, y]);
+			}
+		}
+	}
+}
+
+function letterWalkSikSak() { //start at 0,0 , moving diag top right to bottom left then top right to bottom left, etc
+	var x = 0;
+	var y = 0;
+	var divX = -1;
+	var divY = 1;
+	//var diag_count = 0;
+	var x_start = 0;
+	var y_start = 0;
+
+	do {
+		//process cursor position
+		if (puzzle[y][x] != pad_char) {
+			next_letter_position_on_board.push([x, y]);
+		}
+
+		x = x + divX;
+		y = y + divY;
+
+		if ((y > puzzle_height - 1) || (x < 0)) { //bottom or left
+			//find our start position
+			x_start++;
+			if (x_start > puzzle_width - 1) {
+				x_start = puzzle_width - 1;
+				y_start++;
+			}
+			x = x_start;
+			y = y_start;
+		}
+	}
+	while ((x != puzzle_width - 1) || (y != puzzle_height - 1));
+	next_letter_position_on_board.push([x, y]);
+	st = JSON.stringify(next_letter_position_on_board);
+	h = 7;
+}
+
+function letterWalkSlalom() { //start at 0,0 , moving diag top right to bottom left then alternate bottom left to top right, etc
 	var x = 1;
 	var y = -1;
 	var divX = -1;
@@ -866,56 +915,7 @@ function generateNextLetterPositionOnBoardZigzag() { //start at 0,0 , moving dia
 	} while ((x != puzzle_width - 1) || (y != puzzle_height - 1));
 }
 
-function generateNextLetterPositionsOnBoardDiag() { //start at 0,0 , moving diag top right to bottom left then top right to bottom left, etc
-	var x = 0;
-	var y = 0;
-	var divX = -1;
-	var divY = 1;
-	//var diag_count = 0;
-	var x_start = 0;
-	var y_start = 0;
-
-	do {
-		//process cursor position
-		if (puzzle[y][x] != pad_char) {
-			next_letter_position_on_board.push([x, y]);
-		}
-
-		x = x + divX;
-		y = y + divY;
-
-		if ((y > puzzle_height - 1) || (x < 0)) { //bottom or left
-			//find our start position
-			x_start++;
-			if (x_start > puzzle_width - 1) {
-				x_start = puzzle_width - 1;
-				y_start++;
-			}
-			x = x_start;
-			y = y_start;
-		}
-	}
-	while ((x != puzzle_width - 1) || (y != puzzle_height - 1));
-	next_letter_position_on_board.push([x, y]);
-	st = JSON.stringify(next_letter_position_on_board);
-	h = 7;
-}
-
-function generateNextLetterPositionOnBoardFlat() { //all first row, then second, etc
-	var x = 0;
-	var y = 0;
-
-	next_letter_position_on_board = [];
-	for (y = 0; y < puzzle_height; y++) {
-		for (x = 0; x < puzzle_width; x++) {
-			if (puzzle[y][x] != pad_char) {
-				next_letter_position_on_board.push([x, y]);
-			}
-		}
-	}
-}
-
-function generateNextLetterPositionsOnBoardSwitchWalk() { //see thesis.cambon.dk.pdf on github
+function letterWalkSwitch() { //see thesis.cambon.dk.pdf on github
 	var x = 0;
 	var y = 0;
 	var xx = 0; //last starting run
@@ -944,7 +944,7 @@ function generateNextLetterPositionsOnBoardSwitchWalk() { //see thesis.cambon.dk
 	while ((x + y + 2) <= (puzzle_height + puzzle_width));
 }
 
-function generateNextLetterPositionsOnBoardSnakeWalk() { //see thesis.cambon.dk.pdf on github
+function letterWalkSnake() { //see thesis.cambon.dk.pdf on github
 	var dx = 1;
 	var dy = 0;
 	var walk_length = 2;
@@ -1821,7 +1821,7 @@ function printProcessing() {
 
 	//limit # console records
 	console_log_count++;
-	if (console_log_count > 10000) {
+	if (console_log_count > 5000) {
 		console.clear();
 		console_log_count = 0;
 	} //if we don't it can blank out completely
