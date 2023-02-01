@@ -279,7 +279,7 @@ function GenerateGridDoubleSpaced(arg_doublespacedwidth, arg_evenodd) {
 	puzzle_width = arg_doublespacedwidth;
 	arg_evenodd = arg_evenodd | 0;
 
-	//#build a basic double spaced grid
+	//build a basic double spaced grid
 	for (var y = 0; y < arg_doublespacedwidth; y++) {
 		for (var x = 0; x < arg_doublespacedwidth; x++) {
 			if(typeof puzzle[y] === 'undefined'){
@@ -549,7 +549,6 @@ function numberBlankSquares() {
 		}
 	}
 
-	// biggest_word_number = word_number;
 	var crossing_cells = 0;
 	var total_cells = 0;
 	var white_cells = 0;
@@ -1384,46 +1383,7 @@ function doesMaskProduceSingleWordAlreadyUsed(mask) {
 		return false;
 	}
 
-/*
-on zig zag walk
-ABC
-DEF
-GHI
-
-Aoo
-ooo
-ooo
-
-Aoo
-Doo
-ooo
-
-ADo
-Doo
-ooo
-
-ADG
-Doo
-ooo
-
-ADG
-DEo
-ooo
-
-ADG
-DEo
-Goo
-
-duplicate word fails and recurses to
-Aoo
-Doo
-ooo
-and D a valid letter is needlessly removed. We are now out of letters, thus we fail and recurse to
-Aoo
-ooo
-ooo
-which needlessly removes A the only valid letter left there....
-*/
+	//alternate
 
 	//obviously slower but fails earlier than fast version, but is the end result different?
 	var list_of_words = wordsFromMask(mask);
@@ -1490,9 +1450,7 @@ function recursiveWords() {
 	var success = 0;
 	while (!success) {
 
-		if (arg_printtoconsole) {
-			printProcessing();
-		}
+		printProcessing();
 
 		/*
 		if (!first_run) {
