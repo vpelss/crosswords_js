@@ -191,6 +191,12 @@ function main() {
 		recursiveLetters();
 	}
 
+	printProcessing();
+	msg = 'Puzzle getenerated. Downloading clue data. It may take 60 seconds or more. You must click OK to continue.';
+	console.log(msg);
+	//document.getElementById('puzzle_place').innerHTML = msg;
+	alert(msg);
+
 	numberClueList();
 
 	print_limit = 10000;

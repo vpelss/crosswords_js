@@ -1,61 +1,304 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
 
-Main
+<html>
+<head>
+	<link rel="stylesheet" type="text/css" href="main.css">
+	<meta name="KEYWORDS" content="Crosswords , JS, Javascript , crossword , cross, word, generator , puzzle , script , crosswords, printable">
+	<meta name="DESCRIPTION" content="Crosswords written in JS Javascript. Crossword Puzzle Generator Script to create Crosswords for prining or saving for use in your web browser">
+
+	<title>Emogic's Javascript Crosswords Puzzle Generator</title>
+
+	<link rel="stylesheet" href="main.css" type="text/css">
+</head>
+
+<body background="crossword.gif">
+	<center>
+		<table cellpadding="0" cellspacing="1" bgcolor="#000000">
+			<tr>
+				<td>
+					<table cellpadding="5" cellspacing="0" bgcolor="#FFFFFF">
+						<tr>
+							<td colspan="3">
+								<h6 align="center">Back to <a href="/">Emogic</a></h6>
+
+								<h3 align="center">Emogic's Javascript Crosswords Puzzle Generator</h3>
+							</td>
+						</tr>
+
+						<tr>
+							<td style="border-top: 1pt solid; border-right: 1pt solid; border-bottom: 1pt solid; border-left: 1pt solid" valign="top">
+								<center>
+									<form action="crossword.html" method="get" target="_blank" name="StartForm" id="StartForm">
+										<hr>
+
+										<table border="0">
+											<tr>
+												<td valign="top">
+													<table cellpadding="0" cellspacing="0" style="border-top: 1pt solid; border-right: 1pt solid; border-bottom: 1pt solid; border-left: 1pt solid" width="100%">
+														<tr>
+															<td valign="top" colspan="2" align="center"><input type="radio" name="layouts" checked="checked" value="grids"><a href="#" onclick="alert(gridsvar);return false;">Grids</a></td>
+														</tr>
+
+														<tr>
+															<td valign="top"><select id="grid" name="grid" size="6">
+																<option value="3x3" class="gridOption">
+																	Double Word Squares - no black squares
+																</option>
+
+																<option value="3x3">
+																	3x3
+																</option>
+
+																<option value="4x4">
+																	4x4
+																</option>
+
+																<option value="5x5">
+																	5x5
+																</option>
+
+																<option value="6x6">
+																	6x6
+																</option>
+
+																<option value="7x7">
+																	7x7
+																</option>
+
+																<option value="13x13_56_144" class="gridOption">
+																	Standard USA Grids
+																</option>
+
+																<option value="13x13_56_144" selected="selected">
+																	13x13_56_144
+																</option>
+
+																<option value="13x13_56_144b">
+																	13x13_56_144b
+																</option>
+
+																<option value="13x13_60_146">
+																	13x13_60_146
+																</option>
+
+																<option value="13x13_62_145">
+																	13x13_62_145
+																</option>
+
+																<option value="15x15">
+																	15x15
+																</option>
+
+																<option value="16x16_80_42">
+																	16x16_80_42
+																</option>
+
+																<option value="17x17_100_48">
+																	17x17_100_48
+																</option>
+
+																<option value="19x19_116_58">
+																	19x19_116_58
+																</option>
+
+																<option value="21x21">
+																	21x21
+																</option>
+
+																<option value="21x21_126_64">
+																	21x21_126_64
+																</option>
+
+																<option value="BigOne">
+																	BigOne
+																</option>
+
+																<option value="21x27_178_92">
+																	21x27_178_92
+																</option>
+
+																<option value="23x23_160_87">
+																	23x23_160_87
+																</option>
+
+																<option value="13x13_22_112" class="gridOption">
+																	British Style
+																</option>
+
+																<option value="13x13_22_112">
+																	13x13_22_112
+																</option>
+
+																<option value="15x15_26_138">
+																	15x15_26_138
+																</option>
+
+																<option value="21x21_44_292">
+																	21x21_44_292
+																</option>
+															</select><br></td>
+
+															<td valign="top"></td>
+														</tr>
+													</table><br>
+
+													<table border="0" style="border-top: 1pt solid; border-right: 1pt solid; border-bottom: 1pt solid; border-left: 1pt solid" width="100%">
+														<tr>
+															<td align="center"><input type="radio" name="layouts" value="doublespaced"> <a href="#" onclick="alert(britishgridsvar);return false;">British Grids Random</a><br>
+															<br>
+															Width/Height <input type="text" name="doublespacedwidth" size="3" value="7"><br>
+															<input type="checkbox" name="evenodd" value="1">Even/Odd<br>
+															<input type="text" name="doublespacedpercentage" value="65" size="3">PercentageWhite<br>
+															<br>
+															<input type="checkbox" name="doublespacedfull" value="1"> Full (100% white)</td>
+														</tr>
+													</table><br>
+
+													<table border="0" style="border-top: 1pt solid; border-right: 1pt solid; border-bottom: 1pt solid; border-left: 1pt solid" width="100%">
+														<tr>
+															<td align="center"><input type="checkbox" name="shuffle" checked="checked"> <a href="#" onclick="alert(shufflevar);return false;">Suffle Words/Letters</a></td>
+														</tr>
+													</table>
+												</td>
+
+												<td>
+													<table cellpadding="0" cellspacing="0" style="border-top: 1pt solid; border-right: 1pt solid; border-bottom: 1pt solid; border-left: 1pt solid" width="100%">
+														<tr>
+															<td valign="top" colspan="2" align="center"><a href="#" onclick="alert(worddatabasevar);return false;">Word Databases</a></td>
+														</tr>
+
+														<tr>
+															<td valign="top"><input type="radio" name="wordfile" checked="checked" value="Clues_248505"> <a href="./wordlists/Clues_248505/stats.txt" target="_blank">248,505 Words</a> (recommended)<br>
+															<input type="radio" name="wordfile" value="Sympathy_31121"> <a href="./wordlists/Sympathy_31121/stats.txt" target="_blank">31,121 Words</a><br>
+															<input type="radio" name="wordfile" value="Magnum_Eng_Clues_30420"> <a href="./wordlists/Magnum_Eng_Clues_30420/stats.txt" target="_blank">30,420 Words</a><br>
+															<input type="radio" name="wordfile" value="CrosswordSolver_18790"> <a href="./wordlists/CrosswordSolver_18790/stats.txt" target="_blank">18,790 Words</a><br>
+															<input type="radio" name="wordfile" value="CSolver_18675"> <a href="./wordlists/CSolver_18675/stats.txt" target="_blank">18,675 Words</a><br>
+															<input type="radio" name="wordfile" value="CrosswordComiler_17763"> <a href="./wordlists/CrosswordComiler_17763/stats.txt" target="_blank">17,763 Words</a><br></td>
+
+															<td valign="top"></td>
+														</tr>
+													</table><br>
+
+													<table border="0" style="border-top: 1pt solid; border-right: 1pt solid; border-bottom: 1pt solid; border-left: 1pt solid" width="100%">
+														<tr>
+															<td align="center"><a href="#" onclick="alert(walkpathvar);return false;">WalkPath</a></td>
+														</tr>
+
+														<tr>
+															<td align="center">
+																<select name="walkpath" size="10" id="walkpath">
+
+																		<option value="LetterWalkStraight" class="gridOption">
+																		Letter Walks
+																	</option>
+
+																<option value="LetterWalkStraight">
+																		Straight
+																	</option>
+
+																	<option value="LetterWalkSikSak">
+																		Sik Sak
+																	</option>
+
+																	<option value="LetterWalkSlalom">
+																		Slalom
+																	</option>
+
+																	<option value="LetterWalkSwitch">
+																		Switch
+																	</option>
+
+																	<option value="LetterWalkSnake">
+																		Snake
+																	</option>
 
 
-    <input onchange="showFile(this);" type="file">
+																<option value="crossingwords" class="gridOption">
+																		Word Walks
+																	</option>
 
-    <script>
-      function showFile(input) {
-        let file = input.files[0];
-        alert(`File name: ${file.name}`);
-        alert(`Last modified: ${file.lastModified}`);
-      }
-    </script>
+																	<option value="WordWalkCrossingwords" selected="selected">
+																		Crossing Words (best)
+																	</option>
 
+																	<option value="WordWalkNumerical">
+																		Numerical Words
+																	</option>
 
-	   <input onchange="readFile(this);" type="file">
+																	<option value="WordWalkAcrossThenDown">
+																		Across then Down Words
+																	</option>
 
-	<script>
-      function readFile(input) {
-        let file = input.files[0];
-        let fileReader = new FileReader();
-        fileReader.readAsText(file);
-        fileReader.onload = function() {
-          alert(fileReader.result);
-        };
-        fileReader.onerror = function() {
-          alert(fileReader.error);
-        };
-      }
-    </script>
+																	<option value="WordWalkSikSak">
+																		Sik Sak Words
+																	</option>
 
+																	<option value="WordWalkSlalom">
+																		Slalom Words
+																	</option>
 
-<pre id='display_area'>
-Display
-
-</pre>
-
-<script>
-
-function readStringFromFileAtPath(pathOfFileToReadFrom){
-	const request = new XMLHttpRequest();
-	request.addEventListener("error", function(){return 0;});
-	request.open("GET", pathOfFileToReadFrom, false);
-	request.send(null);
-	var status = request.status;
-	if (status != 200 ) { return status; }
-	var returnValue = request.responseText;
-	return returnValue;
-	}
-
-var text = readStringFromFileAtPath ( "./wordlists/clues/words/10.txt" );
-var id = document.getElementById('display_area');
-
-var text2 = readStringFromFileAtPath ( "./wordlists/clues/words/810.txt" );
-id.innerHTML = text2;
-
-var t = 7;
-
-</script>
+																	<option value="WordWalkRandom">
+																		Random Words (worst)
+																	</option>
 
 
+																</select><br>
+																<input type="checkbox" name="simplewordmasksearch"> <a href="#" onclick="alert(simplewordmaskvar);return false;">Simple Word Mask Search</a>
+																<hr>
+																<input type="checkbox" name="optimalbacktrack" value="1" checked="checked"> <a href="#" onclick="alert(optimumbacktrackvar);return false;">Optimal Backtrack</a> (Recommended)
+															</td>
+														</tr>
+													</table><br>
+												</td>
+											</tr>
+										</table>
+
+										<input type="checkbox" name="printtoconsole" value="1"> <a href="#" onclick="alert(printtoconsole);return false;">Print to JS Console</a> (off for speed)
+
+										<p><input type="submit" name="Submit1" value="Generate Puzzle"></p>
+
+										<p><input type="reset" name="Reset1" value="Reset Defaults"></p>
+									</form>
+								</center>
+
+							</td>
+						</tr>
+
+						<tr>
+							<td colspan="3" align="center" style="border-top: 1pt solid; border-right: 1pt solid; border-bottom: 1pt solid; border-left: 1pt solid"></td>
+						</tr>
+
+						<tr>
+							<td colspan="3" align="center" style="border-top: 1pt solid; border-right: 1pt solid; border-bottom: 1pt solid; border-left: 1pt solid">Notes about the creation of this Crossword Generator Algorithm and Script:<br>
+							<a href="https://emogic.com/tech-notes/crossword-algorithm-crossword-generation-algorithm/" target="_blank">https://emogic.com/tech-notes/crossword-algorithm-crossword-generation-algorithm/</a></td>
+						</tr>
+
+						<tr>
+							<td colspan="3" align="center" style="border-top: 1pt solid; border-right: 1pt solid; border-bottom: 1pt solid; border-left: 1pt solid">
+								<p>Thanks to:</p>
+
+								<p><a href="http://www.cruciverb.com" target="_blank">cruciverb.com</a></p>
+
+								<p><a href="http://thesis.cambon.dk/" target="_blank">thesis.cambon.dk/</a></p>
+
+								<p>and <a href="http://www.otsys.com/clue" target="_blank">www.otsys.com/clue</a></p>
+
+								<div id='show_puzzle'></div>
+							</td>
+						</tr>
+					</table>
+				</td>
+			</tr>
+		</table>
+	</center><script type="text/javascript">
+var gridsvar = 'These are some standard pre-generated grids. See below if you want to contribute other grids.';
+	var britishgridsvar = 'This will generate a random British style grid (double spaced). Nothe that it is not symetrical.';
+	var worddatabasevar = 'The more words we have in our database the easier it is to generate a crossword.';
+	var walkpathvar = 'The walk path is the order we try to lay down words. The path chosen can vastly improve the generation time. Different paths work better for different grids but Crossing Words is the best for most situations. Letter walks are the slowest and are provided only to test and prove this fact.';
+	var optimumbacktrackvar = 'Optimal Backtrack vastly speeds up the search by removing more than one word when we can no longer lay down another word. It will continue to remove words until it reaches a word that potentially caused the failure.';
+	var slowdownvar = 'Only use this if you want to see the walk in slow time. It is not useful in generating crosswords.';
+	var shufflevar = 'If unchecked, it will try to lay words down in alphabetic order. So it will generate the same puzzle each time. It is not useful in generating crosswords. It is only usefull if you want to replicate a crossword generation scenario.';
+	var simplewordmaskvar = 'This lets the recursion figure out if the crossing words will play nice. Although is speeds up the words layed per second, it is slower overall.';
+	</script>
+</body>
+</html>
