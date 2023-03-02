@@ -121,6 +121,7 @@ function main() {
 		var arg_doublespacedpercentage = urlParams.get('arg_doublespacedpercentage');
 		if (arg_doublespacedfull) {
 			GenerateGridDoubleSpaced(arg_doublespacedwidth, arg_evenodd);
+			ShotgunDoubleSpaced();
 		} else {
 			//GenerateGridDoubleSpaced2(arg_doublespacedwidth, arg_evenodd , arg_doublespacedpercentage);
 		}
@@ -280,16 +281,14 @@ function GenerateGridDoubleSpaced(arg_doublespacedwidth, arg_evenodd) {
 	//input width (which gives height) and oddEven style
 	//output a text array of width and height and create full double space pattern
 	//also set globals $in{width} and $in{height}
-
 	puzzle_height = arg_doublespacedwidth;
 	puzzle_width = arg_doublespacedwidth;
 	arg_evenodd = arg_evenodd | 0;
-
 	//build a basic double spaced grid
 	for (var y = 0; y < arg_doublespacedwidth; y++) {
 		for (var x = 0; x < arg_doublespacedwidth; x++) {
 			if(typeof puzzle[y] === 'undefined'){
-				puzzle[y] = {};
+				puzzle[y] = [];
 			}
 			puzzle[y][x] = unoccupied; // assume, then change as required
 			if (((y % 2) != arg_evenodd) && ((x % 2) != arg_evenodd)) {
@@ -297,6 +296,67 @@ function GenerateGridDoubleSpaced(arg_doublespacedwidth, arg_evenodd) {
 			}
 		}
 	}
+}
+
+function ShotgunDoubleSpaced( max , symmetry ){
+
+
+ var res = AreSpacesConnected();
+
+var t = 9;
+
+}
+
+function AreSpacesConnected() {
+	var untested = {}; //JSON.parse(JSON.stringify(puzzle));
+	var todo = {};
+	//get unoccupied squares
+	puzzle.forEach(function(currentObj, y) {
+		puzzle[y].forEach(function(currentObj, x) {
+			if (puzzle[y][x] == unoccupied) {
+				untested['' + x + '_' + y] = true;
+			}
+		});
+	});
+
+	var start_square = Object.keys(untested).shift();
+	todo[start_square] = true;
+	delete untested[start_square];
+
+	do {
+		start_square = Object.keys(todo).shift();
+		delete untested[start_square];
+		delete todo[start_square];
+		var [x, y] = start_square.split('_');
+
+		var key = '' + x + '_' + (+y - 1);
+		if (untested[key] !== undefined) {
+			delete untested[key];
+			todo[key] = true;
+		}
+		key = '' + x + '_' + (+y + 1);
+		if (untested[key] !== undefined) {
+			delete untested[key];
+			todo[key] = true;
+		}
+		key = '' + (+x + 1) + '_' + y;
+		if (untested[key] !== undefined) {
+			delete untested[key];
+			todo[key] = true;
+		}
+		key = '' + (+x - 1) + '_' + y;
+		if (untested[key] !== undefined) {
+			delete untested[key];
+			todo[key] = true;
+		}
+	} while (JSON.stringify(todo) !== '{}')
+
+	if (JSON.stringify(untested) === '{}') {
+		return true;
+	} else {
+		return false;
+	}
+
 }
 
 /*
