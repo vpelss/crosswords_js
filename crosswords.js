@@ -123,6 +123,8 @@ function main() {
 			GenerateGridDoubleSpaced(arg_doublespacedwidth, arg_evenodd);
 			ShotgunDoubleSpaced();
 		} else {
+			GenerateGridDoubleSpaced(arg_doublespacedwidth, arg_evenodd);
+			ShotgunDoubleSpaced();
 			//GenerateGridDoubleSpaced2(arg_doublespacedwidth, arg_evenodd , arg_doublespacedpercentage);
 		}
 	}
@@ -298,13 +300,53 @@ function GenerateGridDoubleSpaced(arg_doublespacedwidth, arg_evenodd) {
 	}
 }
 
-function ShotgunDoubleSpaced( max , symmetry ){
+function ShotgunDoubleSpaced(max, symmetry) {
+	var tried = {};
+	var x;
+	var y;
+	var cell;
 
+	do {
+		//option to quit early here
 
- var res = AreSpacesConnected();
+		//pick squares
+		do{
+		x = Math.floor(Math.random() * puzzle_width);
+		y = Math.floor(Math.random() * puzzle_height);
+		cell = '' + x + '_' + y;
+		}while( tried[cell] ); //skip tried cells
 
-var t = 9;
+		tried[cell] = true;
 
+		//place squares
+		if (puzzle[y][x] == unoccupied) {
+			puzzle[y][x] = pad_char;
+		}
+
+		var anyTwoLetterWords = AnyTwoLetterWords();
+		var areSpacesConnected = AreSpacesConnected();
+		if ((!areSpacesConnected) || ( anyTwoLetterWords )) {
+			//remove squares
+			puzzle[y][x] = unoccupied;
+		}
+
+	} while (Object.keys(tried).length < (puzzle_width * puzzle_height));
+
+	var t = 9;
+}
+
+function AnyTwoLetterWords() {
+	for (var x = 0; x < puzzle_width; x++) {
+		for (var y = 0; y < puzzle_height; y++) {
+			for (var dir = 0; dir < 2; dir++) {
+				var len = calculateWordLetterPositions(x, y, dir).length;
+				if (len == 2) {
+					return true;
+				}
+			}
+		}
+	}
+	return false;
 }
 
 function AreSpacesConnected() {
@@ -349,14 +391,13 @@ function AreSpacesConnected() {
 			delete untested[key];
 			todo[key] = true;
 		}
-	} while (JSON.stringify(todo) !== '{}')
+	} while (JSON.stringify(todo) !== '{}');
 
 	if (JSON.stringify(untested) === '{}') {
 		return true;
 	} else {
 		return false;
 	}
-
 }
 
 /*
@@ -721,7 +762,7 @@ function wordWalkCrossing() { //start with 1 horiz. find all crossing words find
 	var dir = dir_down;
 
 	if (typeof all_masks_on_board[dir][word_number] === 'undefined') {
-		dir = dir_vert;
+		dir = dir_down;
 	} // no horizontal #1 word. go vertical
 	var to_do_list = []; //list of crossing words and directions left to process. FIFO: shift off and push on so we do in an orderly fashion!
 	to_do_list.push([dir, word_number]);
@@ -1929,9 +1970,12 @@ function printPuzzle() {
 			}
 			temp_puzzle[y][x] = puzzle[y][x]; //mimic filled in puzzle
 			for (dir = 0; dir < 2; dir++) {
+				if (typeof position_in_word[dir][y] === 'undefined') {
+					continue;
+				} //no words on this line
 				if (typeof position_in_word[dir][y][x] === 'undefined') {
 					continue;
-				} //not a word.
+				} //no words in this square
 				if (position_in_word[dir][y][x] == 0) { //we are at start of word so there will be a number here. place that number
 					temp_puzzle[y][x] = this_square_belongs_to_word_number[dir][y][x];
 				}
