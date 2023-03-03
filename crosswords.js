@@ -759,7 +759,7 @@ function wordWalkCrossing() { //start with 1 horiz. find all crossing words find
 	already_in_list[dir_across] = {};
 	already_in_list[dir_down] = {};
 	var word_number = 1;
-	var dir = dir_down;
+	var dir = dir_across;
 
 	if (typeof all_masks_on_board[dir][word_number] === 'undefined') {
 		dir = dir_down;
