@@ -116,16 +116,17 @@ function main() {
 
 	if (layouts == 'doublespaced') {
 		var arg_doublespacedfull = urlParams.get('doublespacedfull');
-		var arg_evenodd = urlParams.get('evenodd');
+		var arg_evenodd = urlParams.get('doublespacedevenodd');
 		var arg_doublespacedwidth = urlParams.get('doublespacedwidth');
-		var arg_doublespacedpercentage = urlParams.get('arg_doublespacedpercentage');
+		var arg_doublespacedmax = urlParams.get('doublespacedmax');
+		var arg_doublespacedsymmetry = urlParams.get('doublespacedsymmetry');
+
 		if (arg_doublespacedfull) {
 			GenerateGridDoubleSpaced(arg_doublespacedwidth, arg_evenodd);
 			//ShotgunDoubleSpaced();
 		} else {
 			GenerateGridDoubleSpaced(arg_doublespacedwidth, arg_evenodd);
-			ShotgunDoubleSpaced();
-			//GenerateGridDoubleSpaced2(arg_doublespacedwidth, arg_evenodd , arg_doublespacedpercentage);
+			ShotgunDoubleSpaced( arg_doublespacedmax , arg_doublespacedsymmetry);
 		}
 	}
 
@@ -278,7 +279,6 @@ function readStringFromFileAtPath(pathOfFileToReadFrom) {
 	return returnValue;
 }
 
-
 function GenerateGridDoubleSpaced(arg_doublespacedwidth, arg_evenodd) {
 	//input width (which gives height) and oddEven style
 	//output a text array of width and height and create full double space pattern
@@ -314,13 +314,14 @@ function ShotgunDoubleSpaced(max, symmetry) {
 	var cell;
 	var cells;
 	var numberOfCells = (puzzle_width * puzzle_height);
-	symmetry = 4;
+	var blackSquaresAdded = 0;
 
 	do {
-		//option to quit early here
+		if (blackSquaresAdded >= max) { //option to quit early here
+			break;
+		}
 
 		cells = [];
-
 		//pick squares
 		do {
 			x = Math.floor(Math.random() * puzzle_width);
@@ -355,26 +356,28 @@ function ShotgunDoubleSpaced(max, symmetry) {
 				[x, y] = cellArray;
 				puzzle[y][x] = pad_char;
 			});
+		} else { //nothing was laid
+			continue;
 		}
 
 		var anyTwoLetterWords = AnyTwoLetterWords();
 		var areSpacesConnected = AreSpacesConnected();
-		if ((!areSpacesConnected) || (anyTwoLetterWords)) {
-			//remove squares
+		if ((!areSpacesConnected) || (anyTwoLetterWords)) { //remove squares
 			cells.forEach(function(cellArray) {
 				[x, y] = cellArray;
 				puzzle[y][x] = unoccupied;
 			});
+		} else { //squares where added
+			blackSquaresAdded = blackSquaresAdded + symmetry;
 		}
 
 	} while (Object.keys(tried).length < numberOfCells); //try all cells
-
-	var t = 9;
 }
 
 function AnyTwoLetterWords() {
 	for (var x = 0; x < puzzle_width; x++) {
 		for (var y = 0; y < puzzle_height; y++) {
+			if(puzzle[y][x] == pad_char){continue;}//nothing to test
 			for (var dir = 0; dir < 2; dir++) {
 				var len = calculateWordLetterPositions(x, y, dir).length;
 				if (len == 2) {
@@ -436,174 +439,6 @@ function AreSpacesConnected() {
 		return false;
 	}
 }
-
-/*
-var breadCrumbs;
-function GenerateGridDoubleSpaced2(arg_doublespacedwidth, arg_evenodd,arg_doublespacedpercentage){
-//random british grid generator
-//fill with white space and pads then add pads one at a time. If pad separates any area, undo and try again.
-//fill all joining squares with breadcrumbs using recursion. If all surrounding white space has a breadcrumb then there are no islads of white
-//if words NSEW are > 2 try again
-
-var x , xx , y , yy;
-var unoccupiedNSEWWhitespace=[];
-var $wordSizeH;
-var $wordSizeV;
-
-
-GenerateGridDoubleSpaced(arg_doublespacedwidth,arg_evenodd);
-
-var $padCells;
-var $whiteCells;
-//calculate  density
-for (y = 0 ; y < arg_doublespacedwidth ; y++)
-      {
-      for (x = 0 ; x < arg_doublespacedwidth ; x++) {
-            if (puzzle[y][x] == pad_char)
-                       {$padCells++;}
-            if (puzzle[y][x] == unoccupied)
-                       {$whiteCells++;}
-            }
-      }
-var $totalCells = arg_doublespacedwidth * arg_doublespacedwidth;
-var $time_to_quit = Date.now() + 3000; //3 seconds!
-while (Date.now() < $time_to_quit) {
-       x = Math.floor(Math.random() * arg_doublespacedwidth);
-       y = Math.floor(Math.random() * arg_doublespacedwidth);
-
-       if ( arg_doublespacedpercentage > Math.floor(100 * ($totalCells - $padCells) / $totalCells) ){
-            break; //we have reached black pad percentage quota
-            }
-
-       //already is a pad
-       if ( puzzle[y][x] == pad_char ){
-             continue;
-             }
-
-       //place pad first so we can calculate word sizes, remove if fail!
-       puzzle[y][x] = pad_char;
-       $padCells++;
-
-       //get first whitespace around proposed pad space
-       breadCrumbs = {}; //start fresh
-       unoccupiedNSEWWhitespace = returnLocalWhiteSquares(x,y);
-
-       //see if surrounded by pads - next!
-       if ( unoccupiedNSEWWhitespace.length == 0){
-           puzzle[y][x] = unoccupied;
-           $padCells--;
-           continue;
-           }
-
-       //take 1st local whitespace and run with it
-       xx = unoccupiedNSEWWhitespace[0][0];
-       yy = unoccupiedNSEWWhitespace[0][1];
-
-		breadCrumbAllWhiteFromHere(xx,yy); //mark all touching whitespace starting from either NSEW
-
-       //check each local surrounding whitespace for a breadcrumb  and check for legal word sizes
-       foreach my $item (@unoccupiedNSEWWhitespace)
-                {
-                xx = $item->[0];
-                yy = $item->[1];
-
-                #check to see if both horiz and vert word size are valid
-                $wordSizeH = &calcWordSize( xx ,yy , 0);
-                $wordSizeV = &calcWordSize( xx ,yy , 1);
-                if ( $wordSizeH == 1 and $wordSizeV == 1 )
-                     {
-                     $puzzle[x][y]->{Letter} = $unoccupied;
-                     $padCells--;
-                     next MAINLOOP;
-                     }
-                if ( not($wordSizeH == 1) and ($wordSizeH < 3) )
-                     {
-                     $puzzle[x][y]->{Letter} = $unoccupied;
-                     $padCells--;
-                     next MAINLOOP;
-                     }
-                if ( not($wordSizeV == 1) and ($wordSizeV < 3) )
-                     {
-                     $puzzle[x][y]->{Letter} = $unoccupied;
-                     $padCells--;
-                     next MAINLOOP;
-                     }
-                #check to see if bread crumb exists for all surrounding whitespace or next
-                if ( $breadCrumbs{xx}{yy} != 1 )
-                      {
-                      $puzzle[x][y]->{Letter} = $unoccupied;
-                      $padCells--;
-                      next MAINLOOP;
-                      }
-                }
-       }
-};
-
-function breadCrumbAllWhiteFromHere()
-{
-#given a starting location $unoccupied, mark all adjoining whitespace with breadcrumbs and when done, return
-my x = $_[0];
-my y = $_[1];
-my @unoccupiedNSEWWhitespace = ();
-
-$breadCrumbs{x}{y} = 1; #mark visited
-
-#get all $unoccupied and unvisited local pads around x y and push to a list
-@unoccupiedNSEWWhitespace = &ReturnLocalWhiteSquares(x,y);
-
-if ( (scalar @unoccupiedNSEWWhitespace) == 0) #surrounded by pads or already visited
-            {
-            return;  #start of the end
-            }
-
-foreach my $item (@unoccupiedNSEWWhitespace)
-        {
-         #choose next adjoining white space
-         x = $item->[0];
-         y = $item->[1];
-         #continue recursive journey
-         &BreadCrumbAllWhiteFromHere(x,y);
-        }
-};
-
-function returnLocalWhiteSquares()
-{
-#give a sqare and return a list of ([x y] [x y] [x y] ....) of NSEW white squares
-my @unoccupiedNSEWWhitespace;
-my (x , y);
-
-#check N
-x = $_[0];
-y = $_[1] - 1;
-if ( not &outsideCrossword(x,y) and ($puzzle[x][y]->{Letter} eq $unoccupied) and ($breadCrumbs{x}{y} != 1))
-     {
-     push @unoccupiedNSEWWhitespace , [x,y];
-     }
-#check S
-x = $_[0];
-y = $_[1] + 1;
-if ( not &outsideCrossword(x,y) and ($puzzle[x][y]->{Letter} eq $unoccupied) and ($breadCrumbs{x}{y} != 1))
-     {
-     push @unoccupiedNSEWWhitespace , [x,y];
-     }
-#check E
-x = $_[0] + 1;
-y = $_[1];
-if ( not &outsideCrossword(x,y) and ($puzzle[x][y]->{Letter} eq $unoccupied) and ($breadCrumbs{x}{y} != 1))
-     {
-     push @unoccupiedNSEWWhitespace , [x,y];
-     }
-#check W
-x = $_[0] - 1;
-y = $_[1];
-if ( not &outsideCrossword(x,y) and ($puzzle[x][y]->{Letter} eq $unoccupied) and ($breadCrumbs{x}{y} != 1))
-     {
-     push @unoccupiedNSEWWhitespace , [x,y];
-     }
-
-return @unoccupiedNSEWWhitespace;
-};
-*/
 
 function numberBlankSquares() {
 	//this does a lot of global variable setups

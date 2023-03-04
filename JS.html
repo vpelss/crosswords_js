@@ -5,6 +5,7 @@
 	<link rel="stylesheet" type="text/css" href="main.css">
 	<meta name="KEYWORDS" content="Crosswords , JS, Javascript , crossword , cross, word, generator , puzzle , script , crosswords, printable">
 	<meta name="DESCRIPTION" content="Crosswords written in JS Javascript. Crossword Puzzle Generator Script to create Crosswords for prining or saving for use in your web browser">
+
 	<title>Emogic's Javascript Crosswords Puzzle Generator</title>
 	<link rel="stylesheet" href="main.css" type="text/css">
 </head>
@@ -145,10 +146,22 @@
 															<td align="center"><input type="radio" name="layouts" value="doublespaced"> <a href="#" onclick="alert(britishgridsvar);return false;">British Grids Random</a><br>
 															<br>
 															Width/Height (odd values only)<input type="text" name="doublespacedwidth" size="3" value="7"><br>
-															<input type="checkbox" name="evenodd" value="1">Even/Odd<br>
-															<input type="text" name="doublespacedpercentage" value="65" size="3">PercentageWhite<br>
-															<br>
-															<input type="checkbox" name="doublespacedfull" value="1"> Full (100% white)</td>
+															<input type="checkbox" name="doublespacedevenodd" value="1">Black Squares Even<br>
+															<input type="text" name="doublespacedmax" value="10" size="3">Max black squares added<br>
+															<label for="doublespacedsymmetry">Symmetry <select name="doublespacedsymmetry" size="1" id="doublespacedsymmetry">
+																<option value="1">
+																	None
+																</option>
+
+																<option value="2">
+																	Left/Right
+																</option>
+
+																<option value="4">
+																	4 Corners
+																</option>
+															</select><br>
+															<input type="checkbox" name="doublespacedfull" value="1"> Full (100% white)</label></td>
 														</tr>
 													</table><br>
 
@@ -185,12 +198,11 @@
 														<tr>
 															<td align="center">
 																<select name="walkpath" size="10" id="walkpath">
-
-																		<option value="LetterWalkStraight" class="gridOption">
+																	<option value="LetterWalkStraight" class="gridOption">
 																		Letter Walks
 																	</option>
 
-																<option value="LetterWalkStraight">
+																	<option value="LetterWalkStraight">
 																		Straight
 																	</option>
 
@@ -210,8 +222,7 @@
 																		Snake
 																	</option>
 
-
-																<option value="crossingwords" class="gridOption">
+																	<option value="crossingwords" class="gridOption">
 																		Word Walks
 																	</option>
 
@@ -238,8 +249,6 @@
 																	<option value="WordWalkRandom">
 																		Random Words (worst)
 																	</option>
-
-
 																</select><br>
 																<input type="checkbox" name="simplewordmasksearch"> <a href="#" onclick="alert(simplewordmaskvar);return false;">Simple Word Mask Search</a>
 																<hr>
@@ -249,16 +258,13 @@
 													</table><br>
 												</td>
 											</tr>
-										</table>
-
-										<input type="checkbox" name="printtoconsole" value="1"> <a href="#" onclick="alert(printtoconsole);return false;">Print to JS Console</a> (off for speed)
+										</table><input type="checkbox" name="printtoconsole" value="1"> <a href="#" onclick="alert(printtoconsole);return false;">Print to JS Console</a> (off for speed)
 
 										<p><input type="submit" name="Submit1" value="Generate Puzzle"></p>
 
 										<p><input type="reset" name="Reset1" value="Reset Defaults"></p>
 									</form>
 								</center>
-
 							</td>
 						</tr>
 
@@ -290,13 +296,13 @@
 		</table>
 	</center><script type="text/javascript">
 var gridsvar = 'These are some standard pre-generated grids. See below if you want to contribute other grids.';
-	var britishgridsvar = 'This will generate a random British style grid (double spaced). Nothe that it is not symetrical.';
-	var worddatabasevar = 'The more words we have in our database the easier it is to generate a crossword.';
-	var walkpathvar = 'The walk path is the order we try to lay down words. The path chosen can vastly improve the generation time. Different paths work better for different grids but Crossing Words is the best for most situations. Letter walks are the slowest and are provided only to test and prove this fact.';
-	var optimumbacktrackvar = 'Optimal Backtrack vastly speeds up the search by removing more than one word when we can no longer lay down another word. It will continue to remove words until it reaches a word that potentially caused the failure.';
-	var slowdownvar = 'Only use this if you want to see the walk in slow time. It is not useful in generating crosswords.';
-	var shufflevar = 'If unchecked, it will try to lay words down in alphabetic order. So it will generate the same puzzle each time. It is not useful in generating crosswords. It is only usefull if you want to replicate a crossword generation scenario.';
-	var simplewordmaskvar = 'This lets the recursion figure out if the crossing words will play nice. Although is speeds up the words layed per second, it is slower overall.';
+		var britishgridsvar = 'This will generate a random British style grid (double spaced). Nothe that it is not symetrical.';
+		var worddatabasevar = 'The more words we have in our database the easier it is to generate a crossword.';
+		var walkpathvar = 'The walk path is the order we try to lay down words. The path chosen can vastly improve the generation time. Different paths work better for different grids but Crossing Words is the best for most situations. Letter walks are the slowest and are provided only to test and prove this fact.';
+		var optimumbacktrackvar = 'Optimal Backtrack vastly speeds up the search by removing more than one word when we can no longer lay down another word. It will continue to remove words until it reaches a word that potentially caused the failure.';
+		var slowdownvar = 'Only use this if you want to see the walk in slow time. It is not useful in generating crosswords.';
+		var shufflevar = 'If unchecked, it will try to lay words down in alphabetic order. So it will generate the same puzzle each time. It is not useful in generating crosswords. It is only usefull if you want to replicate a crossword generation scenario.';
+		var simplewordmaskvar = 'This lets the recursion figure out if the crossing words will play nice. Although is speeds up the words layed per second, it is slower overall.';
 	</script>
 </body>
 </html>
