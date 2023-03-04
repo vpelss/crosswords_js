@@ -121,7 +121,7 @@ function main() {
 		var arg_doublespacedpercentage = urlParams.get('arg_doublespacedpercentage');
 		if (arg_doublespacedfull) {
 			GenerateGridDoubleSpaced(arg_doublespacedwidth, arg_evenodd);
-			ShotgunDoubleSpaced();
+			//ShotgunDoubleSpaced();
 		} else {
 			GenerateGridDoubleSpaced(arg_doublespacedwidth, arg_evenodd);
 			ShotgunDoubleSpaced();
@@ -283,6 +283,13 @@ function GenerateGridDoubleSpaced(arg_doublespacedwidth, arg_evenodd) {
 	//input width (which gives height) and oddEven style
 	//output a text array of width and height and create full double space pattern
 	//also set globals $in{width} and $in{height}
+	if( arg_doublespacedwidth < 3){
+		arg_doublespacedwidth = 3;
+	}
+	if( (arg_doublespacedwidth % 2) == 0){//no even allowed. breads symetry
+		arg_doublespacedwidth++;
+	}
+
 	puzzle_height = arg_doublespacedwidth;
 	puzzle_width = arg_doublespacedwidth;
 	arg_evenodd = arg_evenodd | 0;
@@ -302,35 +309,65 @@ function GenerateGridDoubleSpaced(arg_doublespacedwidth, arg_evenodd) {
 
 function ShotgunDoubleSpaced(max, symmetry) {
 	var tried = {};
-	var x;
-	var y;
+	var x, x1;
+	var y, y1;
 	var cell;
+	var cells;
+	var numberOfCells = (puzzle_width * puzzle_height);
+	symmetry = 4;
 
 	do {
 		//option to quit early here
 
+		cells = [];
+
 		//pick squares
-		do{
-		x = Math.floor(Math.random() * puzzle_width);
-		y = Math.floor(Math.random() * puzzle_height);
-		cell = '' + x + '_' + y;
-		}while( tried[cell] ); //skip tried cells
+		do {
+			x = Math.floor(Math.random() * puzzle_width);
+			y = Math.floor(Math.random() * puzzle_height);
+			x1 = puzzle_width - 1 - x;
+			y1 = puzzle_height - 1 - y;
+			cell = '' + x + '_' + y;
+		} while (tried[cell]); //skip tried cells
 
 		tried[cell] = true;
+		cells.push([x, y]);
+		if (symmetry == 2) {
+			cell = '' + x1 + '_' + y;
+			tried[cell] = true;
+			cells.push([x1, y]);
+		}
+		if (symmetry == 4) {
+			cell = '' + x1 + '_' + y;
+			tried[cell] = true;
+			cells.push([x1, y]);
+			cell = '' + x1 + '_' + y1;
+			tried[cell] = true;
+			cells.push([x1, y1]);
+			cell = '' + x + '_' + y1;
+			tried[cell] = true;
+			cells.push([x, y1]);
+		}
 
 		//place squares
 		if (puzzle[y][x] == unoccupied) {
-			puzzle[y][x] = pad_char;
+			cells.forEach(function(cellArray) {
+				[x, y] = cellArray;
+				puzzle[y][x] = pad_char;
+			});
 		}
 
 		var anyTwoLetterWords = AnyTwoLetterWords();
 		var areSpacesConnected = AreSpacesConnected();
-		if ((!areSpacesConnected) || ( anyTwoLetterWords )) {
+		if ((!areSpacesConnected) || (anyTwoLetterWords)) {
 			//remove squares
-			puzzle[y][x] = unoccupied;
+			cells.forEach(function(cellArray) {
+				[x, y] = cellArray;
+				puzzle[y][x] = unoccupied;
+			});
 		}
 
-	} while (Object.keys(tried).length < (puzzle_width * puzzle_height));
+	} while (Object.keys(tried).length < numberOfCells); //try all cells
 
 	var t = 9;
 }
