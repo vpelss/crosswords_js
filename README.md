@@ -1,22 +1,52 @@
+Contents
+
+Contents
+Emogic's Crossword Generation Algorithm
+The Code
+Why the PERL version?
+What, a Javascript Version Too?
+Word Lists
+Dictionary and Clues Database Structure
+Crossword Puzzle Grid Template Design
+Global Data Structures
+Recursion
+Letter Searches
+Letter Walks
+Letter Backtracks Naive
+Letter Backtracks : Optimal
+Letter Search Methods
+Word Searches
+Word Walks
+Word Backtrack : Optimum
+Word Search Methods
+Benchmarks
+Some things I have learned
+Possible Explanations
+Ideas/Questions
+
+
 Emogic's Crossword Generation Algorithm
 
 See "Emogics_Crossword_Algorithm.pdf" for a better formatted version of this text. 
 
-Note: My Javascript version is the most up to date. While porting my PERL code to JS, I have found many logical errors in my algorithms. I have tried to fix them. I believe my JS version to be the preferred version. Time permitting I may update my PERL code with the fixes.
+Note: My Javascript version is the most up to date. While porting my PERL code to JS, I have found many logical errors in my algorithms. I have tried to fix them in the JS version. I believe my JS version to be the preferred version. Time permitting I may update my PERL code with the fixes.
 
 Both versions are intended more as a tool to study and test a few algorithms that can generate crossword puzzles and the differences between them.
 It is not intended to generate New York Times quality puzzles. 
 
 See: "Design and Implementation of Crossword Compilation Programs Using Serial Approaches'' (CCP). It was at http://thesis.cambon.dk/. But that site no longer exists. The author has granted permission for me to post it on my github. See "thesis.cambon.dk.pdf". I have used many of the concepts mentioned in his thesis and in some cases expanded on them. If you want to create your own crossword generator script,it is a great place to start. The thesis has sample code in C. 
 
-It has been suggested that a letter by letter search is as good (or equivalent) to a word by word search. In a logical sense it is, but not in a practical sense. Yes, a letter search can mimic a word search. But letter searches take longer to discover dead ends in the search space, compared to full word searches. So unless your letter search is mimicking a word search, there will likely be many more CPU cycles burned on a letter search.
-Update: I have noticed that the letter by letter search is very fast in JS and in many cases out performs the word searches. On PERL this is not the case. I believe this is due to PERL having highly optimized regexp code. My word searches rely on the regexp code as it provides amazing memory savings and makes the code much simpler. To make the word search routine as fast as a letter search routine, I would need more RAM than a standard PC has.
-However as the puzzle sizes increase there is a point when the word search outperforms the letter search. As the puzzle size increases the search tree grows much faster for the letter search than for the word search. So even though the letter search algorithm is much faster, eventually a word search can outperform the letter search. 
+It has been suggested that a letter by letter search is as good (or equivalent) to a word by word search. A letter search can mimic a word search. But letter searches will have a larger search tree compared to word searches. So the puzzle generation time is dependent on the speed of the look up routine, and also the search tree size. Even a slower word search lookup ‘could’ outperform a letter search lookup.
+Update: I have noticed that the letter by letter search is very fast in JS and in many cases out performs the word searches. On PERL this is not the case. I believe this is due to PERL having better optimized regexp code compared to the browsers regexp code. My word searches rely on the regexp code as it provides memory savings and makes the code much simpler. 
+However as the puzzle sizes increase there is a point when the word search outperforms the letter search. As the puzzle size increases the search tree grows much faster for the letter search than for the word search. So even though the letter search algorithm is much faster, eventually a word search can outperform the letter search.
+
 The Code
 
 My Crossword Source Code is at:
 PERL: https://github.com/vpelss/crosswords
+https://www.emogic.com/cgi/crosswords/
 JS: https://github.com/vpelss/crosswords_js
+https://www.emogic.com/cgi/crosswords/js.html
 
 You can download the code for my old British style Crossword Generator at: https://www.emogic.com/store/free_crossword_script. 
 It is very simplistic.
@@ -31,7 +61,7 @@ PERL is ubiquitous. PERL is elegant. PERL is, in my opinion, organic. I just lik
 
 What, a Javascript Version Too?
 
-Why a JS version? Well it is ubiquitous also. 
+Why a JS version?
 
 One benefit of the JS version is you can run and wait for the code to complete as long as you like. The perl version is likely to timeout and stall on long runs.
 
@@ -308,8 +338,8 @@ Method 1.
 For each word length I built a chain of hash references of the letters at each position in the word. This required that, for a search, our code had to follow the chain of hash references. The lookup code is more complex but it is fast and very memory efficient as it is a simple data tree.
 
 Data structure:
-For example, to find the first potential letters of a 5 letter word we would get the keys of next_letter[5]. 
-If we decided to use the letter T as a first letter we would then return the keys for next_letter[5][T] to get the second 5 letter words starting with T. etc...
+linear_word_search[‘CAo’]. 
+If we decided to use the letter T as a first letter we would then return the keys for next_letter[5][T] to get the second possible letters in all 5 letter words starting with T. etc...
 
 
 Method 2. 
@@ -556,5 +586,3 @@ Can we further increase generation time by choosing more suitable or likely word
 
 I need to write a better clue selection routine to allow for different styles.
 http://en.wikipedia.org/wiki/Word_square
-
-
