@@ -1,4 +1,6 @@
-Contents
+Try it: https://vpelss.github.io/crosswords_js/
+
+#Contents
 
 Contents
 Emogic's Crossword Generation Algorithm
