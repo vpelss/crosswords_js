@@ -22,6 +22,7 @@
 
 //reverse diag!!! better for optimal
 
+//web workers!
 
 //"use strict";
 
@@ -81,10 +82,11 @@ var NthPosition;
 var CurrentPos;
 
 //main();
+var arg_dbRootPath;
 var arg_shuffle;
 var arg_optimalbacktrack;
 var arg_walkpath;
-var arg_wordfile;
+var arg_wordfile_path;
 var arg_simplewordmasksearch;
 var arg_printtoconsole;
 var layouts;
@@ -100,6 +102,8 @@ function main() {
 
 	layouts = urlParams.get('layouts');
 
+	arg_dbRootPath = urlParams.get('dbRootPath');
+
 	arg_shuffle = urlParams.get('shuffle');
 
 	arg_printtoconsole = urlParams.get('printtoconsole');
@@ -109,11 +113,13 @@ function main() {
 		return;
 	}
 
+	//american style : grid db
 	if (layouts == 'grids') {
 		var arg_grid = urlParams.get('grid');
 		grid_change(arg_grid);
 	}
 
+	//british style : random generated
 	if (layouts == 'doublespaced') {
 		var arg_doublespacedfull = urlParams.get('doublespacedfull');
 		var arg_evenodd = urlParams.get('doublespacedevenodd');
@@ -132,15 +138,15 @@ function main() {
 
 	numberBlankSquares();
 
-	arg_wordfile = urlParams.get('wordfile');
+	arg_wordfile_path = arg_dbRootPath + urlParams.get('wordfile');
 	arg_walkpath = urlParams.get('walkpath');
 	if (arg_walkpath.includes('Letter')) {
 		mode = 'letter';
 	} else {
 		mode = 'word';
 	}
-	//arg_wordfile = 'vp';
-	loadWordList(arg_wordfile);
+	//arg_wordfile_path = 'vp';
+	loadWordList(arg_wordfile_path);
 
 	//word walks
 	if (arg_walkpath == 'WordWalkCrossingwords') {
@@ -368,7 +374,7 @@ function ShotgunDoubleSpaced(max, symmetry) {
 				puzzle[y][x] = unoccupied;
 			});
 		} else { //squares where added
-			blackSquaresAdded = blackSquaresAdded + symmetry;
+			blackSquaresAdded = blackSquaresAdded + (+symmetry);
 		}
 
 	} while (Object.keys(tried).length < numberOfCells); //try all cells
@@ -590,11 +596,14 @@ function calculateWordLetterPositions(x, y, dir) {
 	return letter_pos;
 }
 
-function loadWordList(arg_wordfile) { //load word lists and set word and letter search variables
-	var db = arg_wordfile;
+function loadWordList(arg_wordfile_path) { //load word lists and set word and letter search variables
+	//var db = arg_wordfile_path;
 	var wl = Object.keys(word_lengths);
 	wl.forEach(function(word_length) {
-		var file_and_path = './wordlists/' + db + '/words/' + word_length + '.txt';
+
+		//var file_and_path = './wordlists/' + db + '/words/' + word_length + '.txt';
+		var file_and_path = arg_wordfile_path + '/words/' + word_length + '.txt';
+
 		var word_list_text = readStringFromFileAtPath(file_and_path);
 		//still need to process
 		var word_list_array = word_list_text.split(/\r?\n|\r|\n/g); //split on lines into array
@@ -1670,7 +1679,7 @@ function numberClueList() {
 		all_masks_on_board[dir].forEach(function(word, word_number) { //for all our words on the board
 			//get clue(s) for this word
 			var first_2_leters = word.substring(0, 2);
-			var directory = "./wordlists/" + arg_wordfile + "/clues/";
+			var directory = arg_wordfile_path + "/clues/";
 			var filename = directory + "_" + first_2_leters + ".clu";
 			var clue_list_text = readStringFromFileAtPath(filename);
 			var clue_list_array = clue_list_text.split(/\r?\n|\r|\n/g); //split on lines into array
@@ -1782,7 +1791,7 @@ function printProcessing() {
 	string += arg_walkpath; //#print time to create crossword
 
 	string += "\n";
-	string += arg_wordfile; //#print time to create crossword
+	string += arg_wordfile_path; //#print time to create crossword
 
 	string += "\n";
 	string += "Time: " + time; //#print time to create crossword

@@ -8,9 +8,9 @@
 
 <LINK REL="stylesheet" TYPE="text/css" HREF="crossword.css">
 
-		<LINK REL="stylesheet" HREF="/jqueryui/jquery-ui.css">
-		<SCRIPT SRC="//code.jquery.com/jquery-1.10.2.js"></SCRIPT>
-		<SCRIPT SRC="/jqueryui/jquery-ui.js"></SCRIPT>
+		<LINK REL="stylesheet" HREF="./jqueryui/jquery-ui.css">
+		<SCRIPT SRC="https://code.jquery.com/jquery-1.10.2.js"></SCRIPT>
+		<SCRIPT SRC="./jqueryui/jquery-ui.js"></SCRIPT>
   <SCRIPT SRC="crosswords.js" />
   	<SCRIPT SRC="cookie.js"></SCRIPT>
 
@@ -89,14 +89,16 @@ $( "#dialog-message" ).dialog( "option", "width", 800 );
 				<div id='puzzle_place'>
 
 	 <DIV ALIGN="CENTER" style="border: solid 1px;">
-   <h3>This program was created so you could inspect a crossword script in action.</br>
+   <h3>This program was created so you could inspect a crossword script in action in your web browser.</br>
    From the browsers Inspect Console, you may see the live console generation log, set break points, single step through the code, etc...</br>
    To access the JS console, right click and chose 'Inspect'.</br>
    If using Chrome, use ctrl-shift-i to start Inspect.</h3>
+
    <script>var giddy_up = `<h3>Starting puzzle generation.
 		It may take several minutes, or many, depending on your choices.
   This browser tab may be unresponsive as Javascript is preforming many recursive calls.
   </h3>`</script>
+
 		<FORM>
    <INPUT TYPE="BUTTON" NAME="Button1" VALUE="START PUZZLE GENERATION" ONCLICK="setTimeout(main,1000); document.getElementById('puzzle_place').innerHTML = giddy_up;">
   </FORM>
