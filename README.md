@@ -1,6 +1,6 @@
 Try it: https://vpelss.github.io/crosswords_js/
 
-#Contents
+Contents
 
 Contents
 Emogic's Crossword Generation Algorithm
